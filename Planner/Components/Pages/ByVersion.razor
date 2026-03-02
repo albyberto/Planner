@@ -1,0 +1,128 @@
+﻿@page "/by-version"
+@using Planner.Models
+@inject IConfiguration Configuration
+
+<PageTitle>Per Fix Version</PageTitle>
+
+<MudText Typo="Typo.h4" GutterBottom="true">
+    <MudIcon Icon="@Icons.Material.Filled.NewReleases" Class="mr-2" />
+    Issues per Fix Version
+</MudText>
+
+<Planner.Components.Shared.StatusFilter OnIssuesLoaded="OnIssuesLoaded" />
+
+@if (_issues != null)
+{
+    <MudText Typo="Typo.subtitle1" Class="mb-4">
+        Trovate <b>@_issues.Count</b> issue
+    </MudText>
+
+    @foreach (var fvGroup in _issues.GroupBy(i => i.Fields.FixVersionName).OrderBy(g => g.Key))
+    {
+        var fvOriginal = fvGroup.Sum(i => i.Fields.OriginalEstimateSeconds ?? 0);
+        var fvSpent = fvGroup.Sum(i => i.Fields.TimeSpentSeconds ?? 0);
+        var fvRemaining = fvGroup.Sum(i => i.Fields.RemainingEstimateSeconds ?? 0);
+
+        <MudPaper Class="mb-4" Elevation="2">
+            <MudToolBar Dense="true" Class="mud-theme-primary">
+                <MudIcon Icon="@Icons.Material.Filled.NewReleases" Class="mr-2" />
+                <MudText Typo="Typo.h6">@fvGroup.Key</MudText>
+                <MudSpacer />
+                <MudChip T="string" Size="Size.Small" Variant="Variant.Filled" Color="Color.Dark">
+                    Stima: @FormatSeconds(fvOriginal)
+                </MudChip>
+                <MudChip T="string" Size="Size.Small" Variant="Variant.Filled" Color="Color.Dark">
+                    Speso: @FormatSeconds(fvSpent)
+                </MudChip>
+                <MudChip T="string" Size="Size.Small" Variant="Variant.Filled" Color="Color.Dark">
+                    Rimanente: @FormatSeconds(fvRemaining)
+                </MudChip>
+            </MudToolBar>
+
+            <MudSimpleTable Dense="true" Hover="true" Striped="true">
+                <thead>
+                    <tr>
+                        <th style="width:120px">Key</th>
+                        <th>Sommario</th>
+                        <th style="width:150px">Assegnatario</th>
+                        <th style="width:100px">Stato</th>
+                        <th style="width:100px">Stima</th>
+                        <th style="width:100px">Speso</th>
+                        <th style="width:100px">Rimanente</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    @foreach (var issue in fvGroup)
+                    {
+                        <tr>
+                            <td>
+                                <MudLink Href="@($"{_jiraBaseUrl}/browse/{issue.Key}")" Target="_blank" Color="Color.Primary">
+                                    @issue.Key
+                                </MudLink>
+                            </td>
+                            <td>@issue.Fields.Summary</td>
+                            <td>@issue.Fields.AssigneeName</td>
+                            <td>
+                                <MudChip T="string" Color="@GetStatusColor(issue.Fields.StatusName)" Size="Size.Small" Variant="Variant.Filled">
+                                    @issue.Fields.StatusName
+                                </MudChip>
+                            </td>
+                            <td>@FormatSeconds(issue.Fields.OriginalEstimateSeconds)</td>
+                            <td>@FormatSeconds(issue.Fields.TimeSpentSeconds)</td>
+                            <td>@FormatSeconds(issue.Fields.RemainingEstimateSeconds)</td>
+                        </tr>
+                    }
+                </tbody>
+            </MudSimpleTable>
+        </MudPaper>
+    }
+}
+
+@code {
+    private List<JiraIssue>? _issues;
+    private string _jiraBaseUrl = string.Empty;
+
+    protected override void OnInitialized()
+    {
+        _jiraBaseUrl = Configuration["Jira:BaseUrl"]?.TrimEnd('/') ?? "";
+    }
+
+    private void OnIssuesLoaded(List<JiraIssue> issues)
+    {
+        _issues = issues;
+    }
+
+    private static string FormatSeconds(int? seconds)
+    {
+        if (seconds is null or 0) return "-";
+        return FormatSecondsValue(seconds.Value);
+    }
+
+    private static string FormatSeconds(int seconds)
+    {
+        if (seconds == 0) return "-";
+        return FormatSecondsValue(seconds);
+    }
+
+    private static string FormatSecondsValue(int seconds)
+    {
+        var days = seconds / 28800;
+        var hours = (seconds % 28800) / 3600;
+        var minutes = (seconds % 3600) / 60;
+
+        if (days > 0 && hours > 0) return $"{days}d {hours}h";
+        if (days > 0) return $"{days}d";
+        if (hours > 0 && minutes > 0) return $"{hours}h {minutes}m";
+        if (hours > 0) return $"{hours}h";
+        return $"{minutes}m";
+    }
+
+    private static Color GetStatusColor(string status)
+    {
+        var s = status.ToLowerInvariant();
+        if (s is "backlog" or "to do") return Color.Default;
+        if (s is "closed" or "done" or "cancelled" or "canceled") return Color.Success;
+        return Color.Info;
+    }
+}
+
