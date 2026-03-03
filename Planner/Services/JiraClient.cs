@@ -9,10 +9,7 @@ namespace Planner.Services;
 /// <summary>
 /// Servizio per comunicare con le API REST di Jira Cloud.
 /// </summary>
-public class JiraService(
-    HttpClient httpClient,
-    IOptions<JiraQuerySettings> querySettings,
-    ILogger<JiraService> logger)
+public class JiraClient(HttpClient httpClient, IOptions<JiraQuerySettings> querySettings, ILogger<JiraClient> logger)
 {
     private readonly JiraQuerySettings _query = querySettings.Value;
     private const string UnassignedKey = "__UNASSIGNED__";

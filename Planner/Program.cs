@@ -42,9 +42,9 @@ builder.Services.AddOptions<JiraQuerySettings>()
 builder.Services.AddOptions<JiraFilterSettings>()
     .BindConfiguration(JiraFilterSettings.SectionName);
 
-builder.Services.AddHttpClient<JiraService>((serviceProvider, client) =>
+builder.Services.AddHttpClient<JiraClient>((provider, client) =>
 {
-    var settings = serviceProvider.GetRequiredService<IOptions<JiraApiSettings>>().Value;
+    var settings = provider.GetRequiredService<IOptions<JiraApiSettings>>().Value;
 
     var credentials = Convert.ToBase64String(Encoding.ASCII.GetBytes($"{settings.Email}:{settings.ApiToken}"));
 

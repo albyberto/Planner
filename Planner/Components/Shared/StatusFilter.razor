@@ -1,7 +1,7 @@
 ﻿@using Planner.Models
 @using Planner.Services
 @using Microsoft.Extensions.Options
-@inject JiraService JiraService
+@inject JiraClient JiraClient
 @inject IOptions<JiraFilterSettings> FilterSettings
 @inject ISnackbar Snackbar
 
@@ -71,7 +71,7 @@
     protected override void OnInitialized()
     {
         var filters = FilterSettings.Value;
-        _unassignedKey = JiraService.GetUnassignedKey();
+        _unassignedKey = JiraClient.GetUnassignedKey();
 
         // Team members ordinati per nome A-Z + "Non assegnato" in fondo
         _teamMembers = filters.TeamMembers.Select(m => m.Email)
@@ -96,7 +96,7 @@
             _firstLoad = false;
             try
             {
-                var statuses = await JiraService.GetProjectStatusesAsync();
+                var statuses = await JiraClient.GetProjectStatusesAsync();
                 if (statuses.Count > 0) _allStatuses = statuses;
             }
             catch (Exception ex)
@@ -163,7 +163,7 @@
         {
             // Il preset usa automaticamente project da config + assignee dalla DDL corrente
             var assignees = ShowAssigneeFilter && _selectedAssignees.Any() ? _selectedAssignees : null;
-            var issues = await JiraService.SearchByPresetAsync(preset.Jql, assignees);
+            var issues = await JiraClient.SearchByPresetAsync(preset.Jql, assignees);
             Snackbar.Add($"Preset '{preset.Name}': {issues.Count} issue", Severity.Success);
             await OnIssuesLoaded.InvokeAsync(issues);
         }
@@ -185,7 +185,7 @@
         try
         {
             var assignees = ShowAssigneeFilter && _selectedAssignees.Any() ? _selectedAssignees : null;
-            var issues = await JiraService.GetIssuesByStatusesAsync(
+            var issues = await JiraClient.GetIssuesByStatusesAsync(
                 _selectedStatuses, assignees, unassignedOnly: UnassignedOnly);
             Snackbar.Add($"Trovate {issues.Count} issue", Severity.Success);
             await OnIssuesLoaded.InvokeAsync(issues);
