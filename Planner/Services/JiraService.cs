@@ -9,22 +9,27 @@ namespace Planner.Services;
 /// <summary>
 /// Servizio per comunicare con le API REST di Jira Cloud.
 /// </summary>
-public class JiraService(HttpClient httpClient, IOptions<JiraSettings> settings, ILogger<JiraService> logger)
+public class JiraService(
+    HttpClient httpClient,
+    IOptions<JiraQuerySettings> querySettings,
+    IOptions<JiraFilterSettings> filterSettings,
+    ILogger<JiraService> logger)
 {
-    private readonly JiraSettings _settings = settings.Value;
+    private readonly JiraQuerySettings _query = querySettings.Value;
+    private readonly JiraFilterSettings _filters = filterSettings.Value;
     private const string UnassignedKey = "__UNASSIGNED__";
 
     public string GetUnassignedKey() => UnassignedKey;
 
-    public List<string> GetTeamMembers() => _settings.TeamMembers.Select(m => m.Email).ToList();
+    public List<string> GetTeamMembers() => _filters.TeamMembers.Select(m => m.Email).ToList();
 
-    public List<string> GetDefaultTeamEmails() => _settings.TeamMembers.Where(m => m.IsDefault).Select(m => m.Email).ToList();
+    public List<string> GetDefaultTeamEmails() => _filters.TeamMembers.Where(m => m.IsDefault).Select(m => m.Email).ToList();
 
-    public List<string> GetDefaultStatuses() => _settings.DefaultStatuses;
+    public List<string> GetDefaultStatuses() => _filters.DefaultStatuses;
 
-    public bool IsUnassignedDefault() => _settings.IncludeUnassignedByDefault;
+    public bool IsUnassignedDefault() => _filters.IncludeUnassignedByDefault;
 
-    public List<JiraPreset> GetPresets() => _settings.Presets;
+    public List<JiraPreset> GetPresets() => _filters.Presets;
 
     /// <summary>
     /// Recupera tutti gli stati disponibili per i progetti configurati.
@@ -33,7 +38,7 @@ public class JiraService(HttpClient httpClient, IOptions<JiraSettings> settings,
     {
         var allStatuses = new HashSet<string>();
 
-        foreach (var projectKey in _settings.ProjectKeys)
+        foreach (var projectKey in _query.ProjectKeys)
         {
             try
             {
@@ -77,7 +82,7 @@ public class JiraService(HttpClient httpClient, IOptions<JiraSettings> settings,
         var statusList = statuses.ToList();
         if (statusList.Count == 0) return [];
 
-        var formattedProjects = string.Join(", ", _settings.ProjectKeys.Select(k => $"\"{k}\""));
+        var formattedProjects = string.Join(", ", _query.ProjectKeys.Select(k => $"\"{k}\""));
         var formattedStatuses = string.Join(", ", statusList.Select(s => $"\"{s}\""));
         var jql = $"project IN ({formattedProjects}) AND status IN ({formattedStatuses})";
 
@@ -105,7 +110,7 @@ public class JiraService(HttpClient httpClient, IOptions<JiraSettings> settings,
         IEnumerable<string>? assigneeEmails = null,
         int maxResults = 50)
     {
-        var formattedProjects = string.Join(", ", _settings.ProjectKeys.Select(k => $"\"{k}\""));
+        var formattedProjects = string.Join(", ", _query.ProjectKeys.Select(k => $"\"{k}\""));
         var jql = $"project IN ({formattedProjects})";
 
         var clause = BuildAssigneeClause(assigneeEmails);

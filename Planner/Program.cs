@@ -26,15 +26,25 @@ builder.Services
 // MudBlazor
 builder.Services.AddMudServices();
 
-// Configura Jira
-builder.Services.AddOptions<JiraSettings>()
-    .BindConfiguration(JiraSettings.SectionName)
+// Configura Jira - API
+builder.Services.AddOptions<JiraApiSettings>()
+    .BindConfiguration(JiraApiSettings.SectionName)
     .ValidateDataAnnotations()
     .ValidateOnStart();
 
+// Configura Jira - Query
+builder.Services.AddOptions<JiraQuerySettings>()
+    .BindConfiguration(JiraQuerySettings.SectionName)
+    .ValidateDataAnnotations()
+    .ValidateOnStart();
+
+// Configura Jira - Filtri
+builder.Services.AddOptions<JiraFilterSettings>()
+    .BindConfiguration(JiraFilterSettings.SectionName);
+
 builder.Services.AddHttpClient<JiraService>((serviceProvider, client) =>
 {
-    var settings = serviceProvider.GetRequiredService<IOptions<JiraSettings>>().Value;
+    var settings = serviceProvider.GetRequiredService<IOptions<JiraApiSettings>>().Value;
 
     var credentials = Convert.ToBase64String(Encoding.ASCII.GetBytes($"{settings.Email}:{settings.ApiToken}"));
 
