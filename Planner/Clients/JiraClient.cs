@@ -1,4 +1,5 @@
 ﻿using System.Collections.Frozen;
+using System.Collections.Immutable;
 using Microsoft.Extensions.Options;
 using Planner.Models;
 using Planner.Models.Requests;
@@ -9,7 +10,7 @@ public class JiraClient(HttpClient httpClient, IOptions<JiraQueryOptions> option
 {
     private readonly JiraQueryOptions _settings = options.Value;
 
-    public async Task<FrozenSet<Status>> GetProjectStatusesAsync(CancellationToken cancellationToken = default)
+    public async Task<ImmutableList<Status>> GetProjectStatusesAsync(CancellationToken cancellationToken = default)
     {
         var tasks = _settings.ProjectKeys.Select(async project =>
         {
@@ -31,11 +32,12 @@ public class JiraClient(HttpClient httpClient, IOptions<JiraQueryOptions> option
             .SelectMany(requests => requests)
             .SelectMany(request => request.Statuses)
             .DistinctBy(status => status.Id)
-            .OrderBy(name => name)
-            .ToFrozenSet();
+            .OrderBy(status => status.StatusCategory.Id)
+            .ThenBy(status => status.Id)
+            .ToImmutableList();
     }
 
-    public async Task<FrozenSet<AssigneeRequest>> GetProjectAssigneesAsync(CancellationToken cancellationToken = default)
+    public async Task<ImmutableList<AssigneeRequest>> GetProjectAssigneesAsync(CancellationToken cancellationToken = default)
     {
         var tasks = _settings.ProjectKeys.Select(async projectKey =>
         {
@@ -55,9 +57,9 @@ public class JiraClient(HttpClient httpClient, IOptions<JiraQueryOptions> option
 
         return results
             .SelectMany(users => users)
-            .Where(user => !string.IsNullOrEmpty(user.AccountId))
+            .Where(user => !string.IsNullOrEmpty(user.EmailAddress))
             .DistinctBy(user => user.AccountId)
             .OrderBy(user => user.DisplayName)
-            .ToFrozenSet();
+            .ToImmutableList();
     }
 }

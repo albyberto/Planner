@@ -42,8 +42,8 @@
 @inject ISnackbar Snackbar
 
 @code {
-    FrozenSet<Status> _statuses = [];
-    FrozenSet<AssigneeRequest> _assignees = []; // Ho usato JiraAssignee basandomi sui messaggi precedenti, adatta se usi AssigneeRequest
+    ImmutableList<Status> _statuses = [];
+    ImmutableList<AssigneeRequest> _assignees = []; // Ho usato JiraAssignee basandomi sui messaggi precedenti, adatta se usi AssigneeRequest
 
     HashSet<string> _selectedStatuses = [];
     HashSet<string> _selectedAssignees = [];
