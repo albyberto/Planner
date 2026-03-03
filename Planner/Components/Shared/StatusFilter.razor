@@ -2,6 +2,7 @@
 @using System.Collections.Immutable
 @using Microsoft.Extensions.Options
 @using Planner.Clients
+@using Planner.Extensions
 @using Planner.Models
 @using Planner.Models.Requests
 @using Planner.Options
@@ -18,7 +19,7 @@
                        Clearable="true">
                 @foreach (var status in _statuses)
                 {
-                    <MudSelectItem T="string" Value="@status.Name">@status.Name</MudSelectItem>
+                    <MudSelectItem T="string" Value="@status.Name">@status.Name.ToTitleCase()</MudSelectItem>
                 }
             </MudSelect>
         </MudItem>
@@ -34,7 +35,7 @@
                        MultiSelectionTextFunc="@(selected => GetSelectedAssigneesText(selected))">
                 @foreach (var assignee in _assignees)
                 {
-                    <MudSelectItem T="string" Value="@assignee.EmailAddress" >@assignee.DisplayName</MudSelectItem>
+                    <MudSelectItem T="string" Value="@assignee.EmailAddress" >@assignee.DisplayName.ToTitleCase()</MudSelectItem>
                 }
             </MudSelect>
         </MudItem>
