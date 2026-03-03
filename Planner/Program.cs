@@ -4,6 +4,7 @@ using MudBlazor.Services;
 using Planner.Clients;
 using Planner.Components;
 using Planner.Models;
+using Planner.Options;
 
 var builder = WebApplication.CreateBuilder(args);
 

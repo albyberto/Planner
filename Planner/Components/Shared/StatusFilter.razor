@@ -1,8 +1,10 @@
 ﻿@using System.Collections.Frozen
 @using System.Collections.Immutable
+@using Microsoft.Extensions.Options
 @using Planner.Clients
 @using Planner.Models
 @using Planner.Models.Requests
+@using Planner.Options
 <MudPaper Class="pa-4 mb-4" Elevation="2">
     <MudGrid>
         <MudItem xs="12" sm="4" md="4">
@@ -16,7 +18,7 @@
                        Clearable="true">
                 @foreach (var status in _statuses)
                 {
-                    <MudSelectItem T="string" Value="@status.Id">@status.Name</MudSelectItem>
+                    <MudSelectItem T="string" Value="@status.Name">@status.Name</MudSelectItem>
                 }
             </MudSelect>
         </MudItem>
@@ -28,16 +30,18 @@
                        SelectedValuesChanged="OnAssigneeChanged"
                        Variant="Variant.Outlined"
                        AnchorOrigin="Origin.BottomCenter"
-                       Clearable="true">
+                       Clearable="true"
+                       MultiSelectionTextFunc="@(selected => GetSelectedAssigneesText(selected))">
                 @foreach (var assignee in _assignees)
                 {
-                    <MudSelectItem T="string" Value="@assignee.AccountId">@assignee.DisplayName</MudSelectItem>
+                    <MudSelectItem T="string" Value="@assignee.EmailAddress" >@assignee.DisplayName</MudSelectItem>
                 }
             </MudSelect>
         </MudItem>
     </MudGrid>
 </MudPaper>
 
+@inject IOptions<JiraFilterOptions> Options;
 @inject JiraClient JiraClient
 @inject ISnackbar Snackbar
 
@@ -54,6 +58,10 @@
         {
             _statuses = await JiraClient.GetProjectStatusesAsync();
             _assignees = await JiraClient.GetProjectAssigneesAsync();
+
+            var settings = Options.Value;
+            _selectedStatuses = settings.DefaultStatuses;
+            _selectedAssignees = settings.TeamMembers.Select(member => member.Email).ToHashSet();
         }
         catch(Exception exception)
         {
@@ -67,4 +75,15 @@
     private void OnStatusChanged(IEnumerable<string> values) => _selectedStatuses = values.ToHashSet();
 
     private void OnAssigneeChanged(IEnumerable<string> values) => _selectedAssignees = values.ToHashSet();
+    
+    private string GetSelectedAssigneesText(IReadOnlyCollection<string> selectedEmails)
+    {
+        if (selectedEmails.Count == 0) return string.Empty;
+
+        var selectedNames = _assignees
+            .Where(a => selectedEmails.Contains(a.EmailAddress))
+            .Select(a => string.IsNullOrWhiteSpace(a.DisplayName) ? a.EmailAddress : a.DisplayName);
+
+        return string.Join(", ", selectedNames);
+    }
 }

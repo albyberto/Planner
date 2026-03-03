@@ -1,11 +1,11 @@
-namespace Planner.Models;
+namespace Planner.Options;
 
 public class JiraFilterOptions
 {
     public const string SectionName = "JiraFilters";
 
-    public List<string> DefaultStatuses { get; init; } = [];
-    public List<TeamMember> TeamMembers { get; init; } = [];
+    public HashSet<string> DefaultStatuses { get; init; } = [];
+    public HashSet<TeamMember> TeamMembers { get; init; } = [];
     public bool IncludeUnassignedByDefault { get; init; }
     public List<JiraPreset> Presets { get; init; } = [];
 }
