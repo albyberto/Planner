@@ -1,10 +1,9 @@
-﻿@using System.Collections.Frozen
-@using System.Collections.Immutable
+﻿@using System.Collections.Immutable
 @using Microsoft.Extensions.Options
 @using Planner.Clients
 @using Planner.Domain
 @using Planner.Extensions
-@using Planner.Models
+@using Planner.Model
 @using Planner.Options
 <MudPaper Class="pa-4 mb-4" Elevation="2">
     <MudGrid>
@@ -12,11 +11,12 @@
             <MudSelect T="string"
                        Label="Stati"
                        MultiSelection="true"
-                       SelectedValues="SelectedStatuses"
+                       SelectedValues="Filter.Statuses"
                        SelectedValuesChanged="OnStatusChanged"
                        Variant="Variant.Outlined"
                        AnchorOrigin="Origin.BottomCenter"
-                       Clearable="true">
+                       Clearable="true"
+                       MultiSelectionTextFunc="@(selected => GetSelectedStatuesText(selected))">
                 @foreach (var status in _statuses)
                 {
                     <MudSelectItem T="string" Value="@status.Name">@status.Name.ToTitleCase()</MudSelectItem>
@@ -27,7 +27,7 @@
             <MudSelect T="string"
                        Label="Assignee"
                        MultiSelection="true"
-                       SelectedValues="SelectedAssignees"
+                       SelectedValues="Filter.Assignees"
                        SelectedValuesChanged="OnAssigneeChanged"
                        Variant="Variant.Outlined"
                        AnchorOrigin="Origin.BottomCenter"
@@ -35,7 +35,8 @@
                        MultiSelectionTextFunc="@(selected => GetSelectedAssigneesText(selected))">
                 @foreach (var assignee in _assignees)
                 {
-                    <MudSelectItem T="string" Value="@assignee.EmailAddress" >@assignee.DisplayName.ToTitleCase()</MudSelectItem>
+                    <MudSelectItem T="string"
+                                   Value="@assignee.EmailAddress">@assignee.DisplayName.ToTitleCase()</MudSelectItem>
                 }
             </MudSelect>
         </MudItem>
@@ -50,8 +51,7 @@
     ImmutableList<Status> _statuses = [];
     ImmutableList<User> _assignees = [];
 
-    public HashSet<string> SelectedStatuses { get; private set; } = [];
-    public HashSet<string> SelectedAssignees { get; private set; } = [];
+    public Filter Filter = new();
 
     protected override async Task OnInitializedAsync()
     {
@@ -61,10 +61,12 @@
             _assignees = await Client.GetProjectAssigneesAsync();
 
             var settings = Options.Value;
-            SelectedStatuses = settings.DefaultStatuses;
-            SelectedAssignees = settings.TeamMembers.Select(member => member.Email).ToHashSet();
+            var assignees = settings.TeamMembers.Select(member => member.Email).ToHashSet();
+            var statuses = settings.DefaultStatuses;
+
+            Filter = new(assignees, statuses);
         }
-        catch(Exception exception)
+        catch (Exception exception)
         {
             Snackbar.Add("Errore durante il recupero dei dati da Jira.", Severity.Error);
             Console.WriteLine(exception.Message);
@@ -73,18 +75,33 @@
 
     private Task OnPresetChanged(string? value) => Task.CompletedTask;
 
-    private void OnStatusChanged(IEnumerable<string> values) => SelectedStatuses = values.ToHashSet();
+    private void OnStatusChanged(IEnumerable<string> values) => Filter = Filter with { Statuses = values.ToHashSet() };
 
-    private void OnAssigneeChanged(IEnumerable<string> values) => SelectedAssignees = values.ToHashSet();
-    
-    private string GetSelectedAssigneesText(IReadOnlyCollection<string> selectedEmails)
+    private void OnAssigneeChanged(IEnumerable<string> values) => Filter = Filter with { Assignees = values.ToHashSet() };
+
+    private string GetSelectedStatuesText(IReadOnlyCollection<string?>? statuses)
     {
-        if (selectedEmails.Count == 0) return string.Empty;
+        statuses ??= [];
 
-        var selectedNames = _assignees
-            .Where(a => selectedEmails.Contains(a.EmailAddress))
-            .Select(a => string.IsNullOrWhiteSpace(a.DisplayName) ? a.EmailAddress : a.DisplayName);
+        if (statuses.Count == 0) return string.Empty;
 
-        return string.Join(", ", selectedNames);
+        var names = statuses
+            .Where(status => !string.IsNullOrEmpty(status))
+            .Select(status => status!.ToTitleCase());
+        
+        return string.Join(", ", names);
+    }
+
+    private string GetSelectedAssigneesText(IReadOnlyCollection<string?>? emails)
+    {
+        emails ??= [];
+        
+        if (emails.Count == 0) return string.Empty;
+
+        var names = _assignees
+            .Where(assignee => emails.Contains(assignee.EmailAddress))
+            .Select(assignee => string.IsNullOrWhiteSpace(assignee.DisplayName) ? assignee.EmailAddress : assignee.DisplayName);
+
+        return string.Join(", ", names);
     }
 }

@@ -1,9 +1,7 @@
-using System.Collections.Immutable;
-
 namespace Planner.Model;
 
-public record Filter(ImmutableList<string>? Assignees = null, ImmutableList<string>? Statuses = null)
+public record Filter(HashSet<string>? Assignees = null, HashSet<string>? Statuses = null)
 {
-    public ImmutableList<string> Assignees { get; init; } = Assignees ?? [];
-    public ImmutableList<string> Statuses { get; init; } = Statuses ?? [];
+    public HashSet<string> Assignees { get; init; } = Assignees ?? [];
+    public HashSet<string> Statuses { get; init; } = Statuses ?? [];
 }
