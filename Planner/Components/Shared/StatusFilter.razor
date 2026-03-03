@@ -1,210 +1,70 @@
-﻿@using Planner.Models
-@using Microsoft.Extensions.Options
+﻿@using System.Collections.Frozen
+@using System.Collections.Immutable
 @using Planner.Clients
-@inject JiraClient JiraClient
-@inject IOptions<JiraFilterSettings> FilterSettings
-@inject ISnackbar Snackbar
-
+@using Planner.Models
+@using Planner.Models.Requests
 <MudPaper Class="pa-4 mb-4" Elevation="2">
     <MudGrid>
-        <MudItem xs="12" sm="3" md="3">
-            <MudSelect T="string" Label="Preset" Value="_selectedPreset" ValueChanged="OnPresetChanged"
-                       Variant="Variant.Outlined" AnchorOrigin="Origin.BottomCenter"
-                       Clearable="true" Placeholder="Nessun preset">
-                @foreach (var preset in _presets)
+        <MudItem xs="12" sm="4" md="4">
+            <MudSelect T="string"
+                       Label="Stati"
+                       MultiSelection="true"
+                       SelectedValues="_selectedStatuses"
+                       SelectedValuesChanged="OnStatusChanged"
+                       Variant="Variant.Outlined"
+                       AnchorOrigin="Origin.BottomCenter"
+                       Clearable="true">
+                @foreach (var status in _statuses)
                 {
-                    <MudSelectItem T="string" Value="@preset.Name">@preset.Name</MudSelectItem>
+                    <MudSelectItem T="string" Value="@status.Id">@status.Name</MudSelectItem>
                 }
             </MudSelect>
         </MudItem>
         <MudItem xs="12" sm="4" md="4">
-            <MudSelect T="string" Label="Stati" MultiSelection="true" SelectedValues="_selectedStatuses"
-                       SelectedValuesChanged="OnStatusChanged"
-                       Variant="Variant.Outlined" AnchorOrigin="Origin.BottomCenter"
-                       Clearable="true" Disabled="@_presetActive">
-                @foreach (var status in _allStatuses)
+            <MudSelect T="string"
+                       Label="Assignee"
+                       MultiSelection="true"
+                       SelectedValues="_selectedAssignees"
+                       SelectedValuesChanged="OnAssigneeChanged"
+                       Variant="Variant.Outlined"
+                       AnchorOrigin="Origin.BottomCenter"
+                       Clearable="true">
+                @foreach (var assignee in _assignees)
                 {
-                    <MudSelectItem T="string" Value="@status">@status</MudSelectItem>
+                    <MudSelectItem T="string" Value="@assignee.AccountId">@assignee.DisplayName</MudSelectItem>
                 }
             </MudSelect>
         </MudItem>
-        @if (ShowAssigneeFilter)
-        {
-            <MudItem xs="12" sm="4" md="4">
-                <MudSelect T="string" Label="Assignee" MultiSelection="true" SelectedValues="_selectedAssignees"
-                           SelectedValuesChanged="OnAssigneeChanged"
-                           Variant="Variant.Outlined" AnchorOrigin="Origin.BottomCenter"
-                           Clearable="true" ToStringFunc="EmailToName">
-                    @foreach (var member in _teamMembers)
-                    {
-                        <MudSelectItem T="string" Value="@member">@EmailToName(member)</MudSelectItem>
-                    }
-                </MudSelect>
-            </MudItem>
-        }
-        @if (Loading)
-        {
-            <MudItem xs="12" sm="1" md="1" Class="d-flex align-end justify-center">
-                <MudProgressCircular Size="Size.Small" Indeterminate="true" Color="Color.Primary" />
-            </MudItem>
-        }
     </MudGrid>
 </MudPaper>
 
+@inject JiraClient JiraClient
+@inject ISnackbar Snackbar
+
 @code {
-    [Parameter] public EventCallback<List<JiraIssue>> OnIssuesLoaded { get; set; }
-    [Parameter] public bool ShowAssigneeFilter { get; set; } = true;
-    [Parameter] public bool UnassignedOnly { get; set; }
+    FrozenSet<Status> _statuses = [];
+    FrozenSet<AssigneeRequest> _assignees = []; // Ho usato JiraAssignee basandomi sui messaggi precedenti, adatta se usi AssigneeRequest
 
-    private List<string> _allStatuses = [];
-    private List<string> _teamMembers = [];
-    private List<JiraPreset> _presets = [];
-    private string _unassignedKey = string.Empty;
-    private IReadOnlyCollection<string> _selectedStatuses = new HashSet<string>();
-    private IReadOnlyCollection<string> _selectedAssignees = new HashSet<string>();
-    private string? _selectedPreset;
-    private bool _presetActive;
-    public bool Loading { get; private set; }
-    private bool _firstLoad = true;
-    private CancellationTokenSource? _debounce;
+    HashSet<string> _selectedStatuses = [];
+    HashSet<string> _selectedAssignees = [];
 
-    protected override void OnInitialized()
+    protected override async Task OnInitializedAsync()
     {
-        var filters = FilterSettings.Value;
-        _unassignedKey = JiraClient.GetUnassignedKey();
-
-        // Team members ordinati per nome A-Z + "Non assegnato" in fondo
-        _teamMembers = filters.TeamMembers.Select(m => m.Email)
-            .OrderBy(e => EmailToName(e), StringComparer.OrdinalIgnoreCase)
-            .ToList();
-        _teamMembers.Add(_unassignedKey);
-
-        // Default: team members con IsDefault + non assegnato se configurato
-        var defaults = filters.TeamMembers.Where(m => m.IsDefault).Select(m => m.Email).ToList();
-        if (filters.IncludeUnassignedByDefault)
-            defaults.Add(_unassignedKey);
-        _selectedAssignees = new HashSet<string>(defaults);
-
-        _selectedStatuses = new HashSet<string>(filters.DefaultStatuses);
-        _presets = filters.Presets;
-    }
-
-    protected override async Task OnAfterRenderAsync(bool firstRender)
-    {
-        if (firstRender && _firstLoad)
-        {
-            _firstLoad = false;
-            try
-            {
-                var statuses = await JiraClient.GetProjectStatusesAsync();
-                if (statuses.Count > 0) _allStatuses = statuses;
-            }
-            catch (Exception ex)
-            {
-                Snackbar.Add($"Errore caricamento stati: {ex.Message}", Severity.Warning);
-            }
-
-            await Search();
-            StateHasChanged();
-        }
-    }
-
-    private async Task OnPresetChanged(string? value)
-    {
-        _selectedPreset = value;
-        _presetActive = !string.IsNullOrEmpty(value);
-
-        if (_presetActive)
-        {
-            await SearchPreset();
-        }
-    }
-
-    private async Task OnStatusChanged(IEnumerable<string> values)
-    {
-        _selectedStatuses = values.ToHashSet();
-        ClearPreset();
-        await DebouncedSearch();
-    }
-
-    private async Task OnAssigneeChanged(IEnumerable<string> values)
-    {
-        _selectedAssignees = values.ToHashSet();
-        ClearPreset();
-        await DebouncedSearch();
-    }
-
-    private void ClearPreset()
-    {
-        _selectedPreset = null;
-        _presetActive = false;
-    }
-
-    private async Task DebouncedSearch()
-    {
-        _debounce?.Cancel();
-        _debounce = new CancellationTokenSource();
         try
         {
-            await Task.Delay(400, _debounce.Token);
-            await Search();
+            _statuses = await JiraClient.GetProjectStatusesAsync();
+            _assignees = await JiraClient.GetProjectAssigneesAsync();
         }
-        catch (TaskCanceledException) { }
-    }
-
-    private async Task SearchPreset()
-    {
-        var preset = _presets.FirstOrDefault(p => p.Name == _selectedPreset);
-        if (preset == null) return;
-
-        Loading = true;
-        StateHasChanged();
-        try
+        catch(Exception exception)
         {
-            // Il preset usa automaticamente project da config + assignee dalla DDL corrente
-            var assignees = ShowAssigneeFilter && _selectedAssignees.Any() ? _selectedAssignees : null;
-            var issues = await JiraClient.SearchByPresetAsync(preset.Jql, assignees);
-            Snackbar.Add($"Preset '{preset.Name}': {issues.Count} issue", Severity.Success);
-            await OnIssuesLoaded.InvokeAsync(issues);
-        }
-        catch (Exception ex)
-        {
-            Snackbar.Add($"Errore preset: {ex.Message}", Severity.Error);
-        }
-        finally
-        {
-            Loading = false;
+            Snackbar.Add("Errore durante il recupero dei dati da Jira.", Severity.Error);
+            Console.WriteLine(exception.Message);
         }
     }
 
-    private async Task Search()
-    {
-        if (!_selectedStatuses.Any()) return;
-        Loading = true;
-        StateHasChanged();
-        try
-        {
-            var assignees = ShowAssigneeFilter && _selectedAssignees.Any() ? _selectedAssignees : null;
-            var issues = await JiraClient.GetIssuesByStatusesAsync(
-                _selectedStatuses, assignees, unassignedOnly: UnassignedOnly);
-            Snackbar.Add($"Trovate {issues.Count} issue", Severity.Success);
-            await OnIssuesLoaded.InvokeAsync(issues);
-        }
-        catch (Exception ex)
-        {
-            Snackbar.Add($"Errore durante la ricerca: {ex.Message}", Severity.Error);
-        }
-        finally
-        {
-            Loading = false;
-        }
-    }
+    private Task OnPresetChanged(string? value) => Task.CompletedTask;
 
-    private string EmailToName(string? email)
-    {
-        if (string.IsNullOrEmpty(email)) return string.Empty;
-        if (email == _unassignedKey) return "Non assegnato";
-        var name = email.Split('@')[0].Replace(".", " ");
-        return System.Globalization.CultureInfo.CurrentCulture.TextInfo.ToTitleCase(name);
-    }
+    private void OnStatusChanged(IEnumerable<string> values) => _selectedStatuses = values.ToHashSet();
+
+    private void OnAssigneeChanged(IEnumerable<string> values) => _selectedAssignees = values.ToHashSet();
 }

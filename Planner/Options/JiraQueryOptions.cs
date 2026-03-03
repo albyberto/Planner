@@ -2,7 +2,7 @@ using System.ComponentModel.DataAnnotations;
 
 namespace Planner.Models;
 
-public class JiraQuerySettings
+public class JiraQueryOptions
 {
     public const string SectionName = "JiraQuery";
 

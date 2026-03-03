@@ -2,7 +2,7 @@ using System.ComponentModel.DataAnnotations;
 
 namespace Planner.Models;
 
-public class JiraApiSettings
+public class JiraApiOptions
 {
     public const string SectionName = "JiraApi";
 

@@ -1,6 +1,6 @@
 namespace Planner.Models;
 
-public class JiraFilterSettings
+public class JiraFilterOptions
 {
     public const string SectionName = "JiraFilters";
 

@@ -25,24 +25,24 @@ builder.Services
 builder.Services.AddMudServices();
 
 // Configura Jira - API
-builder.Services.AddOptions<JiraApiSettings>()
-    .BindConfiguration(JiraApiSettings.SectionName)
+builder.Services.AddOptions<JiraApiOptions>()
+    .BindConfiguration(JiraApiOptions.SectionName)
     .ValidateDataAnnotations()
     .ValidateOnStart();
 
 // Configura Jira - Query
-builder.Services.AddOptions<JiraQuerySettings>()
-    .BindConfiguration(JiraQuerySettings.SectionName)
+builder.Services.AddOptions<JiraQueryOptions>()
+    .BindConfiguration(JiraQueryOptions.SectionName)
     .ValidateDataAnnotations()
     .ValidateOnStart();
 
 // Configura Jira - Filtri
-builder.Services.AddOptions<JiraFilterSettings>()
-    .BindConfiguration(JiraFilterSettings.SectionName);
+builder.Services.AddOptions<JiraFilterOptions>()
+    .BindConfiguration(JiraFilterOptions.SectionName);
 
 builder.Services.AddHttpClient<JiraClient>((provider, client) =>
 {
-    var settings = provider.GetRequiredService<IOptions<JiraApiSettings>>().Value;
+    var settings = provider.GetRequiredService<IOptions<JiraApiOptions>>().Value;
 
     var credentials = Convert.ToBase64String(Encoding.ASCII.GetBytes($"{settings.Email}:{settings.ApiToken}"));
 
