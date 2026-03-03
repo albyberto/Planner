@@ -1,4 +1,4 @@
-﻿﻿﻿﻿﻿﻿using System.Text;
+﻿using System.Text;
 using System.Text.Json;
 using JQLBuilder;
 using JQLBuilder.Types.JqlTypes;
