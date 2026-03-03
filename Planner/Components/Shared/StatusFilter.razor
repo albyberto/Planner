@@ -12,7 +12,7 @@
             <MudSelect T="string"
                        Label="Stati"
                        MultiSelection="true"
-                       SelectedValues="_selectedStatuses"
+                       SelectedValues="SelectedStatuses"
                        SelectedValuesChanged="OnStatusChanged"
                        Variant="Variant.Outlined"
                        AnchorOrigin="Origin.BottomCenter"
@@ -27,7 +27,7 @@
             <MudSelect T="string"
                        Label="Assignee"
                        MultiSelection="true"
-                       SelectedValues="_selectedAssignees"
+                       SelectedValues="SelectedAssignees"
                        SelectedValuesChanged="OnAssigneeChanged"
                        Variant="Variant.Outlined"
                        AnchorOrigin="Origin.BottomCenter"
@@ -48,10 +48,10 @@
 
 @code {
     ImmutableList<Status> _statuses = [];
-    ImmutableList<AssigneeRequest> _assignees = []; // Ho usato JiraAssignee basandomi sui messaggi precedenti, adatta se usi AssigneeRequest
+    ImmutableList<AssigneeRequest> _assignees = [];
 
-    HashSet<string> _selectedStatuses = [];
-    HashSet<string> _selectedAssignees = [];
+    public HashSet<string> SelectedStatuses { get; private set; } = [];
+    public HashSet<string> SelectedAssignees { get; private set; } = [];
 
     protected override async Task OnInitializedAsync()
     {
@@ -61,8 +61,8 @@
             _assignees = await JiraClient.GetProjectAssigneesAsync();
 
             var settings = Options.Value;
-            _selectedStatuses = settings.DefaultStatuses;
-            _selectedAssignees = settings.TeamMembers.Select(member => member.Email).ToHashSet();
+            SelectedStatuses = settings.DefaultStatuses;
+            SelectedAssignees = settings.TeamMembers.Select(member => member.Email).ToHashSet();
         }
         catch(Exception exception)
         {
@@ -73,9 +73,9 @@
 
     private Task OnPresetChanged(string? value) => Task.CompletedTask;
 
-    private void OnStatusChanged(IEnumerable<string> values) => _selectedStatuses = values.ToHashSet();
+    private void OnStatusChanged(IEnumerable<string> values) => SelectedStatuses = values.ToHashSet();
 
-    private void OnAssigneeChanged(IEnumerable<string> values) => _selectedAssignees = values.ToHashSet();
+    private void OnAssigneeChanged(IEnumerable<string> values) => SelectedAssignees = values.ToHashSet();
     
     private string GetSelectedAssigneesText(IReadOnlyCollection<string> selectedEmails)
     {
