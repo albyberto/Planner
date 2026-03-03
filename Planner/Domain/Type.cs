@@ -1,10 +1,8 @@
 using System.Text.Json.Serialization;
 
-namespace Planner.Models.Requests;
+namespace Planner.Domain;
 
-// StatusRequest myDeserializedClass = JsonSerializer.Deserialize<List<StatusRequest>>(myJsonResponse);
-
-public record StatusRequest(
+public record Type(
     [property: JsonPropertyName("self")] string Self,
     [property: JsonPropertyName("id")] string Id,
     [property: JsonPropertyName("name")] string Name,

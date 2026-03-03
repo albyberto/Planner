@@ -1,6 +1,6 @@
 using System.Text.Json.Serialization;
 
-namespace Planner.Models;
+namespace Planner.Domain;
 
 public record Status(
     [property: JsonPropertyName("self")] string Self,

@@ -1,7 +1,8 @@
 ﻿@page "/"
 @page "/dashboard"
-@using Planner.Models
-@inject IConfiguration Configuration
+@using System.Collections.Immutable
+@using Planner.Clients
+@using Planner.Domain
 
 <PageTitle>Dashboard</PageTitle>
 
@@ -10,190 +11,31 @@
     Team Dashboard 
 </MudText>
 
-<StatusFilter @ref="" />
+<Filters @ref="_filters" />
 
-@if (_issues != null)
+<ul>
+@foreach (var issue in _issues)
 {
-    <MudGrid>
-        @foreach (var assignee in _issues.GroupBy(i => i.Fields.AssigneeEmail).OrderBy(g => g.Key))
-        {
-            var original = assignee.Sum(i => i.Fields.OriginalEstimateSeconds ?? 0);
-            var spent = assignee.Sum(i => i.Fields.TimeSpentSeconds ?? 0);
-            var remaining = assignee.Sum(i => i.Fields.RemainingEstimateSeconds ?? 0);
-            var versions = assignee.Select(i => i.Fields.FixVersionName).Distinct().OrderBy(v => v).ToList();
-            var issueCount = assignee.Count();
-            var displayName = assignee.First().Fields.AssigneeName;
-
-            <MudItem xs="12">
-                <MudCard Elevation="3">
-                    <MudCardHeader>
-                        <CardHeaderAvatar>
-                            <MudAvatar Color="Color.Primary">
-                                @displayName[0]
-                            </MudAvatar>
-                        </CardHeaderAvatar>
-                        <CardHeaderContent>
-                            <MudText Typo="Typo.h6">@displayName</MudText>
-                            <MudText Typo="Typo.caption">@assignee.Key — @issueCount issue</MudText>
-                        </CardHeaderContent>
-                    </MudCardHeader>
-                    <MudCardContent>
-                        <MudGrid Spacing="2">
-                            <MudItem xs="4">
-                                <MudPaper Class="pa-2 text-center" Elevation="0" Style="background-color: #f5f5f5;">
-                                    <MudText Typo="Typo.caption" Style="color: #757575;">Stima</MudText>
-                                    <MudText Typo="Typo.h6" Style="color: #1976d2;">
-                                        <b>@FormatSeconds(original)</b>
-                                    </MudText>
-                                </MudPaper>
-                            </MudItem>
-                            <MudItem xs="4">
-                                <MudPaper Class="pa-2 text-center" Elevation="0" Style="background-color: #f5f5f5;">
-                                    <MudText Typo="Typo.caption" Style="color: #757575;">Speso</MudText>
-                                    <MudText Typo="Typo.h6" Style="color: #e65100;">
-                                        <b>@FormatSeconds(spent)</b>
-                                    </MudText>
-                                </MudPaper>
-                            </MudItem>
-                            <MudItem xs="4">
-                                <MudPaper Class="pa-2 text-center" Elevation="0" Style="background-color: #f5f5f5;">
-                                    <MudText Typo="Typo.caption" Style="color: #757575;">Rimanente</MudText>
-                                    <MudText Typo="Typo.h6" Style="color: #2e7d32;">
-                                        <b>@FormatSeconds(remaining)</b>
-                                    </MudText>
-                                </MudPaper>
-                            </MudItem>
-                        </MudGrid>
-
-                        @if (original > 0)
-                        {
-                            var progress = spent * 100 / original;
-                            <MudProgressLinear Color="@(progress > 100 ? Color.Error : Color.Primary)"
-                                               Value="@Math.Min(progress, 100)" Class="mt-3 mb-1" Rounded="true" Size="Size.Medium" />
-                            <MudText Typo="Typo.caption" Align="Align.Center">
-                                @progress% completato
-                            </MudText>
-                        }
-
-                        <MudDivider Class="my-3" />
-
-                        <MudText Typo="Typo.subtitle2" Class="mb-1">Fix Versions</MudText>
-                        <div class="d-flex flex-wrap gap-1">
-                            @foreach (var version in versions)
-                            {
-                                <MudChip T="string" Size="Size.Small" Variant="Variant.Outlined" Color="Color.Primary">
-                                    @version
-                                </MudChip>
-                            }
-                        </div>
-
-                        <MudDivider Class="my-3" />
-
-                        <MudText Typo="Typo.subtitle2" Class="mb-1">Issue</MudText>
-                        @foreach (var fvGroup in assignee.GroupBy(i => i.Fields.FixVersionName).OrderBy(g => g.Key))
-                        {
-                            var fvOriginal = fvGroup.Sum(i => i.Fields.OriginalEstimateSeconds ?? 0);
-                            var fvSpent = fvGroup.Sum(i => i.Fields.TimeSpentSeconds ?? 0);
-                            var fvRemaining = fvGroup.Sum(i => i.Fields.RemainingEstimateSeconds ?? 0);
-
-                            <MudPaper Class="mb-2" Elevation="0" Style="background-color: #eeeeee; border-radius: 4px;">
-                                <div class="d-flex align-center pa-2" style="font-size: 0.8rem;">
-                                    <MudIcon Icon="@Icons.Material.Filled.NewReleases" Size="Size.Small" Class="mr-1" Style="color:#757575;" />
-                                    <b>@fvGroup.Key</b>
-                                    <MudSpacer />
-                                    <span style="color:#1976d2;" class="mr-3">Stima: <b>@FormatSeconds(fvOriginal)</b></span>
-                                    <span style="color:#e65100;" class="mr-3">Speso: <b>@FormatSeconds(fvSpent)</b></span>
-                                    <span style="color:#2e7d32;">Rim: <b>@FormatSeconds(fvRemaining)</b></span>
-                                </div>
-                            </MudPaper>
-                            <MudSimpleTable Dense="true" Hover="true" Striped="true" Style="font-size: 0.8rem; margin-bottom: 8px;">
-                                <thead>
-                                    <tr>
-                                        <th>Key</th>
-                                        <th>Sommario</th>
-                                        <th>Stato</th>
-                                        <th>Stima</th>
-                                        <th>Speso</th>
-                                        <th>Rim.</th>
-                                    </tr>
-                                </thead>
-                                <tbody>
-                                    @foreach (var issue in fvGroup)
-                                    {
-                                        <tr>
-                                            <td>
-                                                <MudLink Href="@($"{_jiraBaseUrl}/browse/{issue.Key}")" Target="_blank" Color="Color.Primary" Typo="Typo.caption">
-                                                    @issue.Key
-                                                </MudLink>
-                                            </td>
-                                            <td style="max-width:200px; overflow:hidden; text-overflow:ellipsis; white-space:nowrap;">
-                                                @issue.Fields.Summary
-                                            </td>
-                                            <td>
-                                                <MudChip T="string" Color="@GetStatusColor(issue.Fields.StatusName)" Size="Size.Small" Variant="Variant.Filled">
-                                                    @issue.Fields.StatusName
-                                                </MudChip>
-                                            </td>
-                                            <td>@FormatSeconds(issue.Fields.OriginalEstimateSeconds)</td>
-                                            <td>@FormatSeconds(issue.Fields.TimeSpentSeconds)</td>
-                                            <td>@FormatSeconds(issue.Fields.RemainingEstimateSeconds)</td>
-                                        </tr>
-                                    }
-                                </tbody>
-                            </MudSimpleTable>
-                        }
-                    </MudCardContent>
-                </MudCard>
-            </MudItem>
-        }
-    </MudGrid>
+    <li>@issue.Key</li>
 }
+</ul>
+
+@inject JiraClient Client;
+@inject ISnackbar Snackbar
 
 @code {
-    private List<JiraIssue>? _issues;
-    private string _jiraBaseUrl = string.Empty;
+    private Filters? _filters;
+    private ImmutableList<Issue> _issues = [];
 
-    protected override void OnInitialized()
+    protected override async Task OnInitializedAsync()
     {
-        _jiraBaseUrl = Configuration["Jira:BaseUrl"]?.TrimEnd('/') ?? "";
+        await Search();
     }
 
-    private void OnIssuesLoaded(List<JiraIssue> issues)
+    private async Task Search()
     {
-        _issues = issues;
-    }
-
-    private static string FormatSeconds(int? seconds)
-    {
-        if (seconds is null or 0) return "-";
-        return FormatSecondsValue(seconds.Value);
-    }
-
-    private static string FormatSeconds(int seconds)
-    {
-        if (seconds == 0) return "-";
-        return FormatSecondsValue(seconds);
-    }
-
-    private static string FormatSecondsValue(int seconds)
-    {
-        var days = seconds / 28800;
-        var hours = (seconds % 28800) / 3600;
-        var minutes = (seconds % 3600) / 60;
-
-        if (days > 0 && hours > 0) return $"{days}d {hours}h";
-        if (days > 0) return $"{days}d";
-        if (hours > 0 && minutes > 0) return $"{hours}h {minutes}m";
-        if (hours > 0) return $"{hours}h";
-        return $"{minutes}m";
-    }
-
-    private static Color GetStatusColor(string status)
-    {
-        var s = status.ToLowerInvariant();
-        if (s is "backlog" or "to do") return Color.Default;
-        if (s is "closed" or "done" or "cancelled" or "canceled") return Color.Success;
-        return Color.Info;
+        if(_filters is null) return;
+        _issues = await Client.GetIssuesAsync("project = OPNMS AND status in (\"To Do\", \"In Progress\")");
     }
 }
 

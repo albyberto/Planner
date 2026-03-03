@@ -1,6 +1,6 @@
 using System.Text.Json.Serialization;
 
-namespace Planner.Models;
+namespace Planner.Domain;
 
 public record StatusCategory(
     [property: JsonPropertyName("self")] string Self,

@@ -1,6 +1,6 @@
 using System.Text.Json.Serialization;
 
-namespace Planner.Models;
+namespace Planner.Domain;
 
 public record AvatarUrls(
     [property: JsonPropertyName("48x48")] string _48x48,

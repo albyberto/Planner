@@ -2,9 +2,9 @@
 @using System.Collections.Immutable
 @using Microsoft.Extensions.Options
 @using Planner.Clients
+@using Planner.Domain
 @using Planner.Extensions
 @using Planner.Models
-@using Planner.Models.Requests
 @using Planner.Options
 <MudPaper Class="pa-4 mb-4" Elevation="2">
     <MudGrid>
@@ -43,12 +43,12 @@
 </MudPaper>
 
 @inject IOptions<JiraFilterOptions> Options;
-@inject JiraClient JiraClient
+@inject JiraClient Client
 @inject ISnackbar Snackbar
 
 @code {
     ImmutableList<Status> _statuses = [];
-    ImmutableList<AssigneeRequest> _assignees = [];
+    ImmutableList<User> _assignees = [];
 
     public HashSet<string> SelectedStatuses { get; private set; } = [];
     public HashSet<string> SelectedAssignees { get; private set; } = [];
@@ -57,8 +57,8 @@
     {
         try
         {
-            _statuses = await JiraClient.GetProjectStatusesAsync();
-            _assignees = await JiraClient.GetProjectAssigneesAsync();
+            _statuses = await Client.GetProjectStatusesAsync();
+            _assignees = await Client.GetProjectAssigneesAsync();
 
             var settings = Options.Value;
             SelectedStatuses = settings.DefaultStatuses;

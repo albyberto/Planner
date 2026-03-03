@@ -1,10 +1,8 @@
 using System.Text.Json.Serialization;
 
-namespace Planner.Models.Requests;
+namespace Planner.Domain;
 
-// Root myDeserializedClass = JsonSerializer.Deserialize<List<Root>>(myJsonResponse);
-
-public record AssigneeRequest(
+public record User(
     [property: JsonPropertyName("self")] string Self,
     [property: JsonPropertyName("accountId")] string AccountId,
     [property: JsonPropertyName("accountType")] string AccountType,
