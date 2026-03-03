@@ -1,7 +1,10 @@
-﻿using System.Text;
+﻿﻿﻿﻿﻿﻿using System.Text;
 using System.Text.Json;
+using JQLBuilder;
+using JQLBuilder.Types.JqlTypes;
 using Microsoft.Extensions.Options;
 using Planner.Models;
+using JqlFilter = JQLBuilder.Render.JqlFilter;
 
 namespace Planner.Clients;
 
@@ -14,7 +17,6 @@ public class JiraClient(HttpClient httpClient, IOptions<JiraQuerySettings> query
     private const string UnassignedKey = "__UNASSIGNED__";
 
     public string GetUnassignedKey() => UnassignedKey;
-
 
     /// <summary>
     /// Recupera tutti gli stati disponibili per i progetti configurati.
@@ -67,22 +69,16 @@ public class JiraClient(HttpClient httpClient, IOptions<JiraQuerySettings> query
         var statusList = statuses.ToList();
         if (statusList.Count == 0) return [];
 
-        var formattedProjects = string.Join(", ", _query.ProjectKeys.Select(k => $"\"{k}\""));
-        var formattedStatuses = string.Join(", ", statusList.Select(s => $"\"{s}\""));
-        var jql = $"project IN ({formattedProjects}) AND status IN ({formattedStatuses})";
+        var projectValues = _query.ProjectKeys.Select(k => (JqlProject)k).ToArray();
+        var statusValues = statusList.Select(s => (JqlStatus)s).ToArray();
 
-        if (unassignedOnly)
-        {
-            jql += " AND assignee is EMPTY";
-        }
-        else
-        {
-            var clause = BuildAssigneeClause(assigneeEmails);
-            if (!string.IsNullOrEmpty(clause))
-                jql += $" AND {clause}";
-        }
+        var filter = JqlBuilder.Query
+            .Where(f => f.Project.In(projectValues))
+            .And(f => f.Status.In(statusValues));
 
-        jql += " ORDER BY updated DESC";
+        filter = AppendAssigneeFilter(filter, assigneeEmails, unassignedOnly);
+
+        var jql = $"{filter} ORDER BY updated DESC";
         return await ExecuteJqlAsync(jql, maxResults);
     }
 
@@ -95,49 +91,62 @@ public class JiraClient(HttpClient httpClient, IOptions<JiraQuerySettings> query
         IEnumerable<string>? assigneeEmails = null,
         int maxResults = 50)
     {
-        var formattedProjects = string.Join(", ", _query.ProjectKeys.Select(k => $"\"{k}\""));
-        var jql = $"project IN ({formattedProjects})";
+        var projectValues = _query.ProjectKeys.Select(k => (JqlProject)k).ToArray();
 
-        var clause = BuildAssigneeClause(assigneeEmails);
-        if (!string.IsNullOrEmpty(clause))
-            jql += $" AND {clause}";
+        var filter = JqlBuilder.Query
+            .Where(f => f.Project.In(projectValues));
+
+        filter = AppendAssigneeFilter(filter, assigneeEmails, unassignedOnly: false);
 
         if (!string.IsNullOrEmpty(presetJql))
-            jql += $" AND ({presetJql})";
+        {
+            var jql = $"{filter} AND ({presetJql}) ORDER BY updated DESC";
+            return await ExecuteJqlAsync(jql, maxResults);
+        }
 
-        jql += " ORDER BY updated DESC";
-        return await ExecuteJqlAsync(jql, maxResults);
+        return await ExecuteJqlAsync($"{filter} ORDER BY updated DESC", maxResults);
     }
 
     /// <summary>
-    /// Costruisce la clausola JQL per gli assignee.
+    /// Aggiunge la clausola assignee al filtro JQL.
     /// Se la lista contiene __UNASSIGNED__ e anche email => (assignee IN (...) OR assignee is EMPTY)
     /// Se solo __UNASSIGNED__ => assignee is EMPTY
     /// Se solo email => assignee IN (...)
     /// </summary>
-    private string? BuildAssigneeClause(IEnumerable<string>? assigneeEmails)
+    private static JqlFilter AppendAssigneeFilter(
+        JqlFilter filter,
+        IEnumerable<string>? assigneeEmails,
+        bool unassignedOnly)
     {
-        if (assigneeEmails == null) return null;
+        if (unassignedOnly)
+            return filter.And(f => f.User.Assignee.Is());
+
+        if (assigneeEmails is null)
+            return filter;
+
         var list = assigneeEmails.ToList();
-        if (list.Count == 0) return null;
+        if (list.Count == 0)
+            return filter;
 
         var includeUnassigned = list.Remove(UnassignedKey);
         var hasEmails = list.Count > 0;
 
         if (hasEmails && includeUnassigned)
         {
-            var formatted = string.Join(", ", list.Select(a => $"\"{a}\""));
-            return $"(assignee IN ({formatted}) OR assignee is EMPTY)";
+            var emailValues = list.Select(e => (JqlHistoricalJqlUser)e).ToArray();
+            return filter.And(f => f.User.Assignee.In(emailValues) | f.User.Assignee.Is());
         }
+
         if (hasEmails)
         {
-            var formatted = string.Join(", ", list.Select(a => $"\"{a}\""));
-            return $"assignee IN ({formatted})";
+            var emailValues = list.Select(e => (JqlHistoricalJqlUser)e).ToArray();
+            return filter.And(f => f.User.Assignee.In(emailValues));
         }
-        if (includeUnassigned)
-            return "assignee is EMPTY";
 
-        return null;
+        if (includeUnassigned)
+            return filter.And(f => f.User.Assignee.Is());
+
+        return filter;
     }
 
     /// <summary>

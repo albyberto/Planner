@@ -1,9 +1,4 @@
-using System;
 using System.Text;
-using Microsoft.AspNetCore.Builder;
-using Microsoft.AspNetCore.Hosting;
-using Microsoft.Extensions.DependencyInjection;
-using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Options;
 using MudBlazor.Services;
 using Planner.Clients;
@@ -16,7 +11,10 @@ var builder = WebApplication.CreateBuilder(args);
 builder.Host.UseWindowsService();
 
 // Forza la porta 2306
-builder.WebHost.UseUrls("http://*:2306");
+var port = builder.Configuration.GetValue<string>("Port");
+port = string.IsNullOrEmpty(port) ? "2306" : port;
+
+builder.WebHost.UseUrls($"http://*:{port}");
 
 // Add services to the container.
 builder.Services
