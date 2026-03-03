@@ -1,10 +1,9 @@
-﻿using System.Net.Http.Headers;
-using System.Text;
+﻿using System.Text;
 using System.Text.Json;
 using Microsoft.Extensions.Options;
 using Planner.Models;
 
-namespace Planner.Services;
+namespace Planner.Clients;
 
 /// <summary>
 /// Servizio per comunicare con le API REST di Jira Cloud.

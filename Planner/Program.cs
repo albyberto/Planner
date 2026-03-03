@@ -6,9 +6,9 @@ using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Options;
 using MudBlazor.Services;
+using Planner.Clients;
 using Planner.Components;
 using Planner.Models;
-using Planner.Services;
 
 var builder = WebApplication.CreateBuilder(args);
 
