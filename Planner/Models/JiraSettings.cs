@@ -1,11 +1,18 @@
-﻿﻿namespace Planner.Models;
+﻿using System.ComponentModel.DataAnnotations;
+
+namespace Planner.Models;
 
 public class JiraSettings
 {
     public const string SectionName = "Jira";
 
+    [Required]
     public string BaseUrl { get; set; } = string.Empty;
+
+    [Required]
     public string Email { get; set; } = string.Empty;
+
+    [Required]
     public string ApiToken { get; set; } = string.Empty;
     public IEnumerable<string> ProjectKeys { get; set; } = [];
     public List<string> DefaultStatuses { get; set; } = [];

@@ -27,7 +27,11 @@ builder.Services
 builder.Services.AddMudServices();
 
 // Configura Jira
-builder.Services.Configure<JiraSettings>(builder.Configuration.GetSection(JiraSettings.SectionName));
+builder.Services.AddOptions<JiraSettings>()
+    .BindConfiguration(JiraSettings.SectionName)
+    .ValidateDataAnnotations()
+    .ValidateOnStart();
+
 builder.Services.AddHttpClient<JiraService>((serviceProvider, client) =>
 {
     var settings = serviceProvider.GetRequiredService<IOptions<JiraSettings>>().Value;
