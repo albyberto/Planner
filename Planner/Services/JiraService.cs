@@ -12,24 +12,13 @@ namespace Planner.Services;
 public class JiraService(
     HttpClient httpClient,
     IOptions<JiraQuerySettings> querySettings,
-    IOptions<JiraFilterSettings> filterSettings,
     ILogger<JiraService> logger)
 {
     private readonly JiraQuerySettings _query = querySettings.Value;
-    private readonly JiraFilterSettings _filters = filterSettings.Value;
     private const string UnassignedKey = "__UNASSIGNED__";
 
     public string GetUnassignedKey() => UnassignedKey;
 
-    public List<string> GetTeamMembers() => _filters.TeamMembers.Select(m => m.Email).ToList();
-
-    public List<string> GetDefaultTeamEmails() => _filters.TeamMembers.Where(m => m.IsDefault).Select(m => m.Email).ToList();
-
-    public List<string> GetDefaultStatuses() => _filters.DefaultStatuses;
-
-    public bool IsUnassignedDefault() => _filters.IncludeUnassignedByDefault;
-
-    public List<JiraPreset> GetPresets() => _filters.Presets;
 
     /// <summary>
     /// Recupera tutti gli stati disponibili per i progetti configurati.

@@ -1,6 +1,8 @@
 ﻿@using Planner.Models
 @using Planner.Services
+@using Microsoft.Extensions.Options
 @inject JiraService JiraService
+@inject IOptions<JiraFilterSettings> FilterSettings
 @inject ISnackbar Snackbar
 
 <MudPaper Class="pa-4 mb-4" Elevation="2">
@@ -68,22 +70,23 @@
 
     protected override void OnInitialized()
     {
+        var filters = FilterSettings.Value;
         _unassignedKey = JiraService.GetUnassignedKey();
 
         // Team members ordinati per nome A-Z + "Non assegnato" in fondo
-        _teamMembers = JiraService.GetTeamMembers()
+        _teamMembers = filters.TeamMembers.Select(m => m.Email)
             .OrderBy(e => EmailToName(e), StringComparer.OrdinalIgnoreCase)
             .ToList();
         _teamMembers.Add(_unassignedKey);
 
         // Default: team members con IsDefault + non assegnato se configurato
-        var defaults = JiraService.GetDefaultTeamEmails();
-        if (JiraService.IsUnassignedDefault())
+        var defaults = filters.TeamMembers.Where(m => m.IsDefault).Select(m => m.Email).ToList();
+        if (filters.IncludeUnassignedByDefault)
             defaults.Add(_unassignedKey);
         _selectedAssignees = new HashSet<string>(defaults);
 
-        _selectedStatuses = new HashSet<string>(JiraService.GetDefaultStatuses());
-        _presets = JiraService.GetPresets();
+        _selectedStatuses = new HashSet<string>(filters.DefaultStatuses);
+        _presets = filters.Presets;
     }
 
     protected override async Task OnAfterRenderAsync(bool firstRender)
