@@ -6,123 +6,105 @@
 
 <DashboardLayout Title="Dashboard" Email="@Email">
     @{
-        var globalStats = new TimeStats(context);
-        var groupedIssues = GroupByFixVersion(context);
+        var stats = new TimeStats(context);
+        var groups = GroupByFixVersion(context);
     }
 
-    @* ───── Summary Cards ───── *@
-    <MudGrid Class="mb-4">
-        <MudItem xs="12" sm="4">
-            <MudCard Elevation="2">
-                <MudCardContent Class="d-flex flex-column align-center">
-                    <MudIcon Icon="@Icons.Material.Filled.Schedule" Size="Size.Large" Color="Color.Primary" />
-                    <MudText Typo="Typo.h4" Class="mt-2">@globalStats.OriginalEstimate.ToJiraTime()</MudText>
-                    <MudText Typo="Typo.caption" Color="Color.Secondary">Original Estimate</MudText>
-                </MudCardContent>
-            </MudCard>
-        </MudItem>
-        <MudItem xs="12" sm="4">
-            <MudCard Elevation="2">
-                <MudCardContent Class="d-flex flex-column align-center">
-                    <MudIcon Icon="@Icons.Material.Filled.Timer" Size="Size.Large" Color="Color.Info" />
-                    <MudText Typo="Typo.h4" Class="mt-2">@globalStats.TimeSpent.ToJiraTime()</MudText>
-                    <MudText Typo="Typo.caption" Color="Color.Secondary">Time Spent</MudText>
-                </MudCardContent>
-            </MudCard>
-        </MudItem>
-        <MudItem xs="12" sm="4">
-            <MudCard Elevation="2">
-                <MudCardContent Class="d-flex flex-column align-center">
-                    <MudIcon Icon="@Icons.Material.Filled.HourglassBottom" Size="Size.Large" 
-                             Color="@(globalStats.IsOverBudget ? Color.Error : Color.Success)" />
-                    <MudText Typo="Typo.h4" Class="mt-2" Color="@(globalStats.IsOverBudget ? Color.Error : Color.Default)">
-                        @(globalStats.IsOverBudget ? $"-{globalStats.OverBudgetAmount.ToJiraTime()}" : globalStats.Remaining.ToJiraTime())
-                    </MudText>
-                    <MudText Typo="Typo.caption" Color="Color.Secondary">Remaining</MudText>
-                </MudCardContent>
-            </MudCard>
-        </MudItem>
-    </MudGrid>
+    @* ───── Summary strip ───── *@
+    <div class="d-flex gap-4 flex-wrap align-center mb-4">
+        <MudChip T="string" Icon="@Icons.Material.Filled.Schedule" Color="Color.Primary"
+                 Variant="Variant.Filled" Size="Size.Large">
+            Estimate @stats.OriginalEstimate.ToJiraTime()
+        </MudChip>
+        <MudChip T="string" Icon="@Icons.Material.Filled.Timer" Color="Color.Info"
+                 Variant="Variant.Filled" Size="Size.Large">
+            Spent @stats.TimeSpent.ToJiraTime()
+        </MudChip>
+        <MudChip T="string" Icon="@Icons.Material.Filled.HourglassBottom"
+                 Color="@(stats.IsOverBudget ? Color.Error : Color.Success)"
+                 Variant="Variant.Filled" Size="Size.Large">
+            @(stats.IsOverBudget ? $"Over -{stats.OverBudgetAmount.ToJiraTime()}" : $"Left {stats.Remaining.ToJiraTime()}")
+        </MudChip>
 
-    @* ───── Progress Bar Globale ───── *@
-    <MudPaper Class="pa-3 mb-6" Elevation="2">
-        <div class="d-flex justify-space-between mb-1">
-            <MudText Typo="Typo.body2">Avanzamento complessivo</MudText>
-            <MudText Typo="Typo.body2" Color="@(globalStats.IsOverBudget ? Color.Error : Color.Default)">
-                @($"{globalStats.ProgressPercent:F0}%")
-            </MudText>
-        </div>
-        <MudProgressLinear Value="@globalStats.ProgressPercent" 
-                           Color="@(globalStats.IsOverBudget ? Color.Error : Color.Primary)" 
-                           Rounded="true" Size="Size.Large" />
-    </MudPaper>
+        <MudProgressLinear Value="@stats.ProgressPercent"
+                           Color="@(stats.IsOverBudget ? Color.Error : Color.Primary)"
+                           Rounded="true" Size="Size.Medium"
+                           Style="flex:1;min-width:120px" />
+        <MudText Typo="Typo.body2" Color="@(stats.IsOverBudget ? Color.Error : Color.Default)" Style="white-space:nowrap">
+            @($"{stats.ProgressPercent:F0}%")
+        </MudText>
+    </div>
 
-    @* ───── Grouped by Fix Version ───── *@
-    @foreach (var group in groupedIssues)
+    @* ───── Fix Version groups ───── *@
+    @foreach (var group in groups)
     {
-        var groupStats = new TimeStats(group.Issues);
+        var g = new TimeStats(group.Issues);
 
-        <MudPaper Class="pa-4 mb-4" Elevation="2">
-            <div class="d-flex align-center justify-space-between mb-2">
-                <MudText Typo="Typo.h6">
-                    <MudIcon Icon="@Icons.Material.Filled.NewReleases" Class="mr-1" Size="Size.Small" />
-                    @group.VersionName
-                </MudText>
-                <div class="d-flex gap-4">
-                    <MudText Typo="Typo.body2"><strong>Estimate:</strong> @groupStats.OriginalEstimate.ToJiraTime()</MudText>
-                    <MudText Typo="Typo.body2"><strong>Spent:</strong> @groupStats.TimeSpent.ToJiraTime()</MudText>
-                    <MudText Typo="Typo.body2" Color="@(groupStats.IsOverBudget ? Color.Error : Color.Default)">
-                        <strong>Remaining:</strong> @(groupStats.IsOverBudget ? $"-{groupStats.OverBudgetAmount.ToJiraTime()}" : groupStats.Remaining.ToJiraTime())
-                    </MudText>
-                </div>
+        <MudPaper Class="pa-3 mb-3" Elevation="1" Style="border-left:4px solid var(--mud-palette-primary)">
+            @* header compatto *@
+            <div class="d-flex align-center flex-wrap gap-2 mb-1">
+                <MudIcon Icon="@Icons.Material.Filled.NewReleases" Size="Size.Small" Color="Color.Primary" />
+                <MudText Typo="Typo.subtitle1" Style="font-weight:600">@group.VersionName</MudText>
+                <MudSpacer />
+                <MudChip T="string" Size="Size.Small" Color="Color.Primary" Variant="Variant.Text">@g.OriginalEstimate.ToJiraTime()</MudChip>
+                <MudChip T="string" Size="Size.Small" Color="Color.Info" Variant="Variant.Text">@g.TimeSpent.ToJiraTime()</MudChip>
+                <MudChip T="string" Size="Size.Small" Color="@(g.IsOverBudget ? Color.Error : Color.Success)" Variant="Variant.Text">
+                    @(g.IsOverBudget ? $"-{g.OverBudgetAmount.ToJiraTime()}" : g.Remaining.ToJiraTime())
+                </MudChip>
+                <MudProgressLinear Value="@g.ProgressPercent"
+                                   Color="@(g.IsOverBudget ? Color.Error : Color.Primary)"
+                                   Rounded="true" Size="Size.Small"
+                                   Style="width:100px" />
             </div>
 
-            <MudProgressLinear Value="@groupStats.ProgressPercent" 
-                               Color="@(groupStats.IsOverBudget ? Color.Error : Color.Primary)" 
-                               Rounded="true" Size="Size.Small" Class="mb-3" />
-
-            <MudTable Items="@group.Issues" Dense="true" Hover="true" Elevation="0" Striped="true">
-                <HeaderContent>
-                    <MudTh Style="width:32px"></MudTh>
-                    <MudTh>Key</MudTh>
-                    <MudTh>Summary</MudTh>
-                    <MudTh>Status</MudTh>
-                    <MudTh Style="text-align:right">Estimate</MudTh>
-                    <MudTh Style="text-align:right">Spent</MudTh>
-                    <MudTh Style="text-align:right">Remaining</MudTh>
-                    <MudTh>Components</MudTh>
-                    <MudTh>Labels</MudTh>
-                </HeaderContent>
-                <RowTemplate Context="issue">
-                    @{
-                        // Sfruttiamo i metodi di estensione puliti creati prima!
+            @* tabella compatta *@
+            <MudSimpleTable Dense="true" Hover="true" Style="background:transparent">
+                <thead>
+                    <tr>
+                        <th style="width:24px"></th>
+                        <th style="width:100px">Key</th>
+                        <th>Summary</th>
+                        <th style="width:120px">Status</th>
+                        <th style="width:70px;text-align:right">Est</th>
+                        <th style="width:70px;text-align:right">Spent</th>
+                        <th style="width:70px;text-align:right">Left</th>
+                        <th>Components</th>
+                        <th>Labels</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    @foreach (var issue in group.Issues)
+                    {
                         var est = issue.GetOriginalEstimate();
                         var sp = issue.GetTimeSpent();
                         var rem = Math.Max(est - sp, 0);
+                        var rowOver = est > 0 && sp > est;
+                        <tr>
+                            <td><TypeIcon IssueType="@issue.Fields.IssueType" /></td>
+                            <td><IssueKey Issue="@issue" /></td>
+                            <td style="max-width:350px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">@issue.Fields.Summary</td>
+                            <td><StatusBadge Status="@issue.Fields.Status" /></td>
+                            <td style="text-align:right">@est.ToJiraTime()</td>
+                            <td style="text-align:right;color:var(--mud-palette-info)">@sp.ToJiraTime()</td>
+                            <td style="text-align:right;color:@(rowOver ? "var(--mud-palette-error)" : "var(--mud-palette-success)")">
+                                @(rowOver ? $"-{(sp - est).ToJiraTime()}" : rem.ToJiraTime())
+                            </td>
+                            <td>
+                                @foreach (var c in issue.Fields.Components ?? [])
+                                {
+                                    <ComponentChip Component="@c" />
+                                }
+                            </td>
+                            <td>
+                                @foreach (var l in issue.Fields.Labels ?? [])
+                                {
+                                    <LabelChip Label="@l" />
+                                }
+                            </td>
+                        </tr>
                     }
-                    <MudTd><TypeIcon IssueType="@issue.Fields.IssueType" /></MudTd>
-                    <MudTd><IssueKey Issue="@issue" /></MudTd>
-                    <MudTd>@issue.Fields.Summary</MudTd>
-                    <MudTd><StatusBadge Status="@issue.Fields.Status" /></MudTd>
-                    
-                    <MudTd Style="text-align:right">@est.ToJiraTime()</MudTd>
-                    <MudTd Style="text-align:right">@sp.ToJiraTime()</MudTd>
-                    <MudTd Style="text-align:right">@rem.ToJiraTime()</MudTd>
-                    
-                    <MudTd>
-                        @foreach (var comp in issue.Fields.Components != null ? issue.Fields.Components : [])
-                        {
-                            <ComponentChip Component="@comp" />
-                        }
-                    </MudTd>
-                    <MudTd>
-                        @foreach (var label in issue.Fields.Labels != null ? issue.Fields.Labels : [])
-                        {
-                            <LabelChip Label="@label" />
-                        }
-                    </MudTd>
-                </RowTemplate>
-            </MudTable>
+                </tbody>
+            </MudSimpleTable>
         </MudPaper>
     }
 </DashboardLayout>
@@ -130,26 +112,20 @@
 @code {
     [Parameter] public string? Email { get; set; }
 
-    // Helper method per raggruppare ordinatamente le versioni
-    private IEnumerable<(string VersionName, IEnumerable<Issue> Issues)> GroupByFixVersion(IEnumerable<Issue> issues)
+    private static IEnumerable<(string VersionName, List<Issue> Issues)> GroupByFixVersion(IEnumerable<Issue> issues)
     {
         return issues
-            .SelectMany(i => (i.Fields.FixVersions != null ? i.Fields.FixVersions.Count > 0 : false)
+            .SelectMany(i => (i.Fields.FixVersions is { Count: > 0 })
                 ? i.Fields.FixVersions.Select(v => (Version: v.Name, Issue: i))
-                : new[] { (Version: "Senza Fix Version", Issue: i) })
+                : [(Version: "Senza Fix Version", Issue: i)])
             .GroupBy(x => x.Version)
             .OrderBy(g => g.Key)
-            .Select(g => (g.Key, g.Select(x => x.Issue)));
+            .Select(g => (g.Key, g.Select(x => x.Issue).ToList()));
     }
 
-    // Un piccolo Record che si occupa in automatico di tutta la logica matematica di raggruppamento!
     private record TimeStats(int OriginalEstimate, int TimeSpent)
     {
-        public TimeStats(IEnumerable<Issue> issues) : this(
-            OriginalEstimate: issues.Sum(i => i.GetOriginalEstimate()),
-            TimeSpent: issues.Sum(i => i.GetTimeSpent())
-        ) {}
-
+        public TimeStats(IEnumerable<Issue> issues) : this(issues.Sum(i => i.GetOriginalEstimate()), issues.Sum(i => i.GetTimeSpent())) { }
         public int Remaining => Math.Max(OriginalEstimate - TimeSpent, 0);
         public bool IsOverBudget => OriginalEstimate > 0 && TimeSpent > OriginalEstimate;
         public int OverBudgetAmount => IsOverBudget ? TimeSpent - OriginalEstimate : 0;
