@@ -5,6 +5,7 @@
 @using Planner.Extensions
 @using Planner.Model
 @using Planner.Options
+
 <MudPaper Class="pa-4 mb-4" Elevation="2">
     <MudGrid>
         <MudItem xs="12" sm="4" md="4">
@@ -64,6 +65,9 @@
     [Parameter] public bool? ForcedIncludeUnassigned { get; set; }
     [Parameter] public bool ShowAssigneeFilter { get; set; } = true;
 
+    // Tracking dei parametri precedenti per evitare notifiche inutili
+    private HashSet<string>? _prevForcedAssignees;
+    private bool? _prevForcedIncludeUnassigned;
     private bool _isLoaded;
     
     ImmutableList<Status> _statuses = [];
@@ -78,6 +82,10 @@
             _statuses = await Client.GetProjectStatusesAsync();
             _assignees = await Client.GetProjectAssigneesAsync();
             _isLoaded = true;
+
+            // Primo filtro: usiamo i default dalle options
+            RebuildFilter();
+            await NotifyFilterChanged();
         }
         catch (Exception exception)
         {
@@ -89,17 +97,35 @@
     protected override async Task OnParametersSetAsync()
     {
         if (!_isLoaded) return;
-
-        var settings = Options.Value;
         
-        var statuses = Filter.Statuses.Count > 0 ? Filter.Statuses : settings.DefaultStatuses;
+        // Notifica solo se i parametri forzati sono davvero cambiati
+        var assigneesChanged = !SameAssignees(_prevForcedAssignees, ForcedAssignees);
+        var unassignedChanged = _prevForcedIncludeUnassigned != ForcedIncludeUnassigned;
+        
+        if (!assigneesChanged && !unassignedChanged) return;
+        
+        _prevForcedAssignees = ForcedAssignees;
+        _prevForcedIncludeUnassigned = ForcedIncludeUnassigned;
 
-        var assignees = ForcedAssignees ?? settings.TeamMembers.Select(member => member.Email).ToHashSet();
+        RebuildFilter();
+        await NotifyFilterChanged();
+    }
+
+    private void RebuildFilter()
+    {
+        var settings = Options.Value;
+        var assignees = ForcedAssignees ?? settings.TeamMembers.Select(m => m.Email).ToHashSet();
         var includeUnassigned = ForcedIncludeUnassigned ?? settings.IncludeUnassignedByDefault;
+        var statuses = settings.DefaultStatuses;
 
         Filter = new(assignees, statuses, includeUnassigned);
-
-        await NotifyFilterChanged();
+    }
+    
+    private static bool SameAssignees(HashSet<string>? a, HashSet<string>? b)
+    {
+        if (ReferenceEquals(a, b)) return true;
+        if (a is null || b is null) return false;
+        return a.SetEquals(b);
     }
 
     private async Task OnStatusChanged(IEnumerable<string> values)

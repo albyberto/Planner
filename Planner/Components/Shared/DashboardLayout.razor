@@ -4,19 +4,16 @@
 @using Planner.Model
 @using Planner.Services
 
-<PageTitle>@_title</PageTitle>
-
 <MudText Typo="Typo.h4" GutterBottom="true">
     <MudIcon Icon="@Icons.Material.Filled.Dashboard" Class="mr-2" />
-    @_title
+    @Title
 </MudText>
 
 <Filters OnFilterChanged="OnFilterChanged"
-         ShowAssigneeFilter="@_showAssigneeFilter"
-         ForcedAssignees="@_forcedAssignees"
-         ForcedIncludeUnassigned="@_forcedIncludeUnassigned" />
+         ShowAssigneeFilter="@ShowAssigneeFilter"
+         ForcedAssignees="@ForcedAssignees"
+         ForcedIncludeUnassigned="@ForcedIncludeUnassigned" />
 
-@* UNA SOLA PROGRESS BAR: Mostrata solo durante il fetch dei dati *@
 @if (_loading)
 {
     <MudProgressLinear Color="Color.Primary" Indeterminate="true" Class="my-4" />
@@ -31,54 +28,20 @@ else
 @inject ISnackbar Snackbar
 
 @code {
-    [Parameter] public string? Email { get; set; }
+    [Parameter, EditorRequired] public string Title { get; set; } = string.Empty;
     [Parameter, EditorRequired] public RenderFragment<ImmutableList<Issue>> ChildContent { get; set; } = default!;
+    [Parameter] public bool ShowAssigneeFilter { get; set; } = true;
+    [Parameter] public HashSet<string>? ForcedAssignees { get; set; }
+    [Parameter] public bool? ForcedIncludeUnassigned { get; set; }
 
     private ImmutableList<Issue> _issues = [];
     private bool _loading;
-    
-    // Variabili di stato interne derivate dalla rotta
-    private string _title = "Team Dashboard";
-    private bool _showAssigneeFilter = true;
-    private HashSet<string>? _forcedAssignees;
-    private bool? _forcedIncludeUnassigned;
-
-    protected override async Task OnParametersSetAsync()
-    {
-        // Analizziamo la rotta (Email) e impostiamo i 3 casi
-        if (string.IsNullOrEmpty(Email))
-        {
-            _title = "Team Dashboard";
-            _showAssigneeFilter = true;
-            _forcedAssignees = null;
-            _forcedIncludeUnassigned = null;
-        }
-        else if (Email.Equals(Constants.Unassigned, StringComparison.OrdinalIgnoreCase))
-        {
-            _title = "Non Assegnate";
-            _showAssigneeFilter = false;
-            _forcedAssignees = [];
-            _forcedIncludeUnassigned = true;
-        }
-        else
-        {
-            var decoded = Uri.UnescapeDataString(Email);
-            var users = await Client.GetProjectAssigneesAsync();
-            var name = users.FirstOrDefault(u => u.EmailAddress.Equals(decoded, StringComparison.OrdinalIgnoreCase))?.DisplayName ?? decoded;
-
-            _title = $"Dashboard — {name}";
-            _showAssigneeFilter = false;
-            _forcedAssignees = [decoded];
-            _forcedIncludeUnassigned = false;
-        }
-    }
 
     private async Task OnFilterChanged(Filter filter)
     {
         try
         {
             _loading = true;
-            StateHasChanged(); // Forza il render per mostrare la progress bar
 
             var jql = QueryBuilder.BuildDashboardQuery(filter);
             _issues = await Client.GetIssuesAsync(jql);
