@@ -1,13 +1,12 @@
 ﻿@page "/"
 @page "/dashboard"
 @page "/dashboard/{Email}"
-@using Planner.Domain
 @using Planner.Extensions
 
 <DashboardLayout Title="Dashboard" Email="@Email">
     @{
-        var stats = new TimeStats(context);
-        var groups = GroupByFixVersion(context);
+        var stats = context.GetTimeStats();
+        var groups = context.GroupByFixVersion();
     }
 
     @* ───── Summary strip ───── *@
@@ -15,23 +14,23 @@
         <MudItem>
             <MudChip T="string" Icon="@Icons.Material.Filled.Schedule" Color="Color.Primary"
                      Variant="Variant.Filled" Size="Size.Large">
-                Estimate @stats.OriginalEstimate.ToJiraTime()
+                Estimate @stats.FormattedEstimate
             </MudChip>
         </MudItem>
         <MudItem>
             <MudChip T="string" Icon="@Icons.Material.Filled.Timer" Color="Color.Info"
                      Variant="Variant.Filled" Size="Size.Large">
-                Spent @stats.TimeSpent.ToJiraTime()
+                Spent @stats.FormattedSpent
             </MudChip>
         </MudItem>
         <MudItem>
             <MudChip T="string" Icon="@Icons.Material.Filled.HourglassBottom"
                      Color="@(stats.IsOverBudget ? Color.Error : Color.Success)"
                      Variant="Variant.Filled" Size="Size.Large">
-                @(stats.IsOverBudget ? $"Over -{stats.OverBudgetAmount.ToJiraTime()}" : $"Left {stats.Remaining.ToJiraTime()}")
+                @(stats.IsOverBudget ? $"Over {stats.FormattedRemaining}" : $"Left {stats.FormattedRemaining}")
             </MudChip>
         </MudItem>
-        <MudItem>
+        <MudItem> @* Aggiunto 'xs' per fargli riempire lo spazio rimanente *@
             <MudProgressLinear Value="@stats.ProgressPercent"
                                Color="@(stats.IsOverBudget ? Color.Error : Color.Primary)"
                                Rounded="true" Size="Size.Medium" />
@@ -46,7 +45,8 @@
     @* ───── Fix Version groups ───── *@
     @foreach (var group in groups)
     {
-        var g = new TimeStats(group.Issues);
+        // Calcolo automatico tramite extension method sulla lista del gruppo
+        var g = group.Issues.GetTimeStats();
 
         <MudPaper Class="pa-4 mb-4" Elevation="2">
             @* header *@
@@ -58,17 +58,17 @@
                     <MudText Typo="Typo.subtitle1"><b>@group.VersionName</b></MudText>
                 </MudItem>
                 <MudItem>
-                    @* Spazio flessibile per spingere i chip a destra *@
+                    @* spacer flessibile per spingere i chip a destra *@
                 </MudItem>
                 <MudItem>
-                    <MudChip T="string" Size="Size.Small" Color="Color.Primary" Variant="Variant.Text">@g.OriginalEstimate.ToJiraTime()</MudChip>
+                    <MudChip T="string" Size="Size.Small" Color="Color.Primary" Variant="Variant.Text">@g.FormattedEstimate</MudChip>
                 </MudItem>
                 <MudItem>
-                    <MudChip T="string" Size="Size.Small" Color="Color.Info" Variant="Variant.Text">@g.TimeSpent.ToJiraTime()</MudChip>
+                    <MudChip T="string" Size="Size.Small" Color="Color.Info" Variant="Variant.Text">@g.FormattedSpent</MudChip>
                 </MudItem>
                 <MudItem>
                     <MudChip T="string" Size="Size.Small" Color="@(g.IsOverBudget ? Color.Error : Color.Success)" Variant="Variant.Text">
-                        @(g.IsOverBudget ? $"-{g.OverBudgetAmount.ToJiraTime()}" : g.Remaining.ToJiraTime())
+                        @g.FormattedRemaining
                     </MudChip>
                 </MudItem>
                 <MudItem xs="12" md="2">
@@ -92,10 +92,6 @@
                     <MudTh>Labels</MudTh>
                 </HeaderContent>
                 <RowTemplate Context="issue">
-                    @{
-                        // Un'unica riga per calcolare tutto!
-                        var issueStats = new TimeStats(issue);
-                    }
                     <MudTd DataLabel="Type" Class="mud-text-align-center">
                         <TypeIcon IssueType="@issue.Fields.IssueType" />
                     </MudTd>
@@ -108,17 +104,20 @@
                     <MudTd DataLabel="Status">
                         <StatusBadge Status="@issue.Fields.Status" />
                     </MudTd>
+                    
+                    @* Utilizzo della nuova proprietà .Stats integrata in Issue *@
                     <MudTd DataLabel="Est" Class="mud-text-align-end">
-                        @issueStats.OriginalEstimate.ToJiraTime()
+                        @issue.Stats.FormattedEstimate
                     </MudTd>
                     <MudTd DataLabel="Spent" Class="mud-text-align-end">
-                        <MudText Typo="Typo.body2" Color="Color.Info">@issueStats.TimeSpent.ToJiraTime()</MudText>
+                        <MudText Typo="Typo.body2" Color="Color.Info">@issue.Stats.FormattedSpent</MudText>
                     </MudTd>
                     <MudTd DataLabel="Left" Class="mud-text-align-end">
-                        <MudText Typo="Typo.body2" Color="@(issueStats.IsOverBudget ? Color.Error : Color.Success)">
-                            @(issueStats.IsOverBudget ? $"-{issueStats.OverBudgetAmount.ToJiraTime()}" : issueStats.Remaining.ToJiraTime())
+                        <MudText Typo="Typo.body2" Color="@(issue.Stats.IsOverBudget ? Color.Error : Color.Success)">
+                            @issue.Stats.FormattedRemaining
                         </MudText>
                     </MudTd>
+                    
                     <MudTd DataLabel="Components">
                         @foreach (var c in issue.Fields.Components ?? [])
                         {
@@ -139,29 +138,4 @@
 
 @code {
     [Parameter] public string? Email { get; set; }
-
-    private static IEnumerable<(string VersionName, List<Issue> Issues)> GroupByFixVersion(IEnumerable<Issue> issues)
-    {
-        return issues
-            .SelectMany(issue => issue.Fields.FixVersions is { Count: > 0 }
-                ? issue.Fields.FixVersions.Select(v => (Version: v.Name, Issue: issue))
-                : [(Version: "Senza Fix Version", Issue: issue)])
-            .GroupBy(tuple => tuple.Version)
-            .OrderBy(group => group.Key)
-            .Select(group => (group.Key, group.Select(x => x.Issue).ToList()));
-    }
-
-    private record TimeStats(int OriginalEstimate, int TimeSpent)
-    {
-        public TimeStats(IReadOnlyCollection<Issue> issues) 
-            : this(issues.Sum(i => i.GetOriginalEstimate()), issues.Sum(i => i.GetTimeSpent())) { }
-    
-        public TimeStats(Issue issue) 
-            : this(issue.GetOriginalEstimate(), issue.GetTimeSpent()) { }
-    
-        public int Remaining => Math.Max(OriginalEstimate - TimeSpent, 0);
-        public bool IsOverBudget => OriginalEstimate > 0 && TimeSpent > OriginalEstimate;
-        public int OverBudgetAmount => IsOverBudget ? TimeSpent - OriginalEstimate : 0;
-        public double ProgressPercent => OriginalEstimate > 0 ? Math.Min((double)TimeSpent / OriginalEstimate * 100, 100) : 0;
-    }
 }
