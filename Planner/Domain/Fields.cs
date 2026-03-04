@@ -6,11 +6,11 @@ public record Fields(
     [property: JsonPropertyName("summary")] string Summary,
     [property: JsonPropertyName("issuetype")] IssueType IssueType,
     [property: JsonPropertyName("components")] IReadOnlyList<Component> Components,
-    [property: JsonPropertyName("created")] DateTime? Created,
+    [property: JsonPropertyName("created")] string? Created,
     [property: JsonPropertyName("worklog")] Worklog Worklog,
     [property: JsonPropertyName("assignee")] User Assignee,
     [property: JsonPropertyName("fixVersions")] IReadOnlyList<FixVersion> FixVersions,
-    [property: JsonPropertyName("updated")] DateTime? Updated,
+    [property: JsonPropertyName("updated")] string? Updated,
     [property: JsonPropertyName("status")] Status Status,
     [property: JsonPropertyName("timetracking")] TimeTracking TimeTracking,
     [property: JsonPropertyName("labels")] IReadOnlyList<string> Labels
