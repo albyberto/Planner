@@ -1,0 +1,14 @@
+@using Planner.Extensions
+
+<MudTooltip Text="@($"Spent {Stats.FormattedSpent} / Estimate {Stats.FormattedEstimate}")" Arrow="true" Class="mud-width-full">
+    <MudProgressLinear Value="@Stats.ProgressPercent" Min="0" Max="100"
+                       Color="@(Stats.IsOverBudget ? Color.Error : Color.Primary)"
+                       Rounded="true" Size="@Size" Class="mud-width-full">
+        <MudText Typo="Typo.caption"><b>@($"{Stats.ProgressPercent:F0}%")</b></MudText>
+    </MudProgressLinear>
+</MudTooltip>
+
+@code {
+    [Parameter, EditorRequired] public required TimeStats Stats { get; set; }
+    [Parameter] public Size Size { get; set; } = Size.Large;
+}
