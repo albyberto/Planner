@@ -32,30 +32,22 @@
     
     private ImmutableList<Issue> _issues = [];
     private string _title = "Team Dashboard";
-    private bool _showAssigneeFilter = true;
-    private bool _isUnassignedRoute;
-    private string? _decodedEmail;
 
     protected override async Task OnParametersSetAsync()
     {
-        _isUnassignedRoute = false;
-        _decodedEmail = null;
-        _showAssigneeFilter = string.IsNullOrEmpty(Email);
-
         if (string.IsNullOrEmpty(Email))
         {
             _title = "Team Dashboard";
         }
-        else if (Email.Equals("unassigned", StringComparison.OrdinalIgnoreCase))
+        else if (Email.Equals(Constants.Unassigned, StringComparison.OrdinalIgnoreCase))
         {
             _title = "Non Assegnate";
-            _isUnassignedRoute = true;
         }
         else
         {
-            _decodedEmail = Uri.UnescapeDataString(Email);
+            var email = Uri.UnescapeDataString(Email);
             var users = await Client.GetProjectAssigneesAsync();
-            var name = users.FirstOrDefault(u => u.EmailAddress.Equals(_decodedEmail, StringComparison.OrdinalIgnoreCase))?.DisplayName ?? _decodedEmail;
+            var name = users.FirstOrDefault(u => u.EmailAddress.Equals(email, StringComparison.OrdinalIgnoreCase))?.DisplayName ?? email;
             _title = $"Dashboard — {name}";
         }
     }

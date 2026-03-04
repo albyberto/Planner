@@ -15,7 +15,7 @@
                 @member.DisplayName
             </MudNavLink>
         }
-        <MudNavLink Href="/dashboard/unassigned" Match="NavLinkMatch.All" Icon="@Icons.Material.Filled.PersonOff">
+        <MudNavLink Href="@UnassignedHref" Match="NavLinkMatch.All" Icon="@Icons.Material.Filled.PersonOff">
             Non Assegnate
         </MudNavLink>
     </MudNavGroup>
@@ -26,7 +26,8 @@
 
 @code {
     private record NavMember(string Email, string DisplayName);
-    
+
+    private const string UnassignedHref = $"/dashboard/{Constants.Unassigned}";
     private List<NavMember> _members = [];
 
     protected override async Task OnInitializedAsync()
