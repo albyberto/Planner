@@ -26,7 +26,7 @@ else
 }
 
 @inject JqlFilterBuilder QueryBuilder
-@inject JiraClient Client
+@inject JiraReadClient ReadClient
 @inject ISnackbar Snackbar
 
 @code {
@@ -63,7 +63,7 @@ else
         else
         {
             var decoded = Uri.UnescapeDataString(Email);
-            var users = await Client.GetProjectAssigneesAsync();
+            var users = await ReadClient.GetProjectAssigneesAsync();
             var user = users.FirstOrDefault(u => u.EmailAddress.Equals(decoded, StringComparison.OrdinalIgnoreCase));
             var name = user?.FormattedDisplayName ?? decoded;
 
@@ -80,7 +80,7 @@ else
         {
             _loading = true;
             var jql = QueryBuilder.BuildDashboardQuery(filter);
-            _issues = await Client.GetIssuesAsync(jql);
+            _issues = await ReadClient.GetIssuesAsync(jql);
         }
         catch (Exception)
         {

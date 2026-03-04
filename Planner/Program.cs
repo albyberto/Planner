@@ -49,7 +49,7 @@ builder.Services.AddOptions<JiraFilterOptions>()
 builder.Services.AddSingleton<JqlFilterBuilder>();
 
 // HTTP Clients
-builder.Services.AddHttpClient<JiraClient>((provider, client) =>
+builder.Services.AddHttpClient<JiraReadClient>((provider, client) =>
 {
     var settings = provider.GetRequiredService<IOptions<JiraApiOptions>>().Value;
 

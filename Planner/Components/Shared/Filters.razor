@@ -54,7 +54,7 @@
 </MudPaper>
 
 @inject IOptions<JiraFilterOptions> Options
-@inject JiraClient Client
+@inject JiraReadClient ReadClient
 @inject ISnackbar Snackbar
 
 @code {
@@ -75,8 +75,8 @@
     {
         try
         {
-            _statuses = await Client.GetProjectStatusesAsync();
-            _assignees = await Client.GetProjectAssigneesAsync();
+            _statuses = await ReadClient.GetProjectStatusesAsync();
+            _assignees = await ReadClient.GetProjectAssigneesAsync();
             _isLoaded = true;
         }
         catch

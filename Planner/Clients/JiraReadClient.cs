@@ -8,7 +8,7 @@ using Type = Planner.Domain.Type;
 
 namespace Planner.Clients;
 
-public class JiraClient(HttpClient httpClient, IOptions<JiraQueryOptions> options, IDistributedCache cache, ILogger<JiraClient> logger)
+public class JiraReadClient(HttpClient httpClient, IOptions<JiraQueryOptions> options, IDistributedCache cache, ILogger<JiraReadClient> logger)
 {
     private readonly JiraQueryOptions _settings = options.Value;
 

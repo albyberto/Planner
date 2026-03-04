@@ -21,7 +21,7 @@
     </MudNavGroup>
 </MudNavMenu>
 
-@inject JiraClient Client
+@inject JiraReadClient ReadClient
 @inject IOptions<JiraFilterOptions> FilterOptions
 
 @code {
@@ -32,7 +32,7 @@
     {
         try
         {
-            var users = await Client.GetProjectAssigneesAsync();
+            var users = await ReadClient.GetProjectAssigneesAsync();
             var emails = FilterOptions.Value.TeamMembers
                 .Select(m => m.Email)
                 .ToHashSet(StringComparer.OrdinalIgnoreCase);
