@@ -1,5 +1,6 @@
 ﻿@page "/"
 @page "/dashboard"
+@page "/dashboard/{Email}"
 @using System.Collections.Immutable
 @using Planner.Clients
 @using Planner.Domain
@@ -10,7 +11,7 @@
 
 <MudText Typo="Typo.h4" GutterBottom="true">
     <MudIcon Icon="@Icons.Material.Filled.Dashboard" Class="mr-2" />
-    Team Dashboard 
+    @_title
 </MudText>
 
 <Filters OnFilterChanged="Search"/>
@@ -22,24 +23,59 @@
 }
 </ul>
 
-@inject JiraClient Client;
+@inject JiraClient Client
 @inject JqlFilterBuilder QueryBuilder
 @inject ISnackbar Snackbar
 
 @code {
+    [Parameter] public string? Email { get; set; }
+    
     private ImmutableList<Issue> _issues = [];
+    private string _title = "Team Dashboard";
+
+    protected override async Task OnParametersSetAsync()
+    {
+        if (string.IsNullOrEmpty(Email))
+        {
+            _title = "Team Dashboard";
+        }
+        else if (Email.Equals("unassigned", StringComparison.OrdinalIgnoreCase))
+        {
+            _title = "Non Assegnate";
+        }
+        else
+        {
+            var decoded = Uri.UnescapeDataString(Email);
+            var users = await Client.GetProjectAssigneesAsync();
+            var name = users.FirstOrDefault(u => u.EmailAddress.Equals(decoded, StringComparison.OrdinalIgnoreCase))?.DisplayName ?? decoded;
+            _title = $"Dashboard — {name}";
+        }
+    }
 
     private async Task Search(Filter filter)
     {
         try 
         {
+            // Se c'è un'email nel route, forza il filtro su quell'utente
+            if (!string.IsNullOrEmpty(Email))
+            {
+                var decoded = Uri.UnescapeDataString(Email);
+                if (decoded.Equals("unassigned", StringComparison.OrdinalIgnoreCase))
+                {
+                    filter = filter with { Assignees = [] };
+                }
+                else
+                {
+                    filter = filter with { Assignees = [decoded] };
+                }
+            }
+            
             var jql = QueryBuilder.BuildDashboardQuery(filter);
             _issues = await Client.GetIssuesAsync(jql);
         }
-        catch (Exception ex)
+        catch (Exception)
         {
             Snackbar.Add("Errore durante il recupero delle issue.", Severity.Error);
         }
     }
 }
-

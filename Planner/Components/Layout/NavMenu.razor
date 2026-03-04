@@ -1,14 +1,52 @@
-﻿<MudNavMenu>
-     <MudNavLink Href="" Match="NavLinkMatch.All" Icon="@Icons.Material.Filled.Dashboard">
-         Dashboard
-     </MudNavLink>
-     <MudNavLink Href="unassigned" Match="NavLinkMatch.Prefix" Icon="@Icons.Material.Filled.PersonOff">
-         Non Assegnate
-     </MudNavLink>
-    <MudNavLink Href="by-version" Match="NavLinkMatch.Prefix" Icon="@Icons.Material.Filled.NewReleases">
-        Per Fix Version
-    </MudNavLink>
-    <MudNavLink Href="by-assignee" Match="NavLinkMatch.Prefix" Icon="@Icons.Material.Filled.People">
-        Per Assignee
-    </MudNavLink>
+﻿@using Microsoft.Extensions.Options
+@using Planner.Clients
+@using Planner.Options
+
+<MudNavMenu>
+    <MudNavGroup Title="Dashboard" Icon="@Icons.Material.Filled.Dashboard" Expanded="true">
+        <MudNavLink Href="/dashboard" Match="NavLinkMatch.All" Icon="@Icons.Material.Filled.Groups">
+            Team
+        </MudNavLink>
+        @foreach (var member in _members)
+        {
+            <MudNavLink Href="@($"/dashboard/{Uri.EscapeDataString(member.Email)}")"
+                        Match="NavLinkMatch.All"
+                        Icon="@Icons.Material.Filled.Person">
+                @member.DisplayName
+            </MudNavLink>
+        }
+        <MudNavLink Href="/dashboard/unassigned" Match="NavLinkMatch.All" Icon="@Icons.Material.Filled.PersonOff">
+            Non Assegnate
+        </MudNavLink>
+    </MudNavGroup>
 </MudNavMenu>
+
+@inject JiraClient Client
+@inject IOptions<JiraFilterOptions> FilterOptions
+
+@code {
+    private record NavMember(string Email, string DisplayName);
+    
+    private List<NavMember> _members = [];
+
+    protected override async Task OnInitializedAsync()
+    {
+        try
+        {
+            var users = await Client.GetProjectAssigneesAsync();
+            var emails = FilterOptions.Value.TeamMembers
+                .Select(m => m.Email)
+                .ToHashSet(StringComparer.OrdinalIgnoreCase);
+
+            _members = users
+                .Where(user => emails.Contains(user.EmailAddress))
+                .Select(user => new NavMember(user.EmailAddress, user.DisplayName))
+                .OrderBy(nav => nav.DisplayName)
+                .ToList();
+        }
+        catch
+        {
+            // fallback: mostra solo Team e Non Assegnate
+        }
+    }
+}

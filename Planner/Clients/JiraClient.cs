@@ -1,5 +1,6 @@
-﻿using System.Collections.Frozen;
-using System.Collections.Immutable;
+﻿using System.Collections.Immutable;
+using System.Text.Json;
+using Microsoft.Extensions.Caching.Distributed;
 using Microsoft.Extensions.Options;
 using Planner.Domain;
 using Planner.Models;
@@ -7,12 +8,18 @@ using Type = Planner.Domain.Type;
 
 namespace Planner.Clients;
 
-public class JiraClient(HttpClient httpClient, IOptions<JiraQueryOptions> options, ILogger<JiraClient> logger)
+public class JiraClient(HttpClient httpClient, IOptions<JiraQueryOptions> options, IDistributedCache cache, ILogger<JiraClient> logger)
 {
     private readonly JiraQueryOptions _settings = options.Value;
 
     public async Task<ImmutableList<Status>> GetProjectStatusesAsync(CancellationToken cancellationToken = default)
     {
+        const string cacheKey = "jira:statuses";
+
+        var cached = await cache.GetStringAsync(cacheKey, cancellationToken);
+        if (cached is not null)
+            return JsonSerializer.Deserialize<ImmutableList<Status>>(cached) ?? [];
+
         var tasks = _settings.ProjectKeys.Select(async project =>
         {
             try
@@ -29,17 +36,31 @@ public class JiraClient(HttpClient httpClient, IOptions<JiraQueryOptions> option
 
         var results = await Task.WhenAll(tasks);
 
-        return results
+        var statuses = results
             .SelectMany(requests => requests)
             .SelectMany(request => request.Statuses)
             .DistinctBy(status => status.Id)
             .OrderBy(status => status.StatusCategory.Id)
             .ThenBy(status => status.Id)
             .ToImmutableList();
+
+        var cacheOptions = new DistributedCacheEntryOptions
+        {
+            AbsoluteExpirationRelativeToNow = TimeSpan.FromHours(1440)
+        };
+        
+        await cache.SetStringAsync(cacheKey, JsonSerializer.Serialize(statuses), cacheOptions, cancellationToken);
+        return statuses;
     }
 
     public async Task<ImmutableList<User>> GetProjectAssigneesAsync(CancellationToken cancellationToken = default)
     {
+        const string cacheKey = "jira:assignees";
+
+        var cached = await cache.GetStringAsync(cacheKey, cancellationToken);
+        if (cached is not null)
+            return JsonSerializer.Deserialize<ImmutableList<User>>(cached) ?? [];
+
         var tasks = _settings.ProjectKeys.Select(async projectKey =>
         {
             try
@@ -56,12 +77,20 @@ public class JiraClient(HttpClient httpClient, IOptions<JiraQueryOptions> option
 
         var results = await Task.WhenAll(tasks);
 
-        return results
+        var assignees = results
             .SelectMany(users => users)
             .Where(user => !string.IsNullOrEmpty(user.EmailAddress))
             .DistinctBy(user => user.AccountId)
             .OrderBy(user => user.DisplayName)
             .ToImmutableList();
+
+        var cacheOptions = new DistributedCacheEntryOptions
+        {
+            AbsoluteExpirationRelativeToNow = TimeSpan.FromHours(16)
+        };
+        
+        await cache.SetStringAsync(cacheKey, JsonSerializer.Serialize(assignees), cacheOptions, cancellationToken);
+        return assignees;
     }
     
     public async Task<ImmutableList<Issue>> GetIssuesAsync(string jql, CancellationToken cancellationToken = default)

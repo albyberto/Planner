@@ -26,6 +26,9 @@ builder.Services
 // MudBlazor
 builder.Services.AddMudServices();
 
+// Cache
+builder.Services.AddDistributedMemoryCache();
+
 // Configura Jira - API
 builder.Services.AddOptions<JiraApiOptions>()
     .BindConfiguration(JiraApiOptions.SectionName)
