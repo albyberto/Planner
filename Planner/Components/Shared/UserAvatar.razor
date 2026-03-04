@@ -1,0 +1,36 @@
+@using Planner.Domain
+
+<div class="d-flex align-center gap-2">
+    <MudAvatar Size="@Size">
+        @if (!string.IsNullOrWhiteSpace(AvatarUrl))
+        {
+            <MudImage Src="@AvatarUrl" Alt="@User.DisplayName" />
+        }
+        else
+        {
+            @Initials
+        }
+    </MudAvatar>
+        
+    @if (ShowName && !string.IsNullOrWhiteSpace(User.DisplayName))
+    {
+        <MudText Typo="Typo.body2">@User.DisplayName</MudText>
+    }
+</div>
+
+@code {
+    [Parameter, EditorRequired] public User User { get; set; } = null!;
+    [Parameter] public Size Size { get; set; } = Size.Small;
+    [Parameter] public bool ShowName { get; set; } = true;
+
+    private string AvatarUrl => Size switch
+    {
+        Size.Small => User.AvatarUrls._16x16,
+        Size.Medium => User.AvatarUrls._32x32,
+        _ => User.AvatarUrls._48x48
+    };
+
+    private string Initials => string.IsNullOrWhiteSpace(User.DisplayName) 
+        ? "?" 
+        : User.DisplayName[..1].ToUpperInvariant();
+}

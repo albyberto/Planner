@@ -1,5 +1,6 @@
 ﻿@using Microsoft.Extensions.Options
 @using Planner.Clients
+@using Planner.Domain
 @using Planner.Options
 
 <MudNavMenu>
@@ -7,12 +8,11 @@
         <MudNavLink Href="/dashboard" Match="NavLinkMatch.All" Icon="@Icons.Material.Filled.Groups">
             Team
         </MudNavLink>
-        @foreach (var member in _members)
+        @foreach (var user in _members)
         {
-            <MudNavLink Href="@($"/dashboard/{Uri.EscapeDataString(member.Email)}")"
-                        Match="NavLinkMatch.All"
-                        Icon="@Icons.Material.Filled.Person">
-                @member.DisplayName
+            <MudNavLink Href="@($"/dashboard/{Uri.EscapeDataString(user.EmailAddress)}")"
+                        Match="NavLinkMatch.All">
+                <UserAvatar User="@user" Size="Size.Small" />
             </MudNavLink>
         }
         <MudNavLink Href="@UnassignedHref" Match="NavLinkMatch.All" Icon="@Icons.Material.Filled.PersonOff">
@@ -25,10 +25,8 @@
 @inject IOptions<JiraFilterOptions> FilterOptions
 
 @code {
-    private record NavMember(string Email, string DisplayName);
-
     private const string UnassignedHref = $"/dashboard/{Constants.Unassigned}";
-    private List<NavMember> _members = [];
+    private List<User> _members = [];
 
     protected override async Task OnInitializedAsync()
     {
@@ -41,8 +39,7 @@
 
             _members = users
                 .Where(user => emails.Contains(user.EmailAddress))
-                .Select(user => new NavMember(user.EmailAddress, user.DisplayName))
-                .OrderBy(nav => nav.DisplayName)
+                .OrderBy(user => user.DisplayName)
                 .ToList();
         }
         catch
