@@ -67,6 +67,7 @@
             var statuses = settings.DefaultStatuses;
 
             Filter = new(assignees, statuses);
+            await NotifyFilterChanged();
         }
         catch (Exception exception)
         {
