@@ -1,4 +1,4 @@
-page "/home"
+@page "/home"
 
 <PageTitle>Home - Planner</PageTitle>
 
@@ -6,7 +6,7 @@ page "/home"
     <MudIcon Icon="@Icons.Material.Filled.Rocket" Size="Size.Large" Color="Color.Primary" Class="mr-3" />
     <div>
         <MudText Typo="Typo.h3">Planner</MudText>
-        <MudText Typo="Typo.subtitle1" Style="color: #757575;">
+        <MudText Typo="Typo.subtitle1" Color="Color.Secondary">
             Monitora il carico di lavoro del team e lo stato delle release Jira
         </MudText>
     </div>
@@ -16,7 +16,7 @@ page "/home"
 
 <MudGrid Spacing="4">
     <MudItem xs="12" sm="6" md="4">
-        <MudCard Elevation="3" Style="height:100%">
+        <MudCard Elevation="3" Class="d-flex flex-column mud-height-full">
             <MudCardHeader>
                 <CardHeaderAvatar>
                     <MudAvatar Color="Color.Primary" Variant="Variant.Filled">
@@ -25,7 +25,7 @@ page "/home"
                 </CardHeaderAvatar>
                 <CardHeaderContent>
                     <MudText Typo="Typo.h6">Dashboard</MudText>
-                    <MudText Typo="Typo.caption" Style="color: #9e9e9e;">Panoramica team</MudText>
+                    <MudText Typo="Typo.caption" Color="Color.Secondary">Panoramica team</MudText>
                 </CardHeaderContent>
             </MudCardHeader>
             <MudCardContent>
@@ -43,7 +43,7 @@ page "/home"
     </MudItem>
 
     <MudItem xs="12" sm="6" md="4">
-        <MudCard Elevation="3" Style="height:100%">
+        <MudCard Elevation="3" Class="d-flex flex-column mud-height-full">
             <MudCardHeader>
                 <CardHeaderAvatar>
                     <MudAvatar Color="Color.Secondary" Variant="Variant.Filled">
@@ -52,7 +52,7 @@ page "/home"
                 </CardHeaderAvatar>
                 <CardHeaderContent>
                     <MudText Typo="Typo.h6">Per Fix Version</MudText>
-                    <MudText Typo="Typo.caption" Style="color: #9e9e9e;">Dettaglio release</MudText>
+                    <MudText Typo="Typo.caption" Color="Color.Secondary">Dettaglio release</MudText>
                 </CardHeaderContent>
             </MudCardHeader>
             <MudCardContent>
@@ -70,7 +70,7 @@ page "/home"
     </MudItem>
 
     <MudItem xs="12" sm="6" md="4">
-        <MudCard Elevation="3" Style="height:100%">
+        <MudCard Elevation="3" Class="d-flex flex-column mud-height-full">
             <MudCardHeader>
                 <CardHeaderAvatar>
                     <MudAvatar Color="Color.Tertiary" Variant="Variant.Filled">
@@ -79,7 +79,7 @@ page "/home"
                 </CardHeaderAvatar>
                 <CardHeaderContent>
                     <MudText Typo="Typo.h6">Per Assignee</MudText>
-                    <MudText Typo="Typo.caption" Style="color: #9e9e9e;">Dettaglio persone</MudText>
+                    <MudText Typo="Typo.caption" Color="Color.Secondary">Dettaglio persone</MudText>
                 </CardHeaderContent>
             </MudCardHeader>
             <MudCardContent>
@@ -99,23 +99,23 @@ page "/home"
 
 <MudDivider Class="my-6" />
 
-<MudPaper Class="pa-4" Elevation="1" Style="background-color: #fafafa;">
+<MudPaper Class="pa-4" Elevation="1">
     <MudGrid>
         <MudItem xs="12" md="4" Class="d-flex align-center">
-            <MudIcon Icon="@Icons.Material.Filled.FilterList" Class="mr-2" Style="color: #9e9e9e;" />
-            <MudText Typo="Typo.body2" Style="color: #616161;">
+            <MudIcon Icon="@Icons.Material.Filled.FilterList" Class="mr-2" Color="Color.Secondary" />
+            <MudText Typo="Typo.body2" Color="Color.Secondary">
                 <b>6 stati filtrabili:</b> Backlog, To Do, In Progress, Paused, In Review, Done
             </MudText>
         </MudItem>
         <MudItem xs="12" md="4" Class="d-flex align-center">
-            <MudIcon Icon="@Icons.Material.Filled.Speed" Class="mr-2" Style="color: #9e9e9e;" />
-            <MudText Typo="Typo.body2" Style="color: #616161;">
+            <MudIcon Icon="@Icons.Material.Filled.Speed" Class="mr-2" Color="Color.Secondary" />
+            <MudText Typo="Typo.body2" Color="Color.Secondary">
                 <b>Time tracking:</b> Stima originale, tempo speso, rimanente
             </MudText>
         </MudItem>
         <MudItem xs="12" md="4" Class="d-flex align-center">
-            <MudIcon Icon="@Icons.Material.Filled.Sync" Class="mr-2" Style="color: #9e9e9e;" />
-            <MudText Typo="Typo.body2" Style="color: #616161;">
+            <MudIcon Icon="@Icons.Material.Filled.Sync" Class="mr-2" Color="Color.Secondary" />
+            <MudText Typo="Typo.body2" Color="Color.Secondary">
                 <b>Dati live</b> dalla Jira REST API v3
             </MudText>
         </MudItem>

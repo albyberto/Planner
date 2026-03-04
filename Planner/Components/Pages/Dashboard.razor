@@ -111,11 +111,13 @@
                     <MudTd DataLabel="Est" Class="mud-text-align-end">
                         @issueStats.OriginalEstimate.ToJiraTime()
                     </MudTd>
-                    <MudTd DataLabel="Spent" Class="mud-text-align-end mud-info-text">
-                        @issueStats.TimeSpent.ToJiraTime()
+                    <MudTd DataLabel="Spent" Class="mud-text-align-end">
+                        <MudText Typo="Typo.body2" Color="Color.Info">@issueStats.TimeSpent.ToJiraTime()</MudText>
                     </MudTd>
-                    <MudTd DataLabel="Left" Class="@(issueStats.IsOverBudget ? "mud-text-align-end mud-error-text" : "mud-text-align-end mud-success-text")">
-                        @(issueStats.IsOverBudget ? $"-{issueStats.OverBudgetAmount.ToJiraTime()}" : issueStats.Remaining.ToJiraTime())
+                    <MudTd DataLabel="Left" Class="mud-text-align-end">
+                        <MudText Typo="Typo.body2" Color="@(issueStats.IsOverBudget ? Color.Error : Color.Success)">
+                            @(issueStats.IsOverBudget ? $"-{issueStats.OverBudgetAmount.ToJiraTime()}" : issueStats.Remaining.ToJiraTime())
+                        </MudText>
                     </MudTd>
                     <MudTd DataLabel="Components">
                         @foreach (var c in issue.Fields.Components ?? [])
