@@ -64,7 +64,8 @@ else
         {
             var decoded = Uri.UnescapeDataString(Email);
             var users = await Client.GetProjectAssigneesAsync();
-            var name = users.FirstOrDefault(u => u.EmailAddress.Equals(decoded, StringComparison.OrdinalIgnoreCase)) != null ? users.FirstOrDefault(u => u.EmailAddress.Equals(decoded, StringComparison.OrdinalIgnoreCase)).DisplayName : decoded;
+            var user = users.FirstOrDefault(u => u.EmailAddress.Equals(decoded, StringComparison.OrdinalIgnoreCase));
+            var name = user?.FormattedDisplayName ?? decoded;
 
             _displayTitle = $"{Title} — {name}";
             _showAssigneeFilter = false;

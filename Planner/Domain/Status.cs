@@ -1,3 +1,4 @@
+using System.Globalization;
 using System.Text.Json.Serialization;
 
 namespace Planner.Domain;
@@ -10,4 +11,10 @@ public record Status(
     [property: JsonPropertyName("untranslatedName")] string UntranslatedName,
     [property: JsonPropertyName("id")] string Id,
     [property: JsonPropertyName("statusCategory")] StatusCategory StatusCategory
-);
+)
+{
+    [JsonIgnore]
+    public string FormattedDisplayName => string.IsNullOrWhiteSpace(Name) 
+        ? Name 
+        : CultureInfo.CurrentCulture.TextInfo.ToTitleCase(Name.ToLower());
+}

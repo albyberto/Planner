@@ -2,7 +2,6 @@
 @using Microsoft.Extensions.Options
 @using Planner.Clients
 @using Planner.Domain
-@using Planner.Extensions
 @using Planner.Model
 @using Planner.Options
 
@@ -20,7 +19,7 @@
                        MultiSelectionTextFunc="@(selected => GetSelectedStatuesText(selected))">
                 @foreach (var status in _statuses)
                 {
-                    <MudSelectItem T="string" Value="@status.Name">@status.Name.ToTitleCase()</MudSelectItem>
+                    <MudSelectItem T="string" Value="@status.Name">@status.FormattedDisplayName</MudSelectItem>
                 }
             </MudSelect>
         </MudItem>
@@ -39,7 +38,7 @@
                            MultiSelectionTextFunc="@(selected => GetSelectedAssigneesText(selected))">
                     @foreach (var assignee in _assignees)
                     {
-                        <MudSelectItem T="string" Value="@assignee.EmailAddress">@assignee.DisplayName.ToTitleCase()</MudSelectItem>
+                        <MudSelectItem T="string" Value="@assignee.EmailAddress">@assignee.FormattedDisplayName</MudSelectItem>
                     }
                 </MudSelect>
             </MudItem>
@@ -129,13 +128,13 @@
         await NotifyFilterChanged();
     }
 
-    private static string GetSelectedStatuesText(IReadOnlyCollection<string?>? statuses)
+    private string GetSelectedStatuesText(IReadOnlyCollection<string?>? statuses)
     {
         statuses ??= [];
         if (statuses.Count == 0) return string.Empty;
-        var names = statuses
-            .Where(s => !string.IsNullOrEmpty(s))
-            .Select(s => s!.ToTitleCase());
+        var names = _statuses
+            .Where(s => statuses.Contains(s.Name))
+            .Select(s => s.FormattedDisplayName);
         return string.Join(", ", names);
     }
 
@@ -145,7 +144,7 @@
         if (emails.Count == 0) return string.Empty;
         var names = _assignees
             .Where(a => emails.Contains(a.EmailAddress))
-            .Select(a => string.IsNullOrWhiteSpace(a.DisplayName) ? a.EmailAddress : a.DisplayName);
+            .Select(a => string.IsNullOrWhiteSpace(a.FormattedDisplayName) ? a.EmailAddress : a.FormattedDisplayName);
         return string.Join(", ", names);
     }
 

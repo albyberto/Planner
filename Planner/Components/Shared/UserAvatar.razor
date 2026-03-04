@@ -14,7 +14,7 @@
         
     @if (ShowName && !string.IsNullOrWhiteSpace(User.DisplayName))
     {
-        <MudText Typo="Typo.body2">@User.DisplayName</MudText>
+        <MudText Typo="Typo.body2">@User.FormattedDisplayName</MudText>
     }
 </div>
 
