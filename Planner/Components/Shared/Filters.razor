@@ -60,40 +60,46 @@
 
 @code {
     [Parameter] public EventCallback<Filter> OnFilterChanged { get; set; }
+    [Parameter] public HashSet<string>? ForcedAssignees { get; set; }
+    [Parameter] public bool? ForcedIncludeUnassigned { get; set; }
     [Parameter] public bool ShowAssigneeFilter { get; set; } = true;
 
+    private bool _isLoaded;
+    
     ImmutableList<Status> _statuses = [];
     ImmutableList<User> _assignees = [];
 
     public Filter Filter = new();
-
+    
     protected override async Task OnInitializedAsync()
     {
         try
         {
             _statuses = await Client.GetProjectStatusesAsync();
             _assignees = await Client.GetProjectAssigneesAsync();
-
-            var settings = Options.Value;
-            var statuses = settings.DefaultStatuses;
-
-            if (ShowAssigneeFilter)
-            {
-                var assignees = settings.TeamMembers.Select(member => member.Email).ToHashSet();
-                Filter = new(assignees, statuses, settings.IncludeUnassignedByDefault);
-            }
-            else
-            {
-                Filter = new(Statuses: statuses);
-            }
-
-            await NotifyFilterChanged();
+            _isLoaded = true;
         }
         catch (Exception exception)
         {
             Snackbar.Add("Errore durante il recupero dei dati da Jira.", Severity.Error);
             Console.WriteLine(exception.Message);
         }
+    }
+
+    protected override async Task OnParametersSetAsync()
+    {
+        if (!_isLoaded) return;
+
+        var settings = Options.Value;
+        
+        var statuses = Filter.Statuses.Count > 0 ? Filter.Statuses : settings.DefaultStatuses;
+
+        var assignees = ForcedAssignees ?? settings.TeamMembers.Select(member => member.Email).ToHashSet();
+        var includeUnassigned = ForcedIncludeUnassigned ?? settings.IncludeUnassignedByDefault;
+
+        Filter = new(assignees, statuses, includeUnassigned);
+
+        await NotifyFilterChanged();
     }
 
     private async Task OnStatusChanged(IEnumerable<string> values)
