@@ -2,7 +2,9 @@
 
 @if (!string.IsNullOrEmpty(IssueType.IconUrl))
 {
-    <MudImage Src="@IssueType.IconUrl" Width="20" Height="20" Alt="@IssueType.Name" Class="d-inline-flex" />
+    <MudTooltip Text="@IssueType.Name" Arrow="true">
+        <MudImage Src="@IssueType.IconUrl" Width="20" Height="20" Alt="@IssueType.Name" Class="d-inline-flex" />
+    </MudTooltip>
 }
 
 @code {

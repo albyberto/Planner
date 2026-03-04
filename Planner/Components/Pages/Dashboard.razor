@@ -30,15 +30,14 @@
                 @(stats.IsOverBudget ? $"Over {stats.FormattedRemaining}" : $"Left {stats.FormattedRemaining}")
             </MudChip>
         </MudItem>
-        <MudItem> @* Aggiunto 'xs' per fargli riempire lo spazio rimanente *@
-            <MudProgressLinear Value="@stats.ProgressPercent"
-                               Color="@(stats.IsOverBudget ? Color.Error : Color.Primary)"
-                               Rounded="true" Size="Size.Medium" />
-        </MudItem>
-        <MudItem>
-            <MudText Typo="Typo.body2" Color="@(stats.IsOverBudget ? Color.Error : Color.Default)">
-                @($"{stats.ProgressPercent:F0}%")
-            </MudText>
+        <MudItem xs="12" sm="6" md="4">
+            <MudTooltip Text="@($"Spent {stats.FormattedSpent} / Estimate {stats.FormattedEstimate}")" Arrow="true">
+                <MudProgressLinear Value="@stats.ProgressPercent" Min="0" Max="100"
+                                   Color="@(stats.IsOverBudget ? Color.Error : Color.Primary)"
+                                   Rounded="true" Size="Size.Large">
+                    <MudText Typo="Typo.caption"><b>@($"{stats.ProgressPercent:F0}%")</b></MudText>
+                </MudProgressLinear>
+            </MudTooltip>
         </MudItem>
     </MudGrid>
 
@@ -72,9 +71,13 @@
                     </MudChip>
                 </MudItem>
                 <MudItem xs="12" md="2">
-                    <MudProgressLinear Value="@g.ProgressPercent"
-                                       Color="@(g.IsOverBudget ? Color.Error : Color.Primary)"
-                                       Rounded="true" Size="Size.Small" />
+                    <MudTooltip Text="@($"Spent {g.FormattedSpent} / Estimate {g.FormattedEstimate}")" Arrow="true">
+                        <MudProgressLinear Value="@g.ProgressPercent" Min="0" Max="100"
+                                           Color="@(g.IsOverBudget ? Color.Error : Color.Primary)"
+                                           Rounded="true" Size="Size.Medium">
+                            <MudText Typo="Typo.caption"><b>@($"{g.ProgressPercent:F0}%")</b></MudText>
+                        </MudProgressLinear>
+                    </MudTooltip>
                 </MudItem>
             </MudGrid>
 
