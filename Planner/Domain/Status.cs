@@ -1,5 +1,6 @@
 using System.Globalization;
 using System.Text.Json.Serialization;
+using Planner.Extensions;
 
 namespace Planner.Domain;
 
@@ -13,8 +14,5 @@ public record Status(
     [property: JsonPropertyName("statusCategory")] StatusCategory StatusCategory
 )
 {
-    [JsonIgnore]
-    public string FormattedDisplayName => string.IsNullOrWhiteSpace(Name) 
-        ? Name 
-        : CultureInfo.CurrentCulture.TextInfo.ToTitleCase(Name.ToLower());
+    [JsonIgnore] public string FormattedDisplayName => Name.ToTitleCase();
 }
