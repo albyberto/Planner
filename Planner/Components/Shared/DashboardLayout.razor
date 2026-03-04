@@ -78,8 +78,6 @@ else
         try
         {
             _loading = true;
-            StateHasChanged(); // Forza il render per far comparire la progress bar
-
             var jql = QueryBuilder.BuildDashboardQuery(filter);
             _issues = await Client.GetIssuesAsync(jql);
         }
@@ -90,7 +88,6 @@ else
         finally
         {
             _loading = false;
-            StateHasChanged();
         }
     }
 }

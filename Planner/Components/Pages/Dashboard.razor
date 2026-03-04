@@ -1,16 +1,159 @@
 ﻿@page "/"
 @page "/dashboard"
 @page "/dashboard/{Email}"
+@using Planner.Domain
+@using Planner.Extensions
 
 <DashboardLayout Title="Dashboard" Email="@Email">
-    <ul>
-        @foreach (var issue in context)
-        {
-            <li>@issue.Key — @issue.Fields.Summary</li>
-        }
-    </ul>
+    @{
+        // Calcoliamo le statistiche globali passandogli l'intera lista di contest
+        var globalStats = new TimeStats(context);
+        var groupedIssues = GroupByFixVersion(context);
+    }
+
+    @* ───── Summary Cards ───── *@
+    <MudGrid Class="mb-4">
+        <MudItem xs="12" sm="4">
+            <MudCard Elevation="2">
+                <MudCardContent Class="d-flex flex-column align-center">
+                    <MudIcon Icon="@Icons.Material.Filled.Schedule" Size="Size.Large" Color="Color.Primary" />
+                    <MudText Typo="Typo.h4" Class="mt-2">@globalStats.OriginalEstimate.ToJiraTime()</MudText>
+                    <MudText Typo="Typo.caption" Color="Color.Secondary">Original Estimate</MudText>
+                </MudCardContent>
+            </MudCard>
+        </MudItem>
+        <MudItem xs="12" sm="4">
+            <MudCard Elevation="2">
+                <MudCardContent Class="d-flex flex-column align-center">
+                    <MudIcon Icon="@Icons.Material.Filled.Timer" Size="Size.Large" Color="Color.Info" />
+                    <MudText Typo="Typo.h4" Class="mt-2">@globalStats.TimeSpent.ToJiraTime()</MudText>
+                    <MudText Typo="Typo.caption" Color="Color.Secondary">Time Spent</MudText>
+                </MudCardContent>
+            </MudCard>
+        </MudItem>
+        <MudItem xs="12" sm="4">
+            <MudCard Elevation="2">
+                <MudCardContent Class="d-flex flex-column align-center">
+                    <MudIcon Icon="@Icons.Material.Filled.HourglassBottom" Size="Size.Large" 
+                             Color="@(globalStats.IsOverBudget ? Color.Error : Color.Success)" />
+                    <MudText Typo="Typo.h4" Class="mt-2" Color="@(globalStats.IsOverBudget ? Color.Error : Color.Default)">
+                        @(globalStats.IsOverBudget ? $"-{globalStats.OverBudgetAmount.ToJiraTime()}" : globalStats.Remaining.ToJiraTime())
+                    </MudText>
+                    <MudText Typo="Typo.caption" Color="Color.Secondary">Remaining</MudText>
+                </MudCardContent>
+            </MudCard>
+        </MudItem>
+    </MudGrid>
+
+    @* ───── Progress Bar Globale ───── *@
+    <MudPaper Class="pa-3 mb-6" Elevation="2">
+        <div class="d-flex justify-space-between mb-1">
+            <MudText Typo="Typo.body2">Avanzamento complessivo</MudText>
+            <MudText Typo="Typo.body2" Color="@(globalStats.IsOverBudget ? Color.Error : Color.Default)">
+                @($"{globalStats.ProgressPercent:F0}%")
+            </MudText>
+        </div>
+        <MudProgressLinear Value="@globalStats.ProgressPercent" 
+                           Color="@(globalStats.IsOverBudget ? Color.Error : Color.Primary)" 
+                           Rounded="true" Size="Size.Large" />
+    </MudPaper>
+
+    @* ───── Grouped by Fix Version ───── *@
+    @foreach (var group in groupedIssues)
+    {
+        var groupStats = new TimeStats(group.Issues);
+
+        <MudPaper Class="pa-4 mb-4" Elevation="2">
+            <div class="d-flex align-center justify-space-between mb-2">
+                <MudText Typo="Typo.h6">
+                    <MudIcon Icon="@Icons.Material.Filled.NewReleases" Class="mr-1" Size="Size.Small" />
+                    @group.VersionName
+                </MudText>
+                <div class="d-flex gap-4">
+                    <MudText Typo="Typo.body2"><strong>Estimate:</strong> @groupStats.OriginalEstimate.ToJiraTime()</MudText>
+                    <MudText Typo="Typo.body2"><strong>Spent:</strong> @groupStats.TimeSpent.ToJiraTime()</MudText>
+                    <MudText Typo="Typo.body2" Color="@(groupStats.IsOverBudget ? Color.Error : Color.Default)">
+                        <strong>Remaining:</strong> @(groupStats.IsOverBudget ? $"-{groupStats.OverBudgetAmount.ToJiraTime()}" : groupStats.Remaining.ToJiraTime())
+                    </MudText>
+                </div>
+            </div>
+
+            <MudProgressLinear Value="@groupStats.ProgressPercent" 
+                               Color="@(groupStats.IsOverBudget ? Color.Error : Color.Primary)" 
+                               Rounded="true" Size="Size.Small" Class="mb-3" />
+
+            <MudTable Items="@group.Issues" Dense="true" Hover="true" Elevation="0" Striped="true">
+                <HeaderContent>
+                    <MudTh Style="width:32px"></MudTh>
+                    <MudTh>Key</MudTh>
+                    <MudTh>Summary</MudTh>
+                    <MudTh>Status</MudTh>
+                    <MudTh Style="text-align:right">Estimate</MudTh>
+                    <MudTh Style="text-align:right">Spent</MudTh>
+                    <MudTh Style="text-align:right">Remaining</MudTh>
+                    <MudTh>Components</MudTh>
+                    <MudTh>Labels</MudTh>
+                </HeaderContent>
+                <RowTemplate Context="issue">
+                    @{
+                        // Sfruttiamo i metodi di estensione puliti creati prima!
+                        int est = issue.GetOriginalEstimate();
+                        int sp = issue.GetTimeSpent();
+                        int rem = Math.Max(est - sp, 0);
+                    }
+                    <MudTd><JiraIssueTypeIcon IssueType="@issue.Fields.IssueType" /></MudTd>
+                    <MudTd><IssueLink Issue="@issue" /></MudTd>
+                    <MudTd>@issue.Fields.Summary</MudTd>
+                    <MudTd><StatusBadge Status="@issue.Fields.Status" /></MudTd>
+                    
+                    <MudTd Style="text-align:right">@est.ToJiraTime()</MudTd>
+                    <MudTd Style="text-align:right">@sp.ToJiraTime()</MudTd>
+                    <MudTd Style="text-align:right">@rem.ToJiraTime()</MudTd>
+                    
+                    <MudTd>
+                        @foreach (var comp in issue.Fields.Components ?? [])
+                        {
+                            <JiraComponentChip Component="@comp" />
+                        }
+                    </MudTd>
+                    <MudTd>
+                        @foreach (var label in issue.Fields.Labels ?? [])
+                        {
+                            <JiraLabelChip Label="@label" />
+                        }
+                    </MudTd>
+                </RowTemplate>
+            </MudTable>
+        </MudPaper>
+    }
 </DashboardLayout>
 
 @code {
     [Parameter] public string? Email { get; set; }
+
+    // Helper method per raggruppare ordinatamente le versioni
+    private IEnumerable<(string VersionName, IEnumerable<Issue> Issues)> GroupByFixVersion(IEnumerable<Issue> issues)
+    {
+        return issues
+            .SelectMany(i => i.Fields.FixVersions?.Count > 0
+                ? i.Fields.FixVersions.Select(v => (Version: v.Name, Issue: i))
+                : new[] { (Version: "Senza Fix Version", Issue: i) })
+            .GroupBy(x => x.Version)
+            .OrderBy(g => g.Key)
+            .Select(g => (g.Key, g.Select(x => x.Issue)));
+    }
+
+    // Un piccolo Record che si occupa in automatico di tutta la logica matematica di raggruppamento!
+    private record TimeStats(int OriginalEstimate, int TimeSpent)
+    {
+        public TimeStats(IEnumerable<Issue> issues) : this(
+            OriginalEstimate: issues.Sum(i => i.GetOriginalEstimate()),
+            TimeSpent: issues.Sum(i => i.GetTimeSpent())
+        ) {}
+
+        public int Remaining => Math.Max(OriginalEstimate - TimeSpent, 0);
+        public bool IsOverBudget => OriginalEstimate > 0 && TimeSpent > OriginalEstimate;
+        public int OverBudgetAmount => IsOverBudget ? TimeSpent - OriginalEstimate : 0;
+        public double ProgressPercent => OriginalEstimate > 0 ? Math.Min((double)TimeSpent / OriginalEstimate * 100, 100) : 0;
+    }
 }

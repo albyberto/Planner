@@ -1,0 +1,27 @@
+@using Microsoft.Extensions.Options
+@using Planner.Domain
+@using Planner.Models
+
+<MudLink Href="@Url" Target="_blank" Typo="Typo.body2" Color="Color.Primary" Underline="Underline.Hover">
+    @Issue.Key
+</MudLink>
+
+@inject IOptions<JiraApiOptions> ApiOptions
+
+@code {
+    [Parameter, EditorRequired] public Issue Issue { get; set; } = null!;
+
+    private string _siteUrl = string.Empty;
+
+    protected override void OnInitialized()
+    {
+        var baseUrl = ApiOptions.Value.BaseUrl ?? string.Empty;
+        var restIndex = baseUrl.IndexOf("/rest/", StringComparison.OrdinalIgnoreCase);
+        
+        _siteUrl = restIndex >= 0 
+            ? baseUrl[..restIndex] 
+            : baseUrl.TrimEnd('/');
+    }
+
+    private string Url => string.IsNullOrEmpty(Issue?.Key) ? "#" : $"{_siteUrl}/browse/{Issue.Key}";
+}

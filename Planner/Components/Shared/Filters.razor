@@ -80,7 +80,7 @@
             _assignees = await Client.GetProjectAssigneesAsync();
             _isLoaded = true;
         }
-        catch (Exception exception)
+        catch
         {
             Snackbar.Add("Errore durante il recupero dei dati da Jira.", Severity.Error);
         }
