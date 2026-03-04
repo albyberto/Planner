@@ -110,7 +110,7 @@ public class JiraClient(HttpClient httpClient, IOptions<JiraQueryOptions> option
                     { 
                         "summary", "status", "assignee", "fixVersions", 
                         "created", "updated", "issuetype", "components", 
-                        "labels", "timetracking", "worklog" 
+                        "labels", "timetracking", "worklog", "customfield_10117"
                     }
                 };
 

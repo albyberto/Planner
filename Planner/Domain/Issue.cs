@@ -13,6 +13,7 @@ public record Issue(
 {
     [JsonIgnore] public int OriginalEstimate => Fields.TimeTracking.OriginalEstimateSeconds ?? 0;
     [JsonIgnore] public int TimeSpent => Fields.Worklog.Worklogs.Sum(w => w.TimeSpentSeconds) ?? 0;
+    [JsonIgnore] public DateOnly? StartDate => Fields.StartDate;
 
-    [JsonIgnore] public TimeStats Stats => new TimeStats(OriginalEstimate, TimeSpent);
+    [JsonIgnore] public TimeStats Stats => new(OriginalEstimate, TimeSpent);
 }
