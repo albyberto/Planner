@@ -23,33 +23,45 @@
                 }
             </MudSelect>
         </MudItem>
-        <MudItem xs="12" sm="4" md="4">
-            <MudSelect T="string"
-                       Label="Assignee"
-                       MultiSelection="true"
-                       SelectedValues="Filter.Assignees"
-                       SelectedValuesChanged="OnAssigneeChanged"
-                       Variant="Variant.Outlined"
-                       AnchorOrigin="Origin.BottomCenter"
-                       Clearable="true"
-                       MultiSelectionTextFunc="@(selected => GetSelectedAssigneesText(selected))">
-                @foreach (var assignee in _assignees)
-                {
-                    <MudSelectItem T="string"
-                                   Value="@assignee.EmailAddress">@assignee.DisplayName.ToTitleCase()</MudSelectItem>
-                }
-            </MudSelect>
-        </MudItem>
+
+        @if (ShowAssigneeFilter)
+        {
+            <MudItem xs="12" sm="4" md="4">
+                <MudSelect T="string"
+                           Label="Assignee"
+                           MultiSelection="true"
+                           SelectedValues="Filter.Assignees"
+                           SelectedValuesChanged="OnAssigneeChanged"
+                           Variant="Variant.Outlined"
+                           AnchorOrigin="Origin.BottomCenter"
+                           Clearable="true"
+                           MultiSelectionTextFunc="@(selected => GetSelectedAssigneesText(selected))">
+                    @foreach (var assignee in _assignees)
+                    {
+                        <MudSelectItem T="string"
+                                       Value="@assignee.EmailAddress">@assignee.DisplayName.ToTitleCase()</MudSelectItem>
+                    }
+                </MudSelect>
+            </MudItem>
+            <MudItem xs="12" sm="4" md="4" Class="d-flex align-center">
+                <MudSwitch T="bool"
+                           Label="Includi non assegnate"
+                           Color="Color.Primary"
+                           Value="Filter.IncludeUnassigned"
+                           ValueChanged="OnUnassignedChanged"/>
+            </MudItem>
+        }
     </MudGrid>
 </MudPaper>
 
-@inject IOptions<JiraFilterOptions> Options;
+@inject IOptions<JiraFilterOptions> Options
 @inject JiraClient Client
 @inject ISnackbar Snackbar
 
 @code {
     [Parameter] public EventCallback<Filter> OnFilterChanged { get; set; }
-    
+    [Parameter] public bool ShowAssigneeFilter { get; set; } = true;
+
     ImmutableList<Status> _statuses = [];
     ImmutableList<User> _assignees = [];
 
@@ -63,10 +75,18 @@
             _assignees = await Client.GetProjectAssigneesAsync();
 
             var settings = Options.Value;
-            var assignees = settings.TeamMembers.Select(member => member.Email).ToHashSet();
             var statuses = settings.DefaultStatuses;
 
-            Filter = new(assignees, statuses);
+            if (ShowAssigneeFilter)
+            {
+                var assignees = settings.TeamMembers.Select(member => member.Email).ToHashSet();
+                Filter = new(assignees, statuses, settings.IncludeUnassignedByDefault);
+            }
+            else
+            {
+                Filter = new(Statuses: statuses);
+            }
+
             await NotifyFilterChanged();
         }
         catch (Exception exception)
@@ -75,8 +95,6 @@
             Console.WriteLine(exception.Message);
         }
     }
-
-    private Task OnPresetChanged(string? value) => Task.CompletedTask;
 
     private async Task OnStatusChanged(IEnumerable<string> values)
     {
@@ -90,37 +108,34 @@
         await NotifyFilterChanged();
     }
 
+    private async Task OnUnassignedChanged(bool value)
+    {
+        Filter = Filter with { IncludeUnassigned = value };
+        await NotifyFilterChanged();
+    }
+
     private string GetSelectedStatuesText(IReadOnlyCollection<string?>? statuses)
     {
         statuses ??= [];
-
         if (statuses.Count == 0) return string.Empty;
-
         var names = statuses
             .Where(status => !string.IsNullOrEmpty(status))
             .Select(status => status!.ToTitleCase());
-        
         return string.Join(", ", names);
     }
 
     private string GetSelectedAssigneesText(IReadOnlyCollection<string?>? emails)
     {
         emails ??= [];
-        
         if (emails.Count == 0) return string.Empty;
-
         var names = _assignees
             .Where(assignee => emails.Contains(assignee.EmailAddress))
             .Select(assignee => string.IsNullOrWhiteSpace(assignee.DisplayName) ? assignee.EmailAddress : assignee.DisplayName);
-
         return string.Join(", ", names);
     }
-    
+
     private async Task NotifyFilterChanged()
     {
-        if (OnFilterChanged.HasDelegate)
-        {
-            await OnFilterChanged.InvokeAsync(Filter);
-        }
+        if (OnFilterChanged.HasDelegate) await OnFilterChanged.InvokeAsync(Filter);
     }
 }

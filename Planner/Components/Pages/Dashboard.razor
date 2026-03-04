@@ -14,7 +14,7 @@
     @_title
 </MudText>
 
-<Filters OnFilterChanged="Search"/>
+<Filters OnFilterChanged="Search" ShowAssigneeFilter="@_showAssigneeFilter"/>
 
 <ul>
 @foreach (var issue in _issues)
@@ -32,9 +32,16 @@
     
     private ImmutableList<Issue> _issues = [];
     private string _title = "Team Dashboard";
+    private bool _showAssigneeFilter = true;
+    private bool _isUnassignedRoute;
+    private string? _decodedEmail;
 
     protected override async Task OnParametersSetAsync()
     {
+        _isUnassignedRoute = false;
+        _decodedEmail = null;
+        _showAssigneeFilter = string.IsNullOrEmpty(Email);
+
         if (string.IsNullOrEmpty(Email))
         {
             _title = "Team Dashboard";
@@ -42,12 +49,13 @@
         else if (Email.Equals("unassigned", StringComparison.OrdinalIgnoreCase))
         {
             _title = "Non Assegnate";
+            _isUnassignedRoute = true;
         }
         else
         {
-            var decoded = Uri.UnescapeDataString(Email);
+            _decodedEmail = Uri.UnescapeDataString(Email);
             var users = await Client.GetProjectAssigneesAsync();
-            var name = users.FirstOrDefault(u => u.EmailAddress.Equals(decoded, StringComparison.OrdinalIgnoreCase))?.DisplayName ?? decoded;
+            var name = users.FirstOrDefault(u => u.EmailAddress.Equals(_decodedEmail, StringComparison.OrdinalIgnoreCase))?.DisplayName ?? _decodedEmail;
             _title = $"Dashboard — {name}";
         }
     }
@@ -56,20 +64,15 @@
     {
         try 
         {
-            // Se c'è un'email nel route, forza il filtro su quell'utente
-            if (!string.IsNullOrEmpty(Email))
+            if (_isUnassignedRoute)
             {
-                var decoded = Uri.UnescapeDataString(Email);
-                if (decoded.Equals("unassigned", StringComparison.OrdinalIgnoreCase))
-                {
-                    filter = filter with { Assignees = [] };
-                }
-                else
-                {
-                    filter = filter with { Assignees = [decoded] };
-                }
+                filter = filter with { Assignees = [], IncludeUnassigned = true };
             }
-            
+            else if (_decodedEmail is not null)
+            {
+                filter = filter with { Assignees = [_decodedEmail], IncludeUnassigned = false };
+            }
+
             var jql = QueryBuilder.BuildDashboardQuery(filter);
             _issues = await Client.GetIssuesAsync(jql);
         }

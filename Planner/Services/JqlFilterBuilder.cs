@@ -3,6 +3,7 @@ using JQLBuilder.Types.JqlTypes;
 using Microsoft.Extensions.Options;
 using Planner.Model;
 using Planner.Models;
+using JqlFilter = JQLBuilder.Render.JqlFilter;
 
 namespace Planner.Services;
 
@@ -22,12 +23,31 @@ public class JqlFilterBuilder(IOptions<JiraQueryOptions> options)
             query = query.And(f => f.Status.In(statusValues));
         }
 
-        if (filter.Assignees.Count > 0)
-        {
-            var assigneeValues = filter.Assignees.Select(a => (JqlHistoricalJqlUser)a).ToArray(); 
-            query = query.And(f => f.User.Assignee.In(assigneeValues));
-        }
+        query = AppendAssigneeClause(query, filter);
 
         return $"{query} ORDER BY updated DESC";
+    }
+
+    private static JqlFilter AppendAssigneeClause(JqlFilter query, Filter filter)
+    {
+        var hasAssignees = filter.Assignees.Count > 0;
+
+        switch (hasAssignees)
+        {
+            case true when filter.IncludeUnassigned:
+            {
+                var assigneeValues = filter.Assignees.Select(a => (JqlHistoricalJqlUser)a).ToArray();
+                return query.And(f => f.User.Assignee.In(assigneeValues) | f.User.Assignee.Is());
+            }
+            case true:
+            {
+                var assigneeValues = filter.Assignees.Select(a => (JqlHistoricalJqlUser)a).ToArray();
+                return query.And(f => f.User.Assignee.In(assigneeValues));
+            }
+        }
+
+        return filter.IncludeUnassigned 
+            ? query.And(f => f.User.Assignee.Is()) 
+            : query;
     }
 }
