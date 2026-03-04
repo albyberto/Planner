@@ -25,7 +25,7 @@ public class JiraClient(HttpClient httpClient, IOptions<JiraQueryOptions> option
             try
             {
                 var issueTypes = await httpClient.GetFromJsonAsync<List<Type>>($"project/{project}/statuses", cancellationToken);
-                return issueTypes ?? [];   
+                return issueTypes != null ? issueTypes : [];   
             }
             catch (Exception exception)
             {
@@ -66,7 +66,7 @@ public class JiraClient(HttpClient httpClient, IOptions<JiraQueryOptions> option
             try
             {
                 var assignees = await httpClient.GetFromJsonAsync<List<User>>($"user/assignable/search?project={projectKey}", cancellationToken);
-                return assignees ?? [];
+                return assignees != null ? assignees : [];
             }
             catch (Exception exception)
             {
@@ -130,7 +130,7 @@ public class JiraClient(HttpClient httpClient, IOptions<JiraQueryOptions> option
 
                 var searchResult = await response.Content.ReadFromJsonAsync<Issues>(cancellationToken: cancellationToken);
 
-                if (searchResult?.List == null || searchResult.List.Count == 0)
+                if ((searchResult != null ? searchResult.List == null : true) || searchResult.List.Count == 0)
                 {
                     break;
                 }

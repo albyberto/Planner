@@ -6,7 +6,6 @@
 
 <DashboardLayout Title="Dashboard" Email="@Email">
     @{
-        // Calcoliamo le statistiche globali passandogli l'intera lista di contest
         var globalStats = new TimeStats(context);
         var groupedIssues = GroupByFixVersion(context);
     }
@@ -111,13 +110,13 @@
                     <MudTd Style="text-align:right">@rem.ToJiraTime()</MudTd>
                     
                     <MudTd>
-                        @foreach (var comp in issue.Fields.Components ?? [])
+                        @foreach (var comp in issue.Fields.Components != null ? issue.Fields.Components : [])
                         {
                             <ComponentChip Component="@comp" />
                         }
                     </MudTd>
                     <MudTd>
-                        @foreach (var label in issue.Fields.Labels ?? [])
+                        @foreach (var label in issue.Fields.Labels != null ? issue.Fields.Labels : [])
                         {
                             <LabelChip Label="@label" />
                         }
@@ -135,7 +134,7 @@
     private IEnumerable<(string VersionName, IEnumerable<Issue> Issues)> GroupByFixVersion(IEnumerable<Issue> issues)
     {
         return issues
-            .SelectMany(i => i.Fields.FixVersions?.Count > 0
+            .SelectMany(i => (i.Fields.FixVersions != null ? i.Fields.FixVersions.Count > 0 : false)
                 ? i.Fields.FixVersions.Select(v => (Version: v.Name, Issue: i))
                 : new[] { (Version: "Senza Fix Version", Issue: i) })
             .GroupBy(x => x.Version)

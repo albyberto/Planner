@@ -4,9 +4,12 @@ namespace Planner.Extensions;
 
 public static class JiraExtensions
 {
-    public static string ToJiraTime(this int seconds) => ((int?)seconds).ToJiraTime();
-    
-    public static string ToJiraTime(this int? seconds)
+    extension(int seconds)
+    {
+        public string ToJiraTime() => ((int?)seconds).ToJiraTime();
+    }
+
+    private static string ToJiraTime(this int? seconds)
     {
         if (seconds is null or <= 0) return "0h";
         
@@ -33,10 +36,9 @@ public static class JiraExtensions
         };
     }
 
-    // Estensioni di comodo per estrarre i dati puliti dai modelli API
-    public static int GetOriginalEstimate(this Issue issue) => 
-        issue.Fields.TimeTracking?.OriginalEstimateSeconds ?? 0;
-
-    public static int GetTimeSpent(this Issue issue) => 
-        issue.Fields.Worklog?.Worklogs?.Sum(w => w.TimeSpentSeconds ?? 0) ?? 0;
+    extension(Issue issue)
+    {
+        public int GetOriginalEstimate() => issue.Fields.TimeTracking.OriginalEstimateSeconds ?? 0;
+        public int GetTimeSpent() => issue.Fields.Worklog.Worklogs.Sum(w => w.TimeSpentSeconds ?? 0);
+    }
 }

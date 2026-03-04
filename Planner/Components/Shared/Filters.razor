@@ -93,8 +93,8 @@
         var settings = Options.Value;
 
         // 1. Definiamo i valori attesi (se forzati dal parent ok, altrimenti i default delle options)
-        var expectedAssignees = ForcedAssignees ?? settings.TeamMembers.Select(m => m.Email).ToHashSet();
-        var expectedUnassigned = ForcedIncludeUnassigned ?? settings.IncludeUnassignedByDefault;
+        var expectedAssignees = ForcedAssignees != null ? ForcedAssignees : settings.TeamMembers.Select(m => m.Email).ToHashSet();
+        var expectedUnassigned = ForcedIncludeUnassigned != null ? ForcedIncludeUnassigned.Value : settings.IncludeUnassignedByDefault;
         var expectedStatuses = Filter.Statuses.Count > 0 ? Filter.Statuses : settings.DefaultStatuses.ToHashSet();
 
         // 2. Controlliamo se i valori dettati dal parent sono diversi dal nostro filtro in memoria

@@ -15,7 +15,7 @@
 
     protected override void OnInitialized()
     {
-        var baseUrl = ApiOptions.Value.BaseUrl ?? string.Empty;
+        var baseUrl = ApiOptions.Value.BaseUrl != null ? ApiOptions.Value.BaseUrl : string.Empty;
         var restIndex = baseUrl.IndexOf("/rest/", StringComparison.OrdinalIgnoreCase);
         
         _siteUrl = restIndex >= 0 
@@ -23,5 +23,5 @@
             : baseUrl.TrimEnd('/');
     }
 
-    private string Url => string.IsNullOrEmpty(Issue?.Key) ? "#" : $"{_siteUrl}/browse/{Issue.Key}";
+    private string Url => (Issue != null ? string.IsNullOrEmpty(Issue.Key) : true) ? "#" : $"{_siteUrl}/browse/{Issue.Key}";
 }

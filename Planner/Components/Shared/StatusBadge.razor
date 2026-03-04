@@ -1,13 +1,13 @@
 @using Planner.Domain
 
 <MudChip T="string" Size="Size.Small" Color="@Style.Color" Icon="@Style.Icon" Variant="Variant.Filled">
-    @Status?.Name
+    @(Status != null ? Status.Name : null)
 </MudChip>
 
 @code {
     [Parameter, EditorRequired] public Status Status { get; set; } = null!;
 
-    private (Color Color, string Icon) Style => Status?.StatusCategory?.Name switch
+    private (Color Color, string Icon) Style => (Status != null ? Status.StatusCategory != null ? Status.StatusCategory.Name : null : null) switch
     {
         "To Do" => (Color.Default, Icons.Material.Filled.RadioButtonUnchecked),
         "In Progress" => (Color.Info, Icons.Material.Filled.Autorenew),
