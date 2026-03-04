@@ -5,6 +5,7 @@ using Planner.Clients;
 using Planner.Components;
 using Planner.Models;
 using Planner.Options;
+using Planner.Services;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -41,6 +42,10 @@ builder.Services.AddOptions<JiraQueryOptions>()
 builder.Services.AddOptions<JiraFilterOptions>()
     .BindConfiguration(JiraFilterOptions.SectionName);
 
+// Services
+builder.Services.AddSingleton<JqlFilterBuilder>();
+
+// HTTP Clients
 builder.Services.AddHttpClient<JiraClient>((provider, client) =>
 {
     var settings = provider.GetRequiredService<IOptions<JiraApiOptions>>().Value;

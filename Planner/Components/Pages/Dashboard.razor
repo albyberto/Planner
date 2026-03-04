@@ -3,6 +3,8 @@
 @using System.Collections.Immutable
 @using Planner.Clients
 @using Planner.Domain
+@using Planner.Model
+@using Planner.Services
 
 <PageTitle>Dashboard</PageTitle>
 
@@ -11,7 +13,7 @@
     Team Dashboard 
 </MudText>
 
-<Filters @ref="_filters" />
+<Filters OnFilterChanged="Search"/>
 
 <ul>
 @foreach (var issue in _issues)
@@ -21,21 +23,23 @@
 </ul>
 
 @inject JiraClient Client;
+@inject JqlFilterBuilder QueryBuilder
 @inject ISnackbar Snackbar
 
 @code {
-    private Filters? _filters;
     private ImmutableList<Issue> _issues = [];
 
-    protected override async Task OnInitializedAsync()
+    private async Task Search(Filter filter)
     {
-        await Search();
-    }
-
-    private async Task Search()
-    {
-        if(_filters is null) return;
-        _issues = await Client.GetIssuesAsync("project = OPNMS AND status in (\"To Do\", \"In Progress\")");
+        try 
+        {
+            var jql = QueryBuilder.BuildDashboardQuery(filter);
+            _issues = await Client.GetIssuesAsync(jql);
+        }
+        catch (Exception ex)
+        {
+            Snackbar.Add("Errore durante il recupero delle issue.", Severity.Error);
+        }
     }
 }
 

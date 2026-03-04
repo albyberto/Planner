@@ -48,6 +48,8 @@
 @inject ISnackbar Snackbar
 
 @code {
+    [Parameter] public EventCallback<Filter> OnFilterChanged { get; set; }
+    
     ImmutableList<Status> _statuses = [];
     ImmutableList<User> _assignees = [];
 
@@ -75,9 +77,17 @@
 
     private Task OnPresetChanged(string? value) => Task.CompletedTask;
 
-    private void OnStatusChanged(IEnumerable<string> values) => Filter = Filter with { Statuses = values.ToHashSet() };
+    private async Task OnStatusChanged(IEnumerable<string> values)
+    {
+        Filter = Filter with { Statuses = values.ToHashSet() };
+        await NotifyFilterChanged();
+    }
 
-    private void OnAssigneeChanged(IEnumerable<string> values) => Filter = Filter with { Assignees = values.ToHashSet() };
+    private async Task OnAssigneeChanged(IEnumerable<string> values)
+    {
+        Filter = Filter with { Assignees = values.ToHashSet() };
+        await NotifyFilterChanged();
+    }
 
     private string GetSelectedStatuesText(IReadOnlyCollection<string?>? statuses)
     {
@@ -103,5 +113,13 @@
             .Select(assignee => string.IsNullOrWhiteSpace(assignee.DisplayName) ? assignee.EmailAddress : assignee.DisplayName);
 
         return string.Join(", ", names);
+    }
+    
+    private async Task NotifyFilterChanged()
+    {
+        if (OnFilterChanged.HasDelegate)
+        {
+            await OnFilterChanged.InvokeAsync(Filter);
+        }
     }
 }
