@@ -1,0 +1,65 @@
+@using Planner.Clients
+@inject JiraReadClient ReadClient
+@inject JiraWriteClient WriteClient
+@inject ISnackbar Snackbar
+
+@if (_editing)
+{
+    <MudSelect T="string" MultiSelection="true" SelectedValues="_selected" SelectedValuesChanged="OnSelectionChanged"
+               Label="Labels" Dense="true" Variant="Variant.Outlined" Margin="Margin.Dense"
+               AnchorOrigin="Origin.BottomLeft" CloseIcon="@Icons.Material.Filled.Close">
+        @foreach (var l in _available)
+        {
+            <MudSelectItem T="string" Value="@l">@l</MudSelectItem>
+        }
+    </MudSelect>
+}
+else
+{
+    <div class="d-inline-flex flex-wrap gap-1 cursor-pointer" @onclick="StartEdit">
+        @if (Labels is { Count: > 0 })
+        {
+            @foreach (var l in Labels)
+            {
+                <LabelChip Label="@l" />
+            }
+        }
+        else
+        {
+            <MudChip T="string" Size="Size.Small" Variant="Variant.Outlined" Color="Color.Default">+</MudChip>
+        }
+    </div>
+}
+
+@code {
+    [Parameter, EditorRequired] public required string IssueKey { get; set; }
+    [Parameter] public IReadOnlyList<string>? Labels { get; set; }
+    [Parameter] public EventCallback OnChanged { get; set; }
+
+    private bool _editing;
+    private HashSet<string> _selected = [];
+    private IReadOnlyList<string> _available = [];
+
+    private async Task StartEdit()
+    {
+        _available = await ReadClient.GetProjectLabelsAsync();
+        _selected = (Labels ?? []).ToHashSet();
+        _editing = true;
+    }
+
+    private async Task OnSelectionChanged(IReadOnlyCollection<string?>? values)
+    {
+        _selected = [..values?.Where(v => v is not null).Select(v => v!) ?? []];
+        try
+        {
+            await WriteClient.UpdateLabelsAsync(IssueKey, _selected);
+            Snackbar.Add($"{IssueKey} labels aggiornate", Severity.Success);
+            _editing = false;
+            if (OnChanged.HasDelegate) await OnChanged.InvokeAsync();
+        }
+        catch (Exception ex)
+        {
+            Snackbar.Add($"Errore: {ex.Message}", Severity.Error);
+        }
+    }
+}

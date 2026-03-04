@@ -1,0 +1,67 @@
+@using Planner.Clients
+@using Planner.Domain
+@inject JiraReadClient ReadClient
+@inject JiraWriteClient WriteClient
+@inject ISnackbar Snackbar
+
+@if (_editing)
+{
+    <MudSelect T="string" MultiSelection="true" SelectedValues="_selected"
+               SelectedValuesChanged="OnSelectionChanged"
+               Label="Components" Dense="true" Variant="Variant.Outlined" Margin="Margin.Dense"
+               AnchorOrigin="Origin.BottomLeft" CloseIcon="@Icons.Material.Filled.Close">
+        @foreach (var c in _available)
+        {
+            <MudSelectItem T="string" Value="@c.Id">@c.Name</MudSelectItem>
+        }
+    </MudSelect>
+}
+else
+{
+    <div class="d-inline-flex flex-wrap gap-1 cursor-pointer" @onclick="StartEdit">
+        @if (Components is { Count: > 0 })
+        {
+            @foreach (var c in Components)
+            {
+                <ComponentChip Component="@c" />
+            }
+        }
+        else
+        {
+            <MudChip T="string" Size="Size.Small" Variant="Variant.Outlined" Color="Color.Default">+</MudChip>
+        }
+    </div>
+}
+
+@code {
+    [Parameter, EditorRequired] public required string IssueKey { get; set; }
+    [Parameter] public IReadOnlyList<Component>? Components { get; set; }
+    [Parameter] public EventCallback OnChanged { get; set; }
+
+    private bool _editing;
+    private HashSet<string> _selected = [];
+    private IReadOnlyList<Component> _available = [];
+
+    private async Task StartEdit()
+    {
+        _available = await ReadClient.GetProjectComponentsAsync();
+        _selected = (Components ?? []).Select(c => c.Id).ToHashSet();
+        _editing = true;
+    }
+
+    private async Task OnSelectionChanged(IReadOnlyCollection<string?>? values)
+    {
+        _selected = [..values?.Where(v => v is not null).Select(v => v!) ?? []];
+        try
+        {
+            await WriteClient.UpdateComponentsAsync(IssueKey, _selected);
+            Snackbar.Add($"{IssueKey} components aggiornati", Severity.Success);
+            _editing = false;
+            if (OnChanged.HasDelegate) await OnChanged.InvokeAsync();
+        }
+        catch (Exception ex)
+        {
+            Snackbar.Add($"Errore: {ex.Message}", Severity.Error);
+        }
+    }
+}

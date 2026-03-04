@@ -34,11 +34,9 @@
     @* ───── Fix Version groups ───── *@
     @foreach (var group in groups)
     {
-        // Calcolo automatico tramite extension method sulla lista del gruppo
         var g = group.Issues.GetTimeStats();
 
         <MudPaper Class="pa-4 mb-4" Elevation="2">
-            @* header *@
             <MudGrid Spacing="2" Class="mb-3 align-center">
                 <MudItem xs="12" md="6">
                     <MudIcon Icon="@Icons.Material.Filled.NewReleases" Size="Size.Small" Color="Color.Primary" Class="mr-1" />
@@ -54,7 +52,6 @@
                 </MudItem>
             </MudGrid>
 
-            @* tabella *@
             <MudTable Items="@group.Issues" Dense="true" Hover="true" Breakpoint="Breakpoint.Sm" Elevation="0">
                 <HeaderContent>
                     <MudTh Class="mud-text-align-center"></MudTh>
@@ -69,42 +66,34 @@
                 </HeaderContent>
                 <RowTemplate Context="issue">
                     <MudTd DataLabel="Type" Class="mud-text-align-center">
-                        <TypeIcon IssueType="@issue.Fields.IssueType" />
+                        <InlineTypeEdit IssueKey="@issue.Key" IssueType="@issue.Fields.IssueType" />
                     </MudTd>
                     <MudTd DataLabel="Key">
                         <IssueKey Issue="@issue" />
                     </MudTd>
                     <MudTd DataLabel="Summary">
-                        <MudText Typo="Typo.body2">@issue.Fields.Summary</MudText>
+                        <InlineSummaryEdit IssueKey="@issue.Key" Value="@issue.Fields.Summary" />
                     </MudTd>
                     <MudTd DataLabel="Status">
-                        <StatusBadge Status="@issue.Fields.Status" />
+                        <InlineStatusEdit IssueKey="@issue.Key" Status="@issue.Fields.Status" />
                     </MudTd>
-                    
-                    @* Utilizzo della nuova proprietà .Stats integrata in Issue *@
                     <MudTd DataLabel="Est" Class="mud-text-align-end">
-                        @issue.Stats.FormattedEstimate
+                        <InlineTimeEdit IssueKey="@issue.Key" Field="originalEstimate" Label="stima"
+                                        DisplayValue="@issue.Stats.FormattedEstimate" />
                     </MudTd>
                     <MudTd DataLabel="Spent" Class="mud-text-align-end">
                         <MudText Typo="Typo.body2" Color="Color.Info">@issue.Stats.FormattedSpent</MudText>
                     </MudTd>
                     <MudTd DataLabel="Left" Class="mud-text-align-end">
-                        <MudText Typo="Typo.body2" Color="@(issue.Stats.IsOverBudget ? Color.Error : Color.Success)">
-                            @issue.Stats.FormattedRemaining
-                        </MudText>
+                        <InlineTimeEdit IssueKey="@issue.Key" Field="remainingEstimate" Label="rimanente"
+                                        DisplayValue="@issue.Stats.FormattedRemaining"
+                                        DisplayColor="@(issue.Stats.IsOverBudget ? Color.Error : Color.Success)" />
                     </MudTd>
-                    
                     <MudTd DataLabel="Components">
-                        @foreach (var c in issue.Fields.Components ?? [])
-                        {
-                            <ComponentChip Component="@c" />
-                        }
+                        <InlineComponentsEdit IssueKey="@issue.Key" Components="@issue.Fields.Components" />
                     </MudTd>
                     <MudTd DataLabel="Labels">
-                        @foreach (var l in issue.Fields.Labels ?? [])
-                        {
-                            <LabelChip Label="@l" />
-                        }
+                        <InlineLabelsEdit IssueKey="@issue.Key" Labels="@issue.Fields.Labels" />
                     </MudTd>
                 </RowTemplate>
             </MudTable>

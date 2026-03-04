@@ -60,6 +60,17 @@ builder.Services.AddHttpClient<JiraReadClient>((provider, client) =>
     client.DefaultRequestHeaders.Accept.Add(new("application/json"));
 });
 
+builder.Services.AddHttpClient<JiraWriteClient>((provider, client) =>
+{
+    var settings = provider.GetRequiredService<IOptions<JiraApiOptions>>().Value;
+
+    var credentials = Convert.ToBase64String(Encoding.ASCII.GetBytes($"{settings.Email}:{settings.ApiToken}"));
+
+    client.BaseAddress = new(settings.BaseUrl.TrimEnd('/') + "/");
+    client.DefaultRequestHeaders.Authorization = new("Basic", credentials);
+    client.DefaultRequestHeaders.Accept.Add(new("application/json"));
+});
+
 var app = builder.Build();
 
 // Configure the HTTP request pipeline.
