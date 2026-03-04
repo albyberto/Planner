@@ -19,7 +19,8 @@
 </div>
 
 @code {
-    [Parameter, EditorRequired] public User User { get; set; } = null!;
+    [Parameter, EditorRequired] public required User User { get; set; } = null!;
+    
     [Parameter] public Size Size { get; set; } = Size.Small;
     [Parameter] public bool ShowName { get; set; } = true;
 

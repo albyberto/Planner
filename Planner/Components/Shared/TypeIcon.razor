@@ -1,6 +1,6 @@
 @using Planner.Domain
 
-@if (IssueType != null ? !string.IsNullOrEmpty(IssueType.IconUrl) : false)
+@if (!string.IsNullOrEmpty(IssueType.IconUrl))
 {
     <MudAvatar Size="Size.Small" Style="width:20px;height:20px">
         <MudImage Src="@IssueType.IconUrl" Width="20" Height="20" Alt="@IssueType.Name" />
@@ -8,5 +8,5 @@
 }
 
 @code {
-    [Parameter, EditorRequired] public IssueType IssueType { get; set; } = null!;
+    [Parameter, EditorRequired] public required IssueType IssueType { get; set; } = null!;
 }

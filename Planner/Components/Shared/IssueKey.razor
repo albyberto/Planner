@@ -1,27 +1,20 @@
-@using Microsoft.Extensions.Options
 @using Planner.Domain
-@using Planner.Models
 
 <MudLink Href="@Url" Target="_blank" Typo="Typo.body2" Color="Color.Primary" Underline="Underline.Hover">
     @Issue.Key
 </MudLink>
 
-@inject IOptions<JiraApiOptions> ApiOptions
-
 @code {
-    [Parameter, EditorRequired] public Issue Issue { get; set; } = null!;
+    [Parameter, EditorRequired] public required Issue Issue { get; set; } = null!;
 
-    private string _siteUrl = string.Empty;
-
-    protected override void OnInitialized()
+    private string Url 
     {
-        var baseUrl = ApiOptions.Value.BaseUrl != null ? ApiOptions.Value.BaseUrl : string.Empty;
-        var restIndex = baseUrl.IndexOf("/rest/", StringComparison.OrdinalIgnoreCase);
-        
-        _siteUrl = restIndex >= 0 
-            ? baseUrl[..restIndex] 
-            : baseUrl.TrimEnd('/');
-    }
+        get
+        {
+            if (string.IsNullOrEmpty(Issue.Self)) return "#"; // Fallback di sicurezza
 
-    private string Url => (Issue != null ? string.IsNullOrEmpty(Issue.Key) : true) ? "#" : $"{_siteUrl}/browse/{Issue.Key}";
+            var baseUri = new Uri(Issue.Self).GetLeftPart(UriPartial.Authority);
+            return $"{baseUri}/browse/{Issue.Key}";
+        }
+    }
 }
