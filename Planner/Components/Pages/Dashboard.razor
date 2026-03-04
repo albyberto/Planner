@@ -97,12 +97,12 @@
                 <RowTemplate Context="issue">
                     @{
                         // Sfruttiamo i metodi di estensione puliti creati prima!
-                        int est = issue.GetOriginalEstimate();
-                        int sp = issue.GetTimeSpent();
-                        int rem = Math.Max(est - sp, 0);
+                        var est = issue.GetOriginalEstimate();
+                        var sp = issue.GetTimeSpent();
+                        var rem = Math.Max(est - sp, 0);
                     }
-                    <MudTd><JiraIssueTypeIcon IssueType="@issue.Fields.IssueType" /></MudTd>
-                    <MudTd><IssueLink Issue="@issue" /></MudTd>
+                    <MudTd><TypeIcon IssueType="@issue.Fields.IssueType" /></MudTd>
+                    <MudTd><IssueKey Issue="@issue" /></MudTd>
                     <MudTd>@issue.Fields.Summary</MudTd>
                     <MudTd><StatusBadge Status="@issue.Fields.Status" /></MudTd>
                     
@@ -113,13 +113,13 @@
                     <MudTd>
                         @foreach (var comp in issue.Fields.Components ?? [])
                         {
-                            <JiraComponentChip Component="@comp" />
+                            <ComponentChip Component="@comp" />
                         }
                     </MudTd>
                     <MudTd>
                         @foreach (var label in issue.Fields.Labels ?? [])
                         {
-                            <JiraLabelChip Label="@label" />
+                            <LabelChip Label="@label" />
                         }
                     </MudTd>
                 </RowTemplate>
