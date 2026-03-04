@@ -1,87 +1,16 @@
 ﻿@page "/"
 @page "/dashboard"
 @page "/dashboard/{Email}"
-@using System.Collections.Immutable
-@using Planner.Clients
-@using Planner.Domain
-@using Planner.Model
-@using Planner.Services
 
-<PageTitle>Dashboard</PageTitle>
-
-<MudText Typo="Typo.h4" GutterBottom="true">
-    <MudIcon Icon="@Icons.Material.Filled.Dashboard" Class="mr-2" />
-    @_title
-</MudText>
-
-<Filters OnFilterChanged="Search" 
-         ShowAssigneeFilter="@_showAssigneeFilter"
-         ForcedAssignees="@_forcedAssignees"
-         ForcedIncludeUnassigned="@_forcedIncludeUnassigned" />
-
-<ul>
-@foreach (var issue in _issues)
-{
-    <li>@issue.Key</li>
-}
-</ul>
-
-@inject JiraClient Client
-@inject JqlFilterBuilder QueryBuilder
-@inject ISnackbar Snackbar
+<DashboardLayout Email="@Email">
+    <ul>
+        @foreach (var issue in context)
+        {
+            <li>@issue.Key — @issue.Fields.Summary</li>
+        }
+    </ul>
+</DashboardLayout>
 
 @code {
     [Parameter] public string? Email { get; set; }
-    
-    private ImmutableList<Issue> _issues = [];
-    private string _title = "Team Dashboard";
-    
-    // Variabili di stato per vincolare il componente figlio
-    private bool _showAssigneeFilter = true;
-    private HashSet<string>? _forcedAssignees;
-    private bool? _forcedIncludeUnassigned;
-
-    protected override async Task OnParametersSetAsync()
-    {
-        if (string.IsNullOrEmpty(Email))
-        {
-            _title = "Team Dashboard";
-            _showAssigneeFilter = true;
-            _forcedAssignees = null;
-            _forcedIncludeUnassigned = null;
-        }
-        else if (Email.Equals(Constants.Unassigned, StringComparison.OrdinalIgnoreCase))
-        {
-            _title = "Non Assegnate";
-            _showAssigneeFilter = false;
-            _forcedAssignees = []; // Nessun assignee
-            _forcedIncludeUnassigned = true;
-        }
-        else
-        {
-            var decodedEmail = Uri.UnescapeDataString(Email);
-            var users = await Client.GetProjectAssigneesAsync();
-            var name = users.FirstOrDefault(u => u.EmailAddress.Equals(decodedEmail, StringComparison.OrdinalIgnoreCase))?.DisplayName ?? decodedEmail;
-            
-            _title = $"Dashboard — {name}";
-            _showAssigneeFilter = false;
-            _forcedAssignees = [decodedEmail];
-            _forcedIncludeUnassigned = false;
-        }
-    }
-
-    private async Task Search(Filter filter)
-    {
-        try 
-        {
-            // ORA IL METODO E' PULITISSIMO!
-            // Nessuna mutazione, prendiamo il filtro già pronto e costruiamo la query.
-            var jql = QueryBuilder.BuildDashboardQuery(filter);
-            _issues = await Client.GetIssuesAsync(jql);
-        }
-        catch (Exception)
-        {
-            Snackbar.Add("Errore durante il recupero delle issue.", Severity.Error);
-        }
-    }
 }
