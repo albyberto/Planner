@@ -30,9 +30,9 @@ else
 @inject ISnackbar Snackbar
 
 @code {
-    [Parameter, EditorRequired] public string Title { get; set; } = string.Empty;
+    [Parameter, EditorRequired] public required string Title { get; set; } = string.Empty;
     [Parameter] public string? Email { get; set; }
-    [Parameter, EditorRequired] public RenderFragment<ImmutableList<Issue>> ChildContent { get; set; } = default!;
+    [Parameter, EditorRequired] public required RenderFragment<ImmutableList<Issue>> ChildContent { get; set; } = null!;
 
     private ImmutableList<Issue> _issues = [];
     private bool _loading;
