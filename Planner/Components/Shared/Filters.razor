@@ -39,8 +39,7 @@
                            MultiSelectionTextFunc="@(selected => GetSelectedAssigneesText(selected))">
                     @foreach (var assignee in _assignees)
                     {
-                        <MudSelectItem T="string"
-                                       Value="@assignee.EmailAddress">@assignee.DisplayName.ToTitleCase()</MudSelectItem>
+                        <MudSelectItem T="string" Value="@assignee.EmailAddress">@assignee.DisplayName.ToTitleCase()</MudSelectItem>
                     }
                 </MudSelect>
             </MudItem>
@@ -65,16 +64,14 @@
     [Parameter] public bool? ForcedIncludeUnassigned { get; set; }
     [Parameter] public bool ShowAssigneeFilter { get; set; } = true;
 
-    // Tracking dei parametri precedenti per evitare notifiche inutili
-    private HashSet<string>? _prevForcedAssignees;
-    private bool? _prevForcedIncludeUnassigned;
     private bool _isLoaded;
+    private bool _firstRender = true;
     
-    ImmutableList<Status> _statuses = [];
-    ImmutableList<User> _assignees = [];
+    private ImmutableList<Status> _statuses = [];
+    private ImmutableList<User> _assignees = [];
 
     public Filter Filter = new();
-    
+
     protected override async Task OnInitializedAsync()
     {
         try
@@ -82,50 +79,36 @@
             _statuses = await Client.GetProjectStatusesAsync();
             _assignees = await Client.GetProjectAssigneesAsync();
             _isLoaded = true;
-
-            // Primo filtro: usiamo i default dalle options
-            RebuildFilter();
-            await NotifyFilterChanged();
         }
         catch (Exception exception)
         {
             Snackbar.Add("Errore durante il recupero dei dati da Jira.", Severity.Error);
-            Console.WriteLine(exception.Message);
         }
     }
 
     protected override async Task OnParametersSetAsync()
     {
         if (!_isLoaded) return;
-        
-        // Notifica solo se i parametri forzati sono davvero cambiati
-        var assigneesChanged = !SameAssignees(_prevForcedAssignees, ForcedAssignees);
-        var unassignedChanged = _prevForcedIncludeUnassigned != ForcedIncludeUnassigned;
-        
-        if (!assigneesChanged && !unassignedChanged) return;
-        
-        _prevForcedAssignees = ForcedAssignees;
-        _prevForcedIncludeUnassigned = ForcedIncludeUnassigned;
 
-        RebuildFilter();
-        await NotifyFilterChanged();
-    }
-
-    private void RebuildFilter()
-    {
         var settings = Options.Value;
-        var assignees = ForcedAssignees ?? settings.TeamMembers.Select(m => m.Email).ToHashSet();
-        var includeUnassigned = ForcedIncludeUnassigned ?? settings.IncludeUnassignedByDefault;
-        var statuses = settings.DefaultStatuses;
 
-        Filter = new(assignees, statuses, includeUnassigned);
-    }
-    
-    private static bool SameAssignees(HashSet<string>? a, HashSet<string>? b)
-    {
-        if (ReferenceEquals(a, b)) return true;
-        if (a is null || b is null) return false;
-        return a.SetEquals(b);
+        // 1. Definiamo i valori attesi (se forzati dal parent ok, altrimenti i default delle options)
+        var expectedAssignees = ForcedAssignees ?? settings.TeamMembers.Select(m => m.Email).ToHashSet();
+        var expectedUnassigned = ForcedIncludeUnassigned ?? settings.IncludeUnassignedByDefault;
+        var expectedStatuses = Filter.Statuses.Count > 0 ? Filter.Statuses : settings.DefaultStatuses.ToHashSet();
+
+        // 2. Controlliamo se i valori dettati dal parent sono diversi dal nostro filtro in memoria
+        var hasAssigneesChanged = !Filter.Assignees.SetEquals(expectedAssignees);
+        var hasUnassignedChanged = Filter.IncludeUnassigned != expectedUnassigned;
+
+        // 3. Se non c'è stata una vera variazione (e non è il primissimo render), fermiamo tutto! Nessun loop.
+        if (!hasAssigneesChanged && !hasUnassignedChanged && !_firstRender) return;
+
+        // 4. Aggiorniamo il nostro stato e notifichiamo la query solo in caso di vero cambiamento
+        Filter = new(expectedAssignees, expectedStatuses, expectedUnassigned);
+        _firstRender = false;
+
+        await NotifyFilterChanged();
     }
 
     private async Task OnStatusChanged(IEnumerable<string> values)
@@ -146,13 +129,13 @@
         await NotifyFilterChanged();
     }
 
-    private string GetSelectedStatuesText(IReadOnlyCollection<string?>? statuses)
+    private static string GetSelectedStatuesText(IReadOnlyCollection<string?>? statuses)
     {
         statuses ??= [];
         if (statuses.Count == 0) return string.Empty;
         var names = statuses
-            .Where(status => !string.IsNullOrEmpty(status))
-            .Select(status => status!.ToTitleCase());
+            .Where(s => !string.IsNullOrEmpty(s))
+            .Select(s => s!.ToTitleCase());
         return string.Join(", ", names);
     }
 
@@ -161,13 +144,12 @@
         emails ??= [];
         if (emails.Count == 0) return string.Empty;
         var names = _assignees
-            .Where(assignee => emails.Contains(assignee.EmailAddress))
-            .Select(assignee => string.IsNullOrWhiteSpace(assignee.DisplayName) ? assignee.EmailAddress : assignee.DisplayName);
+            .Where(a => emails.Contains(a.EmailAddress))
+            .Select(a => string.IsNullOrWhiteSpace(a.DisplayName) ? a.EmailAddress : a.DisplayName);
         return string.Join(", ", names);
     }
 
-    private async Task NotifyFilterChanged()
-    {
-        if (OnFilterChanged.HasDelegate) await OnFilterChanged.InvokeAsync(Filter);
-    }
+    private Task NotifyFilterChanged() => OnFilterChanged.HasDelegate 
+        ? OnFilterChanged.InvokeAsync(Filter) 
+        : Task.CompletedTask;
 }

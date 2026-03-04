@@ -1,14 +1,8 @@
 ﻿@page "/"
 @page "/dashboard"
 @page "/dashboard/{Email}"
-@using Planner.Clients
 
-<PageTitle>@_title</PageTitle>
-
-<DashboardLayout Title="@_title"
-                 ShowAssigneeFilter="@_showAssigneeFilter"
-                 ForcedAssignees="@_forcedAssignees"
-                 ForcedIncludeUnassigned="@_forcedIncludeUnassigned">
+<DashboardLayout Title="Dashboard" Email="@Email">
     <ul>
         @foreach (var issue in context)
         {
@@ -17,42 +11,6 @@
     </ul>
 </DashboardLayout>
 
-@inject JiraClient Client
-
 @code {
     [Parameter] public string? Email { get; set; }
-
-    private string _title = "Team Dashboard";
-    private bool _showAssigneeFilter = true;
-    private HashSet<string>? _forcedAssignees;
-    private bool? _forcedIncludeUnassigned;
-
-    protected override async Task OnParametersSetAsync()
-    {
-        if (string.IsNullOrEmpty(Email))
-        {
-            _title = "Team Dashboard";
-            _showAssigneeFilter = true;
-            _forcedAssignees = null;
-            _forcedIncludeUnassigned = null;
-        }
-        else if (Email.Equals(Constants.Unassigned, StringComparison.OrdinalIgnoreCase))
-        {
-            _title = "Non Assegnate";
-            _showAssigneeFilter = false;
-            _forcedAssignees = [];
-            _forcedIncludeUnassigned = true;
-        }
-        else
-        {
-            var decoded = Uri.UnescapeDataString(Email);
-            var users = await Client.GetProjectAssigneesAsync();
-            var name = users.FirstOrDefault(u => u.EmailAddress.Equals(decoded, StringComparison.OrdinalIgnoreCase))?.DisplayName ?? decoded;
-
-            _title = $"Dashboard — {name}";
-            _showAssigneeFilter = false;
-            _forcedAssignees = [decoded];
-            _forcedIncludeUnassigned = false;
-        }
-    }
 }

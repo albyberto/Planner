@@ -4,15 +4,17 @@
 @using Planner.Model
 @using Planner.Services
 
+<PageTitle>@_displayTitle</PageTitle>
+
 <MudText Typo="Typo.h4" GutterBottom="true">
     <MudIcon Icon="@Icons.Material.Filled.Dashboard" Class="mr-2" />
-    @Title
+    @_displayTitle
 </MudText>
 
 <Filters OnFilterChanged="OnFilterChanged"
-         ShowAssigneeFilter="@ShowAssigneeFilter"
-         ForcedAssignees="@ForcedAssignees"
-         ForcedIncludeUnassigned="@ForcedIncludeUnassigned" />
+         ShowAssigneeFilter="@_showAssigneeFilter"
+         ForcedAssignees="@_forcedAssignees"
+         ForcedIncludeUnassigned="@_forcedIncludeUnassigned" />
 
 @if (_loading)
 {
@@ -29,19 +31,54 @@ else
 
 @code {
     [Parameter, EditorRequired] public string Title { get; set; } = string.Empty;
+    [Parameter] public string? Email { get; set; }
     [Parameter, EditorRequired] public RenderFragment<ImmutableList<Issue>> ChildContent { get; set; } = default!;
-    [Parameter] public bool ShowAssigneeFilter { get; set; } = true;
-    [Parameter] public HashSet<string>? ForcedAssignees { get; set; }
-    [Parameter] public bool? ForcedIncludeUnassigned { get; set; }
 
     private ImmutableList<Issue> _issues = [];
     private bool _loading;
+
+    // Variabili di stato interne pilotate dalla rotta
+    private string _displayTitle = string.Empty;
+    private bool _showAssigneeFilter = true;
+    private HashSet<string>? _forcedAssignees;
+    private bool? _forcedIncludeUnassigned;
+
+    protected override async Task OnParametersSetAsync()
+    {
+        // Logica composizione titolo e filtri forzati
+        if (string.IsNullOrEmpty(Email))
+        {
+            _displayTitle = $"{Title} — Team";
+            _showAssigneeFilter = true;
+            _forcedAssignees = null;
+            _forcedIncludeUnassigned = null;
+        }
+        else if (Email.Equals(Constants.Unassigned, StringComparison.OrdinalIgnoreCase))
+        {
+            _displayTitle = $"{Title} — Non Assegnate";
+            _showAssigneeFilter = false;
+            _forcedAssignees = []; // Nessuno assegnato
+            _forcedIncludeUnassigned = true;
+        }
+        else
+        {
+            var decoded = Uri.UnescapeDataString(Email);
+            var users = await Client.GetProjectAssigneesAsync();
+            var name = users.FirstOrDefault(u => u.EmailAddress.Equals(decoded, StringComparison.OrdinalIgnoreCase))?.DisplayName ?? decoded;
+
+            _displayTitle = $"{Title} — {name}";
+            _showAssigneeFilter = false;
+            _forcedAssignees = [decoded];
+            _forcedIncludeUnassigned = false;
+        }
+    }
 
     private async Task OnFilterChanged(Filter filter)
     {
         try
         {
             _loading = true;
+            StateHasChanged(); // Forza il render per far comparire la progress bar
 
             var jql = QueryBuilder.BuildDashboardQuery(filter);
             _issues = await Client.GetIssuesAsync(jql);
@@ -53,6 +90,7 @@ else
         finally
         {
             _loading = false;
+            StateHasChanged();
         }
     }
 }
