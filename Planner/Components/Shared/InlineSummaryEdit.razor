@@ -19,6 +19,7 @@ else
     [Parameter, EditorRequired] public required string IssueKey { get; set; }
     [Parameter, EditorRequired] public required string Value { get; set; }
     [Parameter] public EventCallback OnChanged { get; set; }
+    [CascadingParameter(Name = "RefreshIssues")] public Func<Task>? RefreshIssues { get; set; }
 
     private bool _editing;
     private string _value = string.Empty;
@@ -43,6 +44,7 @@ else
             Snackbar.Add($"{IssueKey} summary aggiornato", Severity.Success);
             _editing = false;
             if (OnChanged.HasDelegate) await OnChanged.InvokeAsync();
+            if (RefreshIssues is not null) await RefreshIssues();
         }
         catch (Exception ex)
         {

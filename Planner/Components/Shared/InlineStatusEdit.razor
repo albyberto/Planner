@@ -35,6 +35,7 @@
     [Parameter, EditorRequired] public required string IssueKey { get; set; }
     [Parameter, EditorRequired] public required Status Status { get; set; }
     [Parameter] public EventCallback OnChanged { get; set; }
+    [CascadingParameter(Name = "RefreshIssues")] public Func<Task>? RefreshIssues { get; set; }
 
     private IReadOnlyList<Domain.Transition> _transitions = [];
     private bool _loading;
@@ -63,6 +64,7 @@
             await WriteClient.TransitionAsync(IssueKey, transition.Id);
             Snackbar.Add($"{IssueKey} → {transition.Name}", Severity.Success);
             if (OnChanged.HasDelegate) await OnChanged.InvokeAsync();
+            if (RefreshIssues is not null) await RefreshIssues();
         }
         catch (Exception ex)
         {

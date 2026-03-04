@@ -40,6 +40,7 @@
     [Parameter, EditorRequired] public required string IssueKey { get; set; }
     [Parameter, EditorRequired] public required IssueType IssueType { get; set; }
     [Parameter] public EventCallback OnChanged { get; set; }
+    [CascadingParameter(Name = "RefreshIssues")] public Func<Task>? RefreshIssues { get; set; }
 
     private IReadOnlyList<IssueType> _types = [];
     private bool _loading;
@@ -70,6 +71,7 @@
             await WriteClient.UpdateIssueTypeAsync(IssueKey, type.Id);
             Snackbar.Add($"{IssueKey} tipo → {type.Name}", Severity.Success);
             if (OnChanged.HasDelegate) await OnChanged.InvokeAsync();
+            if (RefreshIssues is not null) await RefreshIssues();
         }
         catch (Exception ex)
         {

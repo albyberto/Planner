@@ -22,7 +22,9 @@
 }
 else
 {
-    @ChildContent(_issues)
+    <CascadingValue Value="RefreshAsync" Name="RefreshIssues">
+        @ChildContent(_issues)
+    </CascadingValue>
 }
 
 @inject JqlFilterBuilder QueryBuilder
@@ -36,6 +38,7 @@ else
 
     private ImmutableList<Issue> _issues = [];
     private bool _loading;
+    private Filter? _lastFilter;
 
     // Variabili di stato interne pilotate dalla rotta
     private string _displayTitle = string.Empty;
@@ -76,9 +79,22 @@ else
 
     private async Task OnFilterChanged(Filter filter)
     {
+        _lastFilter = filter;
+        await LoadIssuesAsync(filter);
+    }
+
+    private async Task RefreshAsync()
+    {
+        if (_lastFilter is not null)
+            await LoadIssuesAsync(_lastFilter);
+    }
+
+    private async Task LoadIssuesAsync(Filter filter)
+    {
         try
         {
             _loading = true;
+            StateHasChanged();
             var jql = QueryBuilder.BuildDashboardQuery(filter);
             _issues = await ReadClient.GetIssuesAsync(jql);
         }
@@ -89,6 +105,7 @@ else
         finally
         {
             _loading = false;
+            StateHasChanged();
         }
     }
 }

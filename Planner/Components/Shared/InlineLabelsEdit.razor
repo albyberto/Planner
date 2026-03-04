@@ -35,6 +35,7 @@ else
     [Parameter, EditorRequired] public required string IssueKey { get; set; }
     [Parameter] public IReadOnlyList<string>? Labels { get; set; }
     [Parameter] public EventCallback OnChanged { get; set; }
+    [CascadingParameter(Name = "RefreshIssues")] public Func<Task>? RefreshIssues { get; set; }
 
     private bool _editing;
     private HashSet<string> _selected = [];
@@ -56,6 +57,7 @@ else
             Snackbar.Add($"{IssueKey} labels aggiornate", Severity.Success);
             _editing = false;
             if (OnChanged.HasDelegate) await OnChanged.InvokeAsync();
+            if (RefreshIssues is not null) await RefreshIssues();
         }
         catch (Exception ex)
         {

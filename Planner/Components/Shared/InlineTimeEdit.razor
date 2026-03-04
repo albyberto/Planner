@@ -26,6 +26,7 @@ else
     /// <summary>"originalEstimate" or "remainingEstimate"</summary>
     [Parameter, EditorRequired] public required string Field { get; set; }
     [Parameter] public EventCallback OnChanged { get; set; }
+    [CascadingParameter(Name = "RefreshIssues")] public Func<Task>? RefreshIssues { get; set; }
 
     private bool _editing;
     private string _value = string.Empty;
@@ -52,6 +53,7 @@ else
             Snackbar.Add($"{IssueKey} {Label} aggiornato a {_value}", Severity.Success);
             _editing = false;
             if (OnChanged.HasDelegate) await OnChanged.InvokeAsync();
+            if (RefreshIssues is not null) await RefreshIssues();
         }
         catch (Exception ex)
         {
