@@ -1,6 +1,7 @@
 @using System.Collections.Immutable
 @using Planner.Clients
 @using Planner.Domain
+@using Planner.Extensions
 @using Planner.Model
 @using Planner.Services
 
@@ -34,9 +35,9 @@ else
 @code {
     [Parameter, EditorRequired] public required string Title { get; set; } = string.Empty;
     [Parameter] public string? Email { get; set; }
-    [Parameter, EditorRequired] public required RenderFragment<ImmutableList<Issue>> ChildContent { get; set; } = null!;
+    [Parameter, EditorRequired] public required RenderFragment<ImmutableList<IssueModel>> ChildContent { get; set; } = null!;
 
-    private ImmutableList<Issue> _issues = [];
+    private ImmutableList<IssueModel> _issues = [];
     private bool _loading;
     private Filter? _lastFilter;
 
@@ -46,7 +47,7 @@ else
     private HashSet<string>? _forcedAssignees;
     private bool? _forcedIncludeUnassigned;
 
-    protected override async Task OnParametersSetAsync()
+    protected override void OnParametersSet()
     {
         // Logica composizione titolo e filtri forzati
         if (string.IsNullOrEmpty(Email))
@@ -66,9 +67,9 @@ else
         else
         {
             var decoded = Uri.UnescapeDataString(Email);
-            var users = await ReadClient.GetProjectAssigneesAsync();
+            var users = ReadClient.GetProjects().FindAssigneesByEmailsAsync(decoded).Result;
             var user = users.FirstOrDefault(u => u.EmailAddress.Equals(decoded, StringComparison.OrdinalIgnoreCase));
-            var name = user?.FormattedDisplayName ?? decoded;
+            var name = user?.DisplayName ?? decoded;
 
             _displayTitle = $"{Title} — {name}";
             _showAssigneeFilter = false;

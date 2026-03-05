@@ -1,9 +1,14 @@
+using System.ComponentModel.DataAnnotations;
+
 namespace Planner.Options;
 
 public class JiraFilterOptions
 {
     public const string SectionName = "JiraFilters";
 
+    [Required, MinLength(2)]
+    public string DefaultProject { get; init; } = string.Empty;
+    
     public HashSet<string> DefaultStatuses { get; init; } = [];
     public HashSet<TeamMember> TeamMembers { get; init; } = [];
     public bool IncludeUnassignedByDefault { get; init; }

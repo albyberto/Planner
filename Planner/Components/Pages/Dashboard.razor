@@ -66,34 +66,31 @@
                 </HeaderContent>
                 <RowTemplate Context="issue">
                     <MudTd DataLabel="Type" Class="mud-text-align-center">
-                        <InlineTypeEdit IssueKey="@issue.Key" IssueType="@issue.Fields.IssueType" />
+                        @issue.Type
                     </MudTd>
                     <MudTd DataLabel="Key">
-                        <IssueKey Issue="@issue" />
+                        @issue.Key
                     </MudTd>
                     <MudTd DataLabel="Summary">
-                        <InlineSummaryEdit IssueKey="@issue.Key" Value="@issue.Fields.Summary" />
+                        @issue.Summary
                     </MudTd>
                     <MudTd DataLabel="Status">
-                        <InlineStatusEdit IssueKey="@issue.Key" Status="@issue.Fields.Status" />
+                        @issue.Status.Name
                     </MudTd>
                     <MudTd DataLabel="Est" Class="mud-text-align-end">
-                        <InlineTimeEdit IssueKey="@issue.Key" Field="originalEstimate" Label="stima"
-                                        DisplayValue="@issue.Stats.FormattedEstimate" />
+                        @issue.Stats.FormattedEstimate
                     </MudTd>
                     <MudTd DataLabel="Spent" Class="mud-text-align-end">
                         <MudText Typo="Typo.body2" Color="Color.Info">@issue.Stats.FormattedSpent</MudText>
                     </MudTd>
                     <MudTd DataLabel="Left" Class="mud-text-align-end">
-                        <InlineTimeEdit IssueKey="@issue.Key" Field="remainingEstimate" Label="rimanente"
-                                        DisplayValue="@issue.Stats.FormattedRemaining"
-                                        DisplayColor="@(issue.Stats.IsOverBudget ? Color.Error : Color.Success)" />
+                        @issue.Stats.FormattedRemaining
                     </MudTd>
                     <MudTd DataLabel="Components">
-                        <InlineComponentsEdit IssueKey="@issue.Key" Components="@issue.Fields.Components" />
+                        @string.Join(", ", issue.Components)"
                     </MudTd>
                     <MudTd DataLabel="Labels">
-                        <InlineLabelsEdit IssueKey="@issue.Key" Labels="@issue.Fields.Labels" />
+                        @string.Join(", ", issue.Labels)"
                     </MudTd>
                 </RowTemplate>
             </MudTable>

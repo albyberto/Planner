@@ -18,35 +18,12 @@ public class JiraReadClient(HttpClient httpClient, IOptions<JiraQueryOptions> op
     public IEnumerable<ProjectModel> GetProjects() =>
         _settings.ProjectKeys.Select(key => new ProjectModel(
             key,
-            () => GetProjectDetailsAsync(key),
             () => GetStatusesForProjectAsync(key),
             () => GetAssigneesForProjectAsync(key),
             () => GetComponentsForProjectAsync(key),
             () => GetLabelsForProjectAsync(key),
             () => GetIssueTypesForProjectAsync(key)
         ));
-
-    private async Task<Project> GetProjectDetailsAsync(string projectKey)
-    {
-        var cacheKey = $"jira:project:{projectKey}";
-        var cached = await cache.GetStringAsync(cacheKey);
-        if (cached is not null)
-            return JsonSerializer.Deserialize<Project>(cached)!;
-
-        try
-        {
-            var project = await httpClient.GetFromJsonAsync<Project>($"project/{projectKey}");
-            if (project is not null)
-                await cache.SetStringAsync(cacheKey, JsonSerializer.Serialize(project),
-                    new DistributedCacheEntryOptions { AbsoluteExpirationRelativeToNow = TimeSpan.FromHours(24) });
-            return project!;
-        }
-        catch (Exception ex)
-        {
-            logger.LogError(ex, "Error fetching project details for {Project}", projectKey);
-            throw;
-        }
-    }
 
     private async Task<ImmutableList<Status>> GetStatusesForProjectAsync(string projectKey)
     {
@@ -209,7 +186,7 @@ public class JiraReadClient(HttpClient httpClient, IOptions<JiraQueryOptions> op
 
     #region Issues
 
-    public async Task<IReadOnlyList<Transition>> GetTransitionsAsync(string issueKey, CancellationToken cancellationToken = default)
+    private async Task<IReadOnlyList<Transition>> GetTransitionsAsync(string issueKey, CancellationToken cancellationToken = default)
     {
         try
         {

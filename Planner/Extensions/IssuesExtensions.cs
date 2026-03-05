@@ -2,7 +2,7 @@ using Planner.Model;
 
 namespace Planner.Extensions;
 
-public static class JiraExtensions
+public static class IssuesExtensions
 {
     extension(ICollection<IssueModel> issues)
     {

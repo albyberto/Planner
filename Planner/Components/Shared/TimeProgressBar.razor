@@ -1,4 +1,5 @@
 @using Planner.Extensions
+@using Planner.Model
 
 <MudTooltip Text="@($"Spent {Stats.FormattedSpent} / Estimate {Stats.FormattedEstimate}")" Arrow="true" Class="mud-width-full">
     <MudProgressLinear Value="@Stats.ProgressPercent" Min="0" Max="100"

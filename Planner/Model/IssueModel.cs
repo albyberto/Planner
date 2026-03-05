@@ -8,12 +8,12 @@ public record IssueModel
     public string Id { get; init; }
     public string Key { get; init; }
     public string Summary { get; init; }
-    public Status Status { get; init; }
-    public User Assignee { get; init; }
-    public IssueType IssueType { get; init; }
-    public ImmutableList<Component> Components { get; init; }
-    public ImmutableList<string> Labels { get; init; }
-    public ImmutableList<FixVersion> FixVersions { get; init; }
+    public StatusModel Status { get; init; }
+    public UserModel Assignee { get; init; }
+    public IssueTypeModel Type { get; init; }
+    public ImmutableList<ComponentModel> Components { get; init; }
+    public ImmutableList<LabelModel> Labels { get; init; }
+    public ImmutableList<FixVersionModel> FixVersions { get; init; }
     public DateOnly? StartDate { get; init; }
 
     public TimeStats Stats { get; init; }
@@ -25,21 +25,28 @@ public record IssueModel
         Id = dto.Id;
         Key = dto.Key;
         Summary = dto.Fields.Summary;
-        Status = dto.Fields.Status;
-        Assignee = dto.Fields.Assignee;
-        IssueType = dto.Fields.IssueType;
-        Components = dto.Fields.Components?.ToImmutableList() ?? [];
-        Labels = dto.Fields.Labels?.ToImmutableList() ?? [];
-        FixVersions = dto.Fields.FixVersions?.ToImmutableList() ?? [];
+        Status = new(dto.Fields.Status);
+        Assignee = new(dto.Fields.Assignee);
+        Type = new(dto.Fields.IssueType);
+        Components = dto.Fields.Components.Select(component => new ComponentModel(component)).ToImmutableList();
+        Labels = dto.Fields.Labels.Select(label => new LabelModel(label)).ToImmutableList();
+        FixVersions = dto.Fields.FixVersions.Select(version => new FixVersionModel(version)).ToImmutableList() ?? [];
         StartDate = dto.Fields.StartDate;
 
-        var originalEstimate = dto.Fields.TimeTracking?.OriginalEstimateSeconds ?? 0;
-        var timeSpent = dto.Fields.Worklog?.Worklogs?.Sum(w => w.TimeSpentSeconds ?? 0) ?? 0;
+        var originalEstimate = dto.Fields.TimeTracking.OriginalEstimateSeconds ?? 0;
+        var timeSpent = dto.Fields.Worklog.Worklogs.Sum(w => w.TimeSpentSeconds ?? 0);
         
         Stats = new(originalEstimate, timeSpent);
 
         _transitionsLoader = new(loadTransitions);
     }
 
-    public Task<IReadOnlyList<Transition>> GetTransitionsAsync() => _transitionsLoader.Value;
+    public async Task<IReadOnlyList<TransitionModel>> GetTransitionsAsync()
+    {
+        var transitions = await _transitionsLoader.Value;
+        
+        return transitions
+            .Select(transition => new TransitionModel(transition))
+            .ToImmutableList();
+    }
 }

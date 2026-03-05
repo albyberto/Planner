@@ -1,6 +1,7 @@
 ﻿@using Microsoft.Extensions.Options
 @using Planner.Clients
-@using Planner.Domain
+@using Planner.Extensions
+@using Planner.Model
 @using Planner.Options
 
 <MudNavMenu>
@@ -26,16 +27,17 @@
 
 @code {
     private const string UnassignedHref = $"/dashboard/{Constants.Unassigned}";
-    private List<User> _members = [];
+    private List<UserModel> _members = [];
 
     protected override async Task OnInitializedAsync()
     {
         try
         {
-            var users = await ReadClient.GetProjectAssigneesAsync();
             var emails = FilterOptions.Value.TeamMembers
                 .Select(m => m.Email)
-                .ToHashSet(StringComparer.OrdinalIgnoreCase);
+                .ToArray();
+            
+            var users = await ReadClient.GetProjects().FindAssigneesByEmailsAsync(emails);
 
             _members = users
                 .Where(user => emails.Contains(user.EmailAddress))
