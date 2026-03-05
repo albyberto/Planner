@@ -3,6 +3,7 @@ using System.Text.Json;
 using Microsoft.Extensions.Caching.Distributed;
 using Microsoft.Extensions.Options;
 using Planner.Domain;
+using Planner.Model;
 using Planner.Models;
 using Type = Planner.Domain.Type;
 
@@ -12,148 +13,207 @@ public class JiraReadClient(HttpClient httpClient, IOptions<JiraQueryOptions> op
 {
     private readonly JiraQueryOptions _settings = options.Value;
 
-    public async Task<ImmutableList<Status>> GetProjectStatusesAsync(CancellationToken cancellationToken = default)
-    {
-        const string cacheKey = "jira:statuses";
+    #region Projects
 
-        var cached = await cache.GetStringAsync(cacheKey, cancellationToken);
+    public IEnumerable<ProjectModel> GetProjects() =>
+        _settings.ProjectKeys.Select(key => new ProjectModel(
+            key,
+            () => GetProjectDetailsAsync(key),
+            () => GetStatusesForProjectAsync(key),
+            () => GetAssigneesForProjectAsync(key),
+            () => GetComponentsForProjectAsync(key),
+            () => GetLabelsForProjectAsync(key),
+            () => GetIssueTypesForProjectAsync(key)
+        ));
+
+    private async Task<Project> GetProjectDetailsAsync(string projectKey)
+    {
+        var cacheKey = $"jira:project:{projectKey}";
+        var cached = await cache.GetStringAsync(cacheKey);
         if (cached is not null)
-            return JsonSerializer.Deserialize<ImmutableList<Status>>(cached) ?? [];
+            return JsonSerializer.Deserialize<Project>(cached)!;
 
-        var tasks = _settings.ProjectKeys.Select(async project =>
-        {
-            try
-            {
-                var issueTypes = await httpClient.GetFromJsonAsync<List<Type>>($"project/{project}/statuses", cancellationToken);
-                return issueTypes != null ? issueTypes : [];   
-            }
-            catch (Exception exception)
-            {
-                logger.LogError(exception, "Error in GetProjectStatusesAsync");
-                throw;
-            }
-        });
-
-        var results = await Task.WhenAll(tasks);
-
-        var statuses = results
-            .SelectMany(requests => requests)
-            .SelectMany(request => request.Statuses)
-            .DistinctBy(status => status.Id)
-            .OrderBy(status => status.StatusCategory.Id)
-            .ThenBy(status => status.Id)
-            .ToImmutableList();
-
-        var cacheOptions = new DistributedCacheEntryOptions
-        {
-            AbsoluteExpirationRelativeToNow = TimeSpan.FromHours(1440)
-        };
-        
-        await cache.SetStringAsync(cacheKey, JsonSerializer.Serialize(statuses), cacheOptions, cancellationToken);
-        return statuses;
-    }
-
-    public async Task<ImmutableList<User>> GetProjectAssigneesAsync(CancellationToken cancellationToken = default)
-    {
-        const string cacheKey = "jira:assignees";
-
-        var cached = await cache.GetStringAsync(cacheKey, cancellationToken);
-        if (cached is not null)
-            return JsonSerializer.Deserialize<ImmutableList<User>>(cached) ?? [];
-
-        var tasks = _settings.ProjectKeys.Select(async projectKey =>
-        {
-            try
-            {
-                var assignees = await httpClient.GetFromJsonAsync<List<User>>($"user/assignable/search?project={projectKey}", cancellationToken);
-                return assignees != null ? assignees : [];
-            }
-            catch (Exception exception)
-            {
-                logger.LogError(exception, "Error in GetProjectAssigneesAsync");
-                throw;
-            }
-        });
-
-        var results = await Task.WhenAll(tasks);
-
-        var assignees = results
-            .SelectMany(users => users)
-            .Where(user => !string.IsNullOrEmpty(user.EmailAddress))
-            .DistinctBy(user => user.AccountId)
-            .OrderBy(user => user.DisplayName)
-            .ToImmutableList();
-
-        var cacheOptions = new DistributedCacheEntryOptions
-        {
-            AbsoluteExpirationRelativeToNow = TimeSpan.FromHours(16)
-        };
-        
-        await cache.SetStringAsync(cacheKey, JsonSerializer.Serialize(assignees), cacheOptions, cancellationToken);
-        return assignees;
-    }
-    
-    public async Task<ImmutableList<Issue>> GetIssuesAsync(string jql, CancellationToken cancellationToken = default)
-    {
-        var issues = new List<Issue>();
-        string? nextPageToken = null;
-        
         try
         {
-            do
-            {
-                var requestBody = new Dictionary<string, object>
-                {
-                    ["jql"] = jql,
-                    ["maxResults"] = 50,
-                    ["fields"] = new[] 
-                    { 
-                        "summary", "status", "assignee", "fixVersions", 
-                        "created", "updated", "issuetype", "components", 
-                        "labels", "timetracking", "worklog", "customfield_10117"
-                    }
-                };
-
-                if (!string.IsNullOrEmpty(nextPageToken))
-                {
-                    requestBody["nextPageToken"] = nextPageToken;
-                }
-
-                var response = await httpClient.PostAsJsonAsync("search/jql", requestBody, cancellationToken);
-                
-                if (!response.IsSuccessStatusCode)
-                {
-                    var errorContent = await response.Content.ReadAsStringAsync(cancellationToken);
-                    logger.LogError("Errore dalla API Jira: {StatusCode} - {Error}", response.StatusCode, errorContent);
-                    response.EnsureSuccessStatusCode();
-                }
-
-                var searchResult = await response.Content.ReadFromJsonAsync<Issues>(cancellationToken: cancellationToken);
-
-                if ((searchResult != null ? searchResult.List == null : true) || searchResult.List.Count == 0)
-                {
-                    break;
-                }
-
-                issues.AddRange(searchResult.List);
-                nextPageToken = searchResult.NextPageToken;
-
-            } while (!string.IsNullOrEmpty(nextPageToken));
-
-            return issues.ToImmutableList();
+            var project = await httpClient.GetFromJsonAsync<Project>($"project/{projectKey}");
+            if (project is not null)
+                await cache.SetStringAsync(cacheKey, JsonSerializer.Serialize(project),
+                    new DistributedCacheEntryOptions { AbsoluteExpirationRelativeToNow = TimeSpan.FromHours(24) });
+            return project!;
         }
-        catch (Exception exception)
+        catch (Exception ex)
         {
-            logger.LogError(exception, "Error in GetIssuesAsync");
+            logger.LogError(ex, "Error fetching project details for {Project}", projectKey);
             throw;
         }
     }
 
-    public async Task<IReadOnlyList<Transition>> GetTransitionsAsync(string issueKey, CancellationToken ct = default)
+    private async Task<ImmutableList<Status>> GetStatusesForProjectAsync(string projectKey)
+    {
+        var cacheKey = $"jira:statuses:{projectKey}";
+        var cached = await cache.GetStringAsync(cacheKey);
+        if (cached is not null)
+            return JsonSerializer.Deserialize<ImmutableList<Status>>(cached) ?? [];
+
+        try
+        {
+            var types = await httpClient.GetFromJsonAsync<List<Type>>($"project/{projectKey}/statuses");
+            var statuses = (types ?? [])
+                .SelectMany(t => t.Statuses)
+                .DistinctBy(status => status.Id)
+                .OrderBy(status => status.StatusCategory.Id)
+                .ThenBy(status => status.Id)
+                .ToImmutableList();
+
+            await cache.SetStringAsync(cacheKey, JsonSerializer.Serialize(statuses),
+                new DistributedCacheEntryOptions { AbsoluteExpirationRelativeToNow = TimeSpan.FromHours(24) });
+
+            return statuses;
+        }
+        catch (Exception exception)
+        {
+            logger.LogError(exception, "Error fetching statuses for project {Project}", projectKey);
+            throw;
+        }
+    }
+
+    private async Task<ImmutableList<User>> GetAssigneesForProjectAsync(string projectKey)
+    {
+        var cacheKey = $"jira:assignees:{projectKey}";
+        var cached = await cache.GetStringAsync(cacheKey);
+        if (cached is not null)
+            return JsonSerializer.Deserialize<ImmutableList<User>>(cached) ?? [];
+
+        try
+        {
+            var assignees = await httpClient.GetFromJsonAsync<List<User>>($"user/assignable/search?project={projectKey}");
+            var result = (assignees ?? [])
+                .Where(user => !string.IsNullOrEmpty(user.EmailAddress))
+                .DistinctBy(user => user.AccountId)
+                .OrderBy(user => user.DisplayName)
+                .ToImmutableList();
+
+            await cache.SetStringAsync(cacheKey, JsonSerializer.Serialize(result),
+                new DistributedCacheEntryOptions { AbsoluteExpirationRelativeToNow = TimeSpan.FromHours(16) });
+
+            return result;
+        }
+        catch (Exception exception)
+        {
+            logger.LogError(exception, "Error fetching assignees for project {Project}", projectKey);
+            throw;
+        }
+    }
+
+    private async Task<ImmutableList<Component>> GetComponentsForProjectAsync(string projectKey)
+    {
+        var cacheKey = $"jira:components:{projectKey}";
+        var cached = await cache.GetStringAsync(cacheKey);
+        if (cached is not null)
+            return JsonSerializer.Deserialize<ImmutableList<Component>>(cached) ?? [];
+
+        try
+        {
+            var components = await httpClient.GetFromJsonAsync<List<Component>>($"project/{projectKey}/components");
+            var result = (components ?? [])
+                .DistinctBy(c => c.Id)
+                .OrderBy(c => c.Name)
+                .ToImmutableList();
+
+            await cache.SetStringAsync(cacheKey, JsonSerializer.Serialize(result),
+                new DistributedCacheEntryOptions { AbsoluteExpirationRelativeToNow = TimeSpan.FromHours(8) });
+
+            return result;
+        }
+        catch (Exception ex)
+        {
+            logger.LogError(ex, "Error fetching components for {Project}", projectKey);
+            throw;
+        }
+    }
+
+    private async Task<ImmutableList<string>> GetLabelsForProjectAsync(string projectKey)
+    {
+        var cacheKey = $"jira:labels:{projectKey}";
+        var cached = await cache.GetStringAsync(cacheKey);
+        if (cached is not null)
+            return JsonSerializer.Deserialize<ImmutableList<string>>(cached) ?? [];
+
+        try
+        {
+            var body = new Dictionary<string, object>
+            {
+                ["jql"] = $"project = {projectKey} AND labels IS NOT EMPTY ORDER BY updated DESC",
+                ["maxResults"] = 100,
+                ["fields"] = new[] { "labels" }
+            };
+
+            var response = await httpClient.PostAsJsonAsync("search/jql", body);
+            var labels = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+
+            if (response.IsSuccessStatusCode)
+            {
+                var result = await response.Content.ReadFromJsonAsync<Issues>();
+                if (result?.List is not null)
+                    foreach (var label in result.List.SelectMany(i => i.Fields.Labels))
+                        labels.Add(label);
+            }
+
+            var finalLabels = labels.OrderBy(l => l).ToImmutableList();
+
+            await cache.SetStringAsync(cacheKey, JsonSerializer.Serialize(finalLabels),
+                new DistributedCacheEntryOptions { AbsoluteExpirationRelativeToNow = TimeSpan.FromHours(8) });
+
+            return finalLabels;
+        }
+        catch (Exception ex)
+        {
+            logger.LogError(ex, "Error fetching labels for {Project}", projectKey);
+            throw;
+        }
+    }
+
+    private async Task<ImmutableList<IssueType>> GetIssueTypesForProjectAsync(string projectKey)
+    {
+        var cacheKey = $"jira:issuetypes:{projectKey}";
+        var cached = await cache.GetStringAsync(cacheKey);
+        if (cached is not null)
+            return JsonSerializer.Deserialize<ImmutableList<IssueType>>(cached) ?? [];
+
+        try
+        {
+            var projectDetail = await httpClient.GetFromJsonAsync<JsonElement>($"project/{projectKey}");
+            var issueTypes = new List<IssueType>();
+
+            if (projectDetail.TryGetProperty("issueTypes", out var issueTypesElement)) issueTypes = JsonSerializer.Deserialize<List<IssueType>>(issueTypesElement.GetRawText()) ?? [];
+
+            var result = issueTypes
+                .Where(t => t.Subtask != true)
+                .DistinctBy(t => t.Id)
+                .OrderBy(t => t.Name)
+                .ToImmutableList();
+
+            await cache.SetStringAsync(cacheKey, JsonSerializer.Serialize(result),
+                new DistributedCacheEntryOptions { AbsoluteExpirationRelativeToNow = TimeSpan.FromHours(8) });
+
+            return result;
+        }
+        catch (Exception ex)
+        {
+            logger.LogError(ex, "Error fetching issue types for {Project}", projectKey);
+            throw;
+        }
+    }
+
+    #endregion
+
+    #region Issues
+
+    public async Task<IReadOnlyList<Transition>> GetTransitionsAsync(string issueKey, CancellationToken cancellationToken = default)
     {
         try
         {
-            var result = await httpClient.GetFromJsonAsync<TransitionsResponse>($"issue/{issueKey}/transitions", ct);
+            var result = await httpClient.GetFromJsonAsync<TransitionsResponse>($"issue/{issueKey}/transitions", cancellationToken);
             return result?.Transitions ?? [];
         }
         catch (Exception ex)
@@ -163,125 +223,58 @@ public class JiraReadClient(HttpClient httpClient, IOptions<JiraQueryOptions> op
         }
     }
 
-    public async Task<ImmutableList<Component>> GetProjectComponentsAsync(CancellationToken ct = default)
+    public async Task<ImmutableList<IssueModel>> GetIssuesAsync(string jql, CancellationToken cancellationToken = default)
     {
-        const string cacheKey = "jira:components";
+        var accumulator = new List<Issue>();
+        string? nextPageToken = null;
 
-        var cached = await cache.GetStringAsync(cacheKey, ct);
-        if (cached is not null)
-            return JsonSerializer.Deserialize<ImmutableList<Component>>(cached) ?? [];
-
-        var tasks = _settings.ProjectKeys.Select(async project =>
+        try
         {
-            try
+            do
             {
-                return await httpClient.GetFromJsonAsync<List<Component>>($"project/{project}/components", ct) ?? [];
-            }
-            catch (Exception ex)
-            {
-                logger.LogError(ex, "Error fetching components for {Project}", project);
-                throw;
-            }
-        });
-
-        var results = await Task.WhenAll(tasks);
-
-        var components = results
-            .SelectMany(c => c)
-            .DistinctBy(c => c.Id)
-            .OrderBy(c => c.Name)
-            .ToImmutableList();
-
-        await cache.SetStringAsync(cacheKey, JsonSerializer.Serialize(components),
-            new DistributedCacheEntryOptions { AbsoluteExpirationRelativeToNow = TimeSpan.FromHours(8) }, ct);
-
-        return components;
-    }
-
-    public async Task<ImmutableList<string>> GetProjectLabelsAsync(CancellationToken ct = default)
-    {
-        const string cacheKey = "jira:labels";
-
-        var cached = await cache.GetStringAsync(cacheKey, ct);
-        if (cached is not null)
-            return JsonSerializer.Deserialize<ImmutableList<string>>(cached) ?? [];
-
-        var allLabels = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
-
-        foreach (var project in _settings.ProjectKeys)
-        {
-            try
-            {
-                var body = new Dictionary<string, object>
+                var requestBody = new Dictionary<string, object>
                 {
-                    ["jql"] = $"project = {project} AND labels IS NOT EMPTY ORDER BY updated DESC",
-                    ["maxResults"] = 100,
-                    ["fields"] = new[] { "labels" }
+                    ["jql"] = jql,
+                    ["maxResults"] = 50,
+                    ["fields"] = new[]
+                    {
+                        "summary", "status", "assignee", "fixVersions",
+                        "created", "updated", "issuetype", "components",
+                        "labels", "timetracking", "worklog", "customfield_10117"
+                    }
                 };
 
-                var response = await httpClient.PostAsJsonAsync("search/jql", body, ct);
-                if (response.IsSuccessStatusCode)
+                if (!string.IsNullOrEmpty(nextPageToken))
+                    requestBody["nextPageToken"] = nextPageToken;
+
+                var response = await httpClient.PostAsJsonAsync("search/jql", requestBody, cancellationToken);
+
+                if (!response.IsSuccessStatusCode)
                 {
-                    var result = await response.Content.ReadFromJsonAsync<Issues>(cancellationToken: ct);
-                    if (result?.List is not null)
-                    {
-                        foreach (var label in result.List.SelectMany(i => i.Fields.Labels))
-                            allLabels.Add(label);
-                    }
+                    var errorContent = await response.Content.ReadAsStringAsync(cancellationToken);
+                    logger.LogError("Errore dalla API Jira: {StatusCode} - {Error}", response.StatusCode, errorContent);
+                    response.EnsureSuccessStatusCode();
                 }
-            }
-            catch (Exception ex)
-            {
-                logger.LogError(ex, "Error fetching labels for {Project}", project);
-            }
+
+                var result = await response.Content.ReadFromJsonAsync<Issues>(cancellationToken);
+
+                if (result is null || result.List.Count == 0) break;
+
+                accumulator.AddRange(result.List);
+                nextPageToken = result.NextPageToken;
+            } while (!string.IsNullOrEmpty(nextPageToken));
+
+            return accumulator.Select(dto => new IssueModel(
+                dto,
+                () => GetTransitionsAsync(dto.Key, cancellationToken)
+            )).ToImmutableList();
         }
-
-        var labels = allLabels.OrderBy(l => l).ToImmutableList();
-
-        await cache.SetStringAsync(cacheKey, JsonSerializer.Serialize(labels),
-            new DistributedCacheEntryOptions { AbsoluteExpirationRelativeToNow = TimeSpan.FromHours(8) }, ct);
-
-        return labels;
-    }
-
-    public async Task<ImmutableList<IssueType>> GetProjectIssueTypesAsync(CancellationToken ct = default)
-    {
-        const string cacheKey = "jira:issuetypes";
-
-        var cached = await cache.GetStringAsync(cacheKey, ct);
-        if (cached is not null)
-            return JsonSerializer.Deserialize<ImmutableList<IssueType>>(cached) ?? [];
-
-        var tasks = _settings.ProjectKeys.Select(async project =>
+        catch (Exception exception)
         {
-            try
-            {
-                var projectDetail = await httpClient.GetFromJsonAsync<JsonElement>($"project/{project}", ct);
-                if (projectDetail.TryGetProperty("issueTypes", out var issueTypesElement))
-                {
-                    return JsonSerializer.Deserialize<List<IssueType>>(issueTypesElement.GetRawText()) ?? [];
-                }
-                return new List<IssueType>();
-            }
-            catch (Exception ex)
-            {
-                logger.LogError(ex, "Error fetching issue types for {Project}", project);
-                throw;
-            }
-        });
-
-        var results = await Task.WhenAll(tasks);
-
-        var issueTypes = results
-            .SelectMany(t => t)
-            .Where(t => t.Subtask != true)
-            .DistinctBy(t => t.Id)
-            .OrderBy(t => t.Name)
-            .ToImmutableList();
-
-        await cache.SetStringAsync(cacheKey, JsonSerializer.Serialize(issueTypes),
-            new DistributedCacheEntryOptions { AbsoluteExpirationRelativeToNow = TimeSpan.FromHours(8) }, ct);
-
-        return issueTypes;
+            logger.LogError(exception, "Error in GetIssuesAsync");
+            throw;
+        }
     }
+
+    #endregion
 }

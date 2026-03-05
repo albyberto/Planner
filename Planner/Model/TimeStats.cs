@@ -1,6 +1,4 @@
-using Planner.Domain;
-
-namespace Planner.Extensions;
+namespace Planner.Model;
 
 public record TimeStats(int OriginalEstimate, int TimeSpent)
 {
@@ -13,7 +11,7 @@ public record TimeStats(int OriginalEstimate, int TimeSpent)
     public string FormattedSpent => FormatTime(TimeSpent);
     public string FormattedRemaining => IsOverBudget ? $"-{FormatTime(OverBudgetAmount)}" : FormatTime(Remaining);
 
-    public static string FormatTime(int seconds)
+    private static string FormatTime(int seconds)
     {
         if (seconds <= 0) return "0h";
 
