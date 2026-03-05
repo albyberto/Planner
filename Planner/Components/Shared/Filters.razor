@@ -5,23 +5,24 @@
 @using Planner.Options
 
 <MudExpansionPanels Class="mb-4 mud-width-full" Elevation="2">
-    <MudExpansionPanel Text="Filtri di Ricerca" Icon="@Icons.Material.Filled.FilterAlt" Expanded="true">
+    <MudExpansionPanel Text="Filtri di Ricerca" Icon="@Icons.Material.Outlined.Flip" Expanded="true">
         <MudGrid>
-            <MudItem xs="12">
-                <MudSelect T="string"
-                           Label="Projects"
-                           Value="Filter.ProjectKey"
-                           ValueChanged="OnProjectChanged"
-                           Variant="Variant.Filled"
-                           AnchorOrigin="Origin.BottomCenter"
-                           Dense="true">
-                    @foreach (var project in _projects)
-                    {
-                        <MudSelectItem T="string" Value="@project.Key">
-                            @project.Key
-                        </MudSelectItem>
-                    }
-                </MudSelect>
+                <MudItem xs="12" md="4">
+                    <MudSelect T="string"
+                               Label="Projects"
+                               Value="Filter.ProjectKey"
+                               ValueChanged="OnProjectChanged"
+                               Variant="Variant.Outlined"
+                               Dense="true"
+                               Required="true"
+                               RequiredError="Il progetto è obbligatorio">
+                        @foreach (var project in _projects)
+                        {
+                            <MudSelectItem T="string" Value="@project.Key">
+                                @project.Key
+                            </MudSelectItem>
+                        }
+                    </MudSelect>
             </MudItem>
 
             @if (!string.IsNullOrEmpty(Filter.ProjectKey))
@@ -113,7 +114,8 @@
                                    MultiSelectionTextFunc="@(selected => GetSelectedAssigneesText(selected))">
                             @foreach (var assignee in _assignees)
                             {
-                                <MudSelectItem T="string" Value="@assignee.EmailAddress">@assignee.DisplayName</MudSelectItem>
+                                <MudSelectItem T="string"
+                                               Value="@assignee.EmailAddress">@assignee.DisplayName</MudSelectItem>
                             }
                         </MudSelect>
                     </MudItem>
@@ -123,7 +125,7 @@
                                    Label="Includi non assegnate"
                                    Color="Color.Primary"
                                    Value="Filter.IncludeUnassigned"
-                                   ValueChanged="OnUnassignedChanged" />
+                                   ValueChanged="OnUnassignedChanged"/>
                     </MudItem>
                 }
             }
@@ -143,7 +145,7 @@
 
     private bool _isLoaded;
     private bool _firstRender = true;
-    
+
     private IReadOnlyList<ProjectModel> _projects = [];
 
     private ImmutableList<StatusModel> _statuses = [];
@@ -159,7 +161,7 @@
         try
         {
             Filter = Filter with { ProjectKey = Options.Value.DefaultProject };
-            
+
             _projects = ReadClient.GetProjects().ToList();
             _isLoaded = true;
         }
@@ -178,7 +180,7 @@
         var expectedProjectKey = Filter.ProjectKey ?? _projects.FirstOrDefault()?.Key;
         var expectedAssignees = ForcedAssignees ?? settings.TeamMembers.Select(m => m.Email).ToHashSet();
         var expectedUnassigned = ForcedIncludeUnassigned ?? settings.IncludeUnassignedByDefault;
-        
+
         var expectedStatuses = Filter.Statuses.Count > 0 ? Filter.Statuses : settings.DefaultStatuses.ToHashSet();
         var expectedComponents = Filter.Components;
         var expectedLabels = Filter.Labels;
@@ -191,14 +193,14 @@
         if (!hasAssigneesChanged && !hasUnassignedChanged && !hasProjectChanged && !_firstRender) return;
 
         Filter = new(
-            ProjectKey: expectedProjectKey,
-            Assignees: expectedAssignees, 
-            Statuses: expectedStatuses, 
-            Components: expectedComponents, 
-            Labels: expectedLabels, 
-            IssueTypes: expectedIssueTypes, 
-            IncludeUnassigned: expectedUnassigned);
-        
+            expectedProjectKey,
+            expectedAssignees,
+            expectedStatuses,
+            expectedComponents,
+            expectedLabels,
+            expectedIssueTypes,
+            expectedUnassigned);
+
         if (_firstRender || hasProjectChanged)
         {
             await LoadProjectDataAsync(expectedProjectKey);
@@ -208,14 +210,14 @@
 
         await NotifyFilterChanged();
     }
-    
+
     private async Task LoadProjectDataAsync(string? projectKey)
     {
         if (string.IsNullOrEmpty(projectKey)) return;
 
         var project = _projects.FirstOrDefault(p => p.Key == projectKey);
         if (project is null) return;
-        
+
         _statuses = (await project.GetStatusesAsync()).OrderBy(x => x.Name).ToImmutableList();
         _assignees = (await project.GetAssigneesAsync()).OrderBy(x => x.DisplayName).ToImmutableList();
         _components = (await project.GetComponentsAsync()).OrderBy(x => x.Name).ToImmutableList();
@@ -227,8 +229,8 @@
     {
         await LoadProjectDataAsync(projectKey);
 
-        var newFilter = Filter with 
-        { 
+        var newFilter = Filter with
+        {
             ProjectKey = projectKey,
             Statuses = [],
             Components = [],
@@ -254,8 +256,8 @@
         await NotifyFilterChanged();
     }
 
-    private Task NotifyFilterChanged() => OnFilterChanged.HasDelegate 
-        ? OnFilterChanged.InvokeAsync(Filter) 
+    private Task NotifyFilterChanged() => OnFilterChanged.HasDelegate
+        ? OnFilterChanged.InvokeAsync(Filter)
         : Task.CompletedTask;
 
 
@@ -293,4 +295,5 @@
         var labels = _issueTypes.Where(x => values.Contains(x.Value)).Select(x => x.Name);
         return string.Join(", ", labels);
     }
+
 }
