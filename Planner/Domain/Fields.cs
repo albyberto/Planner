@@ -14,5 +14,6 @@ public record Fields(
     [property: JsonPropertyName("status")] Status Status,
     [property: JsonPropertyName("timetracking")] TimeTracking TimeTracking,
     [property: JsonPropertyName("labels")] IReadOnlyList<string> Labels,
-    [property: JsonPropertyName("customfield_10117")] DateOnly? StartDate
+    [property: JsonPropertyName("customfield_10117")] DateOnly? StartDate,
+    [property: JsonPropertyName("project")] Project Project
 );

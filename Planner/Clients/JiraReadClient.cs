@@ -217,12 +217,11 @@ public class JiraReadClient(HttpClient httpClient, IOptions<JiraQueryOptions> op
                     {
                         "summary", "status", "assignee", "fixVersions",
                         "created", "updated", "issuetype", "components",
-                        "labels", "timetracking", "worklog", "customfield_10117"
+                        "labels", "timetracking", "worklog", "customfield_10117", "project"
                     }
                 };
 
-                if (!string.IsNullOrEmpty(nextPageToken))
-                    requestBody["nextPageToken"] = nextPageToken;
+                if (!string.IsNullOrEmpty(nextPageToken)) requestBody["nextPageToken"] = nextPageToken;
 
                 var response = await httpClient.PostAsJsonAsync("search/jql", requestBody, cancellationToken);
 

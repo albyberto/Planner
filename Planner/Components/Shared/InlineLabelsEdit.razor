@@ -1,67 +1,130 @@
-@* @using Planner.Clients *@
-@* @inject JiraReadClient ReadClient *@
-@* @inject JiraWriteClient WriteClient *@
-@* @inject ISnackbar Snackbar *@
-@* *@
-@* @if (_editing) *@
-@* { *@
-@*     <MudSelect T="string" MultiSelection="true" SelectedValues="_selected" SelectedValuesChanged="OnSelectionChanged" *@
-@*                Label="Labels" Dense="true" Variant="Variant.Outlined" Margin="Margin.Dense" *@
-@*                AnchorOrigin="Origin.BottomLeft" CloseIcon="@Icons.Material.Filled.Close"> *@
-@*         @foreach (var l in _available) *@
-@*         { *@
-@*             <MudSelectItem T="string" Value="@l">@l</MudSelectItem> *@
-@*         } *@
-@*     </MudSelect> *@
-@* } *@
-@* else *@
-@* { *@
-@*     <div class="d-inline-flex flex-wrap gap-1 cursor-pointer" @onclick="StartEdit"> *@
-@*         @if (Labels is { Count: > 0 }) *@
-@*         { *@
-@*             @foreach (var l in Labels) *@
-@*             { *@
-@*                 <LabelChip Label="@l" /> *@
-@*             } *@
-@*         } *@
-@*         else *@
-@*         { *@
-@*             <MudChip T="string" Size="Size.Small" Variant="Variant.Outlined" Color="Color.Default">+</MudChip> *@
-@*         } *@
-@*     </div> *@
-@* } *@
-@* *@
-@* @code { *@
-@*     [Parameter, EditorRequired] public required string IssueKey { get; set; } *@
-@*     [Parameter] public IReadOnlyList<string>? Labels { get; set; } *@
-@*     [Parameter] public EventCallback OnChanged { get; set; } *@
-@*     [CascadingParameter(Name = "RefreshIssues")] public Func<Task>? RefreshIssues { get; set; } *@
-@* *@
-@*     private bool _editing; *@
-@*     private HashSet<string> _selected = []; *@
-@*     private IReadOnlyList<string> _available = []; *@
-@* *@
-@*     private async Task StartEdit() *@
-@*     { *@
-@*         _available = await ReadClient.GetProjectLabelsAsync(); *@
-@*         _selected = (Labels ?? []).ToHashSet(); *@
-@*         _editing = true; *@
-@*     } *@
-@* *@
-@*     private async Task OnSelectionChanged(IReadOnlyCollection<string?>? values) *@
-@*     { *@
-@*         _selected = [..values?.Where(v => v is not null).Select(v => v!) ?? []]; *@
-@*         try *@
-@*         { *@
-@*             await WriteClient.UpdateLabelsAsync(IssueKey, _selected); *@
-@*             Snackbar.Add($"{IssueKey} labels aggiornate", Severity.Success); *@
-@*             _editing = false; *@
-@*             if (OnChanged.HasDelegate) await OnChanged.InvokeAsync(); *@
-@*             if (RefreshIssues is not null) await RefreshIssues(); *@
-@*         } *@
-@*         catch (Exception ex) *@
-@*         { *@
-@*             Snackbar.Add($"Errore: {ex.Message}", Severity.Error); *@
-@*         } *@
-@*     } *@
-@* } *@
+@using System.Collections.Immutable
+@using Planner.Builders
+@using Planner.Clients
+@using Planner.Model
+
+@inject JiraReadClient ReadClient
+@inject JiraWriteClient WriteClient
+@inject ISnackbar Snackbar
+
+@if (_editing)
+{
+    <MudSelect T="LabelModel"
+               MultiSelection="true"
+               SelectedValues="_selected"
+               SelectedValuesChanged="OnSelectionChanged"
+               Open="_isOpen"
+               OpenChanged="OnOpenChanged"
+               Label="Labels"
+               Dense="true"
+               Variant="Variant.Outlined"
+               Margin="Margin.Dense"
+               AnchorOrigin="Origin.BottomLeft"
+               CloseIcon="@Icons.Material.Filled.Close"
+               ToStringFunc="GetLabelText">
+        @foreach (var label in _availableLabels)
+        {
+            <MudSelectItem T="LabelModel" Value="@label">@label.Label</MudSelectItem>
+        }
+    </MudSelect>
+}
+else
+{
+    <div class="d-inline-flex flex-wrap gap-1 cursor-pointer" @onclick="StartEdit">
+        @if (Issue.Labels is { Count: > 0 })
+        {
+            @foreach (var label in Issue.Labels)
+            {
+                <LabelChip Label="@label.Label"/>
+            }
+        }
+        else
+        {
+            <MudChip T="string" Size="Size.Small" Variant="Variant.Outlined" Color="Color.Default">+</MudChip>
+        }
+    </div>
+}
+
+@code {
+    [Parameter][EditorRequired] public required IssueModel Issue { get; set; }
+
+    private bool _editing;
+    private bool _isOpen;
+    private bool _isDirty;
+    
+    private IReadOnlyCollection<LabelModel> _selected = [];
+    private IReadOnlyList<LabelModel> _availableLabels = [];
+
+    private async Task StartEdit()
+    {
+        var projectKey = Issue.ProjectKey; 
+        var project = ReadClient.GetProjects().FirstOrDefault(p => p.Key.Equals(projectKey, StringComparison.OrdinalIgnoreCase));
+
+        if (project is not null)
+        {
+            _availableLabels = await project.GetLabelsAsync();
+        }
+
+        _selected = Issue.Labels;
+        
+        _isDirty = false; 
+        _editing = true;
+        _isOpen = true; 
+    }
+
+    private void OnSelectionChanged(IReadOnlyCollection<LabelModel> values)
+    {
+        _selected = values;
+        _isDirty = true; 
+    }
+
+    private async Task OnOpenChanged(bool isOpen)
+    {
+        _isOpen = isOpen;
+        
+        if (!isOpen)
+        {
+            await SaveAndCloseAsync();
+        }
+    }
+
+    private async Task SaveAndCloseAsync()
+    {
+        if (!_isDirty)
+        {
+            _editing = false;
+            return;
+        }
+
+        var currentLabels = Issue.Labels;
+        var newLabels = _selected.Select(l => l.Value).OrderBy(v => v).ToList();
+        var oldLabels = currentLabels.Select(l => l.Value).OrderBy(v => v).ToList();
+
+        if (newLabels.SequenceEqual(oldLabels))
+        {
+            _editing = false; 
+            return;
+        }
+
+        try
+        {
+            var update = new IssueUpdateBuilder().SetLabels(newLabels);
+            await WriteClient.UpdateIssueAsync(Issue.Key, update);
+
+            var updatedLabels = _selected.ToImmutableList();
+            Issue = Issue with { Labels = updatedLabels };
+
+            Snackbar.Add($"{Issue.Key} labels aggiornate", Severity.Success);
+        }
+        catch (Exception ex)
+        {
+            Snackbar.Add($"Errore: {ex.Message}", Severity.Error);
+        }
+        finally
+        {
+            _editing = false;
+        }
+    }
+
+    private string GetLabelText(LabelModel? label) => label?.Label ?? string.Empty;
+}

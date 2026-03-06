@@ -90,7 +90,7 @@
                         @string.Join(", ", issue.Components)"
                     </MudTd>
                     <MudTd DataLabel="Labels">
-                        @string.Join(", ", issue.Labels)"
+                        <InlineLabelsEdit Issue="@issue"/>
                     </MudTd>
                 </RowTemplate>
             </MudTable>
