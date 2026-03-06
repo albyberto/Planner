@@ -1,9 +1,0 @@
-@using Planner.Domain
-
-<MudChip T="string" Size="Size.Small" Variant="Variant.Outlined" Color="Color.Primary" Class="mr-1">
-    @Component.Name
-</MudChip>
-
-@code {
-    [Parameter, EditorRequired] public required Component Component { get; set; } = null!;
-}
