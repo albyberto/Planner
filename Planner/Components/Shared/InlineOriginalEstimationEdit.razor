@@ -2,7 +2,6 @@
 @using Planner.Model
 @using Planner.Components.Shared.MudBlazorWrappers
 @inject JiraWriteClient WriteClient
-@inject JiraReadClient ReadClient
 @inject ISnackbar Snackbar
 
 <InlineTimeEdit TimeValue="@Issue.Stats.FormattedEstimate"
@@ -23,12 +22,7 @@
             var update = new Planner.Builders.IssueUpdateBuilder().SetTimeTracking(originalEstimate: newValue);
             await WriteClient.UpdateIssueAsync(Issue.Key, update);
 
-            // Fetch updated issue to refresh stats without reloading the whole page
-            var updatedIssue = await ReadClient.GetIssueAsync(Issue.Key);
-            if (updatedIssue != null)
-            {
-                Issue.Stats = updatedIssue.Stats;
-            }
+            Issue.Stats = Issue.Stats with { OriginalEstimate = TimeStats.ParseTime(newValue) };
             
             Snackbar.Add($"{Issue.Key} estimate aggiornato a {newValue}", Severity.Success);
         }

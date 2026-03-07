@@ -37,10 +37,11 @@ public record IssueModel
         FixVersions = dto.Fields.FixVersions.Select(version => new FixVersionModel(version)).ToImmutableList() ?? [];
         StartDate = dto.Fields.StartDate;
 
-        var originalEstimate = dto.Fields.TimeTracking.OriginalEstimateSeconds ?? 0;
-        var timeSpent = dto.Fields.Worklog.Worklogs.Sum(w => w.TimeSpentSeconds ?? 0);
+        var originalEstimate = dto.Fields.TimeTracking?.OriginalEstimateSeconds ?? 0;
+        var timeSpent = dto.Fields.Worklog?.Worklogs?.Sum(w => w.TimeSpentSeconds ?? 0) ?? 0;
+        var remainingEstimate = dto.Fields.TimeTracking?.RemainingEstimateSeconds;
         
-        Stats = new(originalEstimate, timeSpent);
+        Stats = new(originalEstimate, timeSpent, remainingEstimate);
 
         _transitionsLoader = new(loadTransitions);
     }
