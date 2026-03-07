@@ -5,30 +5,45 @@
 @inject JiraWriteClient WriteClient
 @inject ISnackbar Snackbar
 
-<MudMenu Icon="" ActivationEvent="MouseEvent.LeftClick" Dense="true" AnchorOrigin="Origin.BottomLeft">
-    <ActivatorContent>
-        <MudChip T="string" Size="Size.Small" Color="@ChipColor" Icon="@ChipIcon" Variant="Variant.Filled" Class="cursor-pointer">
-            @Value.Name
-        </MudChip>
-    </ActivatorContent>
-    <ChildContent>
+@if (_editing)
+{
+    <MudSelect T="Domain.Transition"
+               Value="@null"
+               ValueChanged="DoTransition"
+               Placeholder="@Value.Name"
+               Open="_editing"
+               OpenChanged="OnOpenChanged"
+               Dense="true"
+               Variant="Variant.Outlined"
+               Margin="Margin.Dense"
+               AnchorOrigin="Origin.BottomLeft"
+               Class="text-nowrap"
+               PopoverClass="text-nowrap"
+               CloseIcon="@Icons.Material.Filled.Close"
+               ToStringFunc="@(t => t?.Name ?? string.Empty)">
         @if (_loading)
         {
-            <MudMenuItem Disabled="true">
+            <MudSelectItem T="Domain.Transition" Value="@null" Disabled="true">
                 <MudProgressCircular Size="Size.Small" Indeterminate="true" Class="mr-2" /> Caricamento...
-            </MudMenuItem>
+            </MudSelectItem>
         }
         else
         {
             @foreach (var transition in _transitions)
             {
-                <MudMenuItem OnClick="() => DoTransition(transition)">
+                <MudSelectItem T="Domain.Transition" Value="@transition" Class="text-nowrap">
                     @transition.Name
-                </MudMenuItem>
+                </MudSelectItem>
             }
         }
-    </ChildContent>
-</MudMenu>
+    </MudSelect>
+}
+else
+{
+    <MudChip T="string" Size="Size.Small" Color="@ChipColor" Icon="@ChipIcon" Variant="Variant.Filled" Class="cursor-pointer" OnClick="StartEdit">
+        @Value.Name
+    </MudChip>
+}
 
 @code {
     [Parameter, EditorRequired] public required string IssueKey { get; set; }
@@ -39,8 +54,26 @@
 
     private IReadOnlyList<Domain.Transition> _transitions = [];
     private bool _loading;
+    private bool _editing;
 
-    protected override async Task OnParametersSetAsync()
+    private async Task StartEdit()
+    {
+        if (_transitions.Count == 0)
+        {
+            await LoadTransitionsAsync();
+        }
+        _editing = true;
+    }
+
+    private void OnOpenChanged(bool isOpen)
+    {
+        if (!isOpen)
+        {
+            _editing = false;
+        }
+    }
+
+    private async Task LoadTransitionsAsync()
     {
         _loading = true;
         try
@@ -57,8 +90,14 @@
         }
     }
 
-    private async Task DoTransition(Domain.Transition transition)
+    private async Task DoTransition(Domain.Transition? transition)
     {
+        if (transition == null)
+        {
+            _editing = false;
+            return;
+        }
+
         try
         {
             await WriteClient.TransitionAsync(IssueKey, transition.Id);
@@ -70,10 +109,15 @@
 
             if (OnChanged.HasDelegate) await OnChanged.InvokeAsync();
 
+            _transitions = []; // Clear transitions so they reload next time for the new status
         }
         catch (Exception ex)
         {
             Snackbar.Add($"Errore transizione: {ex.Message}", Severity.Error);
+        }
+        finally
+        {
+            _editing = false;
         }
     }
 
