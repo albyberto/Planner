@@ -1,7 +1,9 @@
 ﻿@page "/"
 @page "/dashboard"
 @page "/dashboard/{Email}"
+@using Planner.Domain
 @using Planner.Extensions
+@using Planner.Model
 
 <DashboardLayout Title="Dashboard" Email="@Email">
     @{
@@ -87,10 +89,10 @@
                         @issue.Stats.FormattedRemaining
                     </MudTd>
                     <MudTd DataLabel="Components">
-                        @string.Join(", ", issue.Components)"
+                        <InlineComponentsEdit Issue="@issue"/>
                     </MudTd>
                     <MudTd DataLabel="Labels">
-                        <InlineLabelsEdit Issue="@issue"/>
+                        <InlineLabelsEdit Issue="@issue" IssueChanged=""/>
                     </MudTd>
                 </RowTemplate>
             </MudTable>
@@ -100,4 +102,14 @@
 
 @code {
     [Parameter] public string? Email { get; set; }
+    
+    public void UpdateIssue(IssueModel updatedIssue)
+    {
+        var oldIssue = Issues.FirstOrDefault(i => i.Key == updatedIssue.Key);
+        if (oldIssue is not null)
+        {
+            // Crea una nuova lista immutabile sostituendo l'elemento
+            Issues = Issues.Replace(oldIssue, updatedIssue);
+        }
+    }
 }

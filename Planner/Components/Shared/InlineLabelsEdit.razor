@@ -35,7 +35,9 @@ else
         {
             @foreach (var label in Issue.Labels)
             {
-                <LabelChip Label="@label.Label"/>
+                <MudChip T="string" Size="Size.Small" Variant="Variant.Outlined" Color="Color.Secondary" Class="mr-1">
+                    @label.Label
+                </MudChip>
             }
         }
         else
@@ -47,6 +49,7 @@ else
 
 @code {
     [Parameter][EditorRequired] public required IssueModel Issue { get; set; }
+    [Parameter] public EventCallback<IssueModel> IssueChanged { get; set; }
 
     private bool _editing;
     private bool _isOpen;
@@ -112,7 +115,9 @@ else
             await WriteClient.UpdateIssueAsync(Issue.Key, update);
 
             var updatedLabels = _selected.ToImmutableList();
-            Issue = Issue with { Labels = updatedLabels };
+            var updatedIssue = Issue with { Labels = updatedLabels };
+            
+            await IssueChanged.InvokeAsync(updatedIssue);
 
             Snackbar.Add($"{Issue.Key} labels aggiornate", Severity.Success);
         }

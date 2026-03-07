@@ -1,69 +1,134 @@
-@* @using Planner.Clients *@
-@* @using Planner.Domain *@
-@* @inject JiraReadClient ReadClient *@
-@* @inject JiraWriteClient WriteClient *@
-@* @inject ISnackbar Snackbar *@
-@* *@
-@* @if (_editing) *@
-@* { *@
-@*     <MudSelect T="string" MultiSelection="true" SelectedValues="_selected" *@
-@*                SelectedValuesChanged="OnSelectionChanged" *@
-@*                Label="Components" Dense="true" Variant="Variant.Outlined" Margin="Margin.Dense" *@
-@*                AnchorOrigin="Origin.BottomLeft" CloseIcon="@Icons.Material.Filled.Close"> *@
-@*         @foreach (var c in _available) *@
-@*         { *@
-@*             <MudSelectItem T="string" Value="@c.Id">@c.Name</MudSelectItem> *@
-@*         } *@
-@*     </MudSelect> *@
-@* } *@
-@* else *@
-@* { *@
-@*     <div class="d-inline-flex flex-wrap gap-1 cursor-pointer" @onclick="StartEdit"> *@
-@*         @if (Components is { Count: > 0 }) *@
-@*         { *@
-@*             @foreach (var c in Components) *@
-@*             { *@
-@*                 <ComponentChip Component="@c" /> *@
-@*             } *@
-@*         } *@
-@*         else *@
-@*         { *@
-@*             <MudChip T="string" Size="Size.Small" Variant="Variant.Outlined" Color="Color.Default">+</MudChip> *@
-@*         } *@
-@*     </div> *@
-@* } *@
-@* *@
-@* @code { *@
-@*     [Parameter, EditorRequired] public required string IssueKey { get; set; } *@
-@*     [Parameter] public IReadOnlyList<Component>? Components { get; set; } *@
-@*     [Parameter] public EventCallback OnChanged { get; set; } *@
-@*     [CascadingParameter(Name = "RefreshIssues")] public Func<Task>? RefreshIssues { get; set; } *@
-@* *@
-@*     private bool _editing; *@
-@*     private HashSet<string> _selected = []; *@
-@*     private IReadOnlyList<Component> _available = []; *@
-@* *@
-@*     private async Task StartEdit() *@
-@*     { *@
-@*         _available = await ReadClient.GetProjectComponentsAsync(); *@
-@*         _selected = (Components ?? []).Select(c => c.Id).ToHashSet(); *@
-@*         _editing = true; *@
-@*     } *@
-@* *@
-@*     private async Task OnSelectionChanged(IReadOnlyCollection<string?>? values) *@
-@*     { *@
-@*         _selected = [..values?.Where(v => v is not null).Select(v => v!) ?? []]; *@
-@*         try *@
-@*         { *@
-@*             await WriteClient.UpdateComponentsAsync(IssueKey, _selected); *@
-@*             Snackbar.Add($"{IssueKey} components aggiornati", Severity.Success); *@
-@*             _editing = false; *@
-@*             if (OnChanged.HasDelegate) await OnChanged.InvokeAsync(); *@
-@*             if (RefreshIssues is not null) await RefreshIssues(); *@
-@*         } *@
-@*         catch (Exception ex) *@
-@*         { *@
-@*             Snackbar.Add($"Errore: {ex.Message}", Severity.Error); *@
-@*         } *@
-@*     } *@
-@* } *@
+@using System.Collections.Immutable
+@using Planner.Builders
+@using Planner.Clients
+@using Planner.Model
+
+@inject JiraReadClient ReadClient
+@inject JiraWriteClient WriteClient
+@inject ISnackbar Snackbar
+
+@if (_editing)
+{
+    <MudSelect T="ComponentModel"
+               MultiSelection="true"
+               SelectedValues="_selected"
+               SelectedValuesChanged="OnSelectionChanged"
+               Open="_isOpen"
+               OpenChanged="OnOpenChanged"
+               Label="Components"
+               Dense="true"
+               Variant="Variant.Outlined"
+               Margin="Margin.Dense"
+               AnchorOrigin="Origin.BottomLeft"
+               CloseIcon="@Icons.Material.Filled.Close"
+               ToStringFunc="GetComponentText">
+        @foreach (var component in _availableComponents)
+        {
+            <MudSelectItem T="ComponentModel" Value="@component">@component.Name</MudSelectItem>
+        }
+    </MudSelect>
+}
+else
+{
+    <div class="d-inline-flex flex-wrap gap-1 cursor-pointer" @onclick="StartEdit">
+        @if (Issue.Components is { Count: > 0 })
+        {
+            @foreach (var component in Issue.Components)
+            {
+                <MudChip T="string" Size="Size.Small" Variant="Variant.Outlined" Color="Color.Primary" Class="mr-1">
+                    @component.Name
+                </MudChip>
+            }
+        }
+        else
+        {
+            <MudChip T="string" Size="Size.Small" Variant="Variant.Outlined" Color="Color.Default">+</MudChip>
+        }
+    </div>
+}
+
+@code {
+    [Parameter][EditorRequired] public required IssueModel Issue { get; set; }
+
+    private bool _editing;
+    private bool _isOpen;
+    private bool _isDirty;
+    
+    private IReadOnlyCollection<ComponentModel> _selected = [];
+    private IReadOnlyList<ComponentModel> _availableComponents = [];
+
+    private async Task StartEdit()
+    {
+        // Se non hai la proprietà ProjectKey su IssueModel, puoi usare: var projectKey = Issue.Key.Split('-')[0];
+        var projectKey = Issue.ProjectKey ?? Issue.Key.Split('-')[0]; 
+        var project = ReadClient.GetProjects().FirstOrDefault(p => p.Key.Equals(projectKey, StringComparison.OrdinalIgnoreCase));
+
+        if (project is not null)
+        {
+            _availableComponents = await project.GetComponentsAsync();
+        }
+
+        _selected = Issue.Components ?? [];
+        
+        _isDirty = false;
+        _editing = true;
+        _isOpen = true; 
+    }
+
+    private void OnSelectionChanged(IReadOnlyCollection<ComponentModel> values)
+    {
+        _selected = values ?? [];
+        _isDirty = true; 
+    }
+
+    private async Task OnOpenChanged(bool isOpen)
+    {
+        _isOpen = isOpen;
+        
+        if (!isOpen)
+        {
+            await SaveAndCloseAsync();
+        }
+    }
+
+    private async Task SaveAndCloseAsync()
+    {
+        if (!_isDirty)
+        {
+            _editing = false;
+            return;
+        }
+
+        var currentComponents = Issue.Components ?? [];
+        var newComponents = _selected.Select(c => c.Value).OrderBy(v => v).ToList();
+        var oldComponents = currentComponents.Select(c => c.Value).OrderBy(v => v).ToList();
+
+        if (newComponents.SequenceEqual(oldComponents))
+        {
+            _editing = false; 
+            return;
+        }
+
+        try
+        {
+            // SetComponents accetta un IEnumerable<string> e noi gli passiamo gli Id (ovvero i Value del modello)
+            var update = new IssueUpdateBuilder().SetComponents(newComponents);
+            await WriteClient.UpdateIssueAsync(Issue.Key, update);
+
+            var updatedComponents = _selected.ToImmutableList();
+            Issue = Issue with { Components = updatedComponents };
+
+            Snackbar.Add($"{Issue.Key} components aggiornati", Severity.Success);
+        }
+        catch (Exception ex)
+        {
+            Snackbar.Add($"Errore: {ex.Message}", Severity.Error);
+        }
+        finally
+        {
+            _editing = false;
+        }
+    }
+
+    private string GetComponentText(ComponentModel? component) => component?.Name ?? string.Empty;
+}
