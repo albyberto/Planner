@@ -49,6 +49,7 @@ else
 
 @code {
     [Parameter][EditorRequired] public required IssueModel Issue { get; set; }
+    [Parameter] public EventCallback<IssueModel> IssueChanged { get; set; }
 
     private bool _editing;
     private bool _isOpen;
@@ -111,12 +112,14 @@ else
 
         try
         {
-            // SetComponents accetta un IEnumerable<string> e noi gli passiamo gli Id (ovvero i Value del modello)
             var update = new IssueUpdateBuilder().SetComponents(newComponents);
             await WriteClient.UpdateIssueAsync(Issue.Key, update);
 
-            var updatedComponents = _selected.ToImmutableList();
-            Issue = Issue with { Components = updatedComponents };
+            Issue.Components = _selected.ToImmutableList();
+            if (IssueChanged.HasDelegate)
+            {
+                await IssueChanged.InvokeAsync(Issue);
+            }
 
             Snackbar.Add($"{Issue.Key} components aggiornati", Severity.Success);
         }

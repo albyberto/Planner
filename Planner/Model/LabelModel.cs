@@ -2,8 +2,8 @@ namespace Planner.Model;
 
 public record LabelModel
 {
-    public string Value { get; init; }
-    public string Label { get; init; }
+    public string Value { get; set; }
+    public string Label { get; set; }
 
     public LabelModel(string label)
     {

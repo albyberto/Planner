@@ -1,4 +1,4 @@
-﻿@page "/"
+@page "/"
 @page "/dashboard"
 @page "/dashboard/{Email}"
 @using Planner.Domain
@@ -92,7 +92,7 @@
                         <InlineComponentsEdit Issue="@issue"/>
                     </MudTd>
                     <MudTd DataLabel="Labels">
-                        <InlineLabelsEdit Issue="@issue" IssueChanged=""/>
+                        <InlineLabelsEdit Issue="@issue" />
                     </MudTd>
                 </RowTemplate>
             </MudTable>
@@ -103,13 +103,5 @@
 @code {
     [Parameter] public string? Email { get; set; }
     
-    public void UpdateIssue(IssueModel updatedIssue)
-    {
-        var oldIssue = Issues.FirstOrDefault(i => i.Key == updatedIssue.Key);
-        if (oldIssue is not null)
-        {
-            // Crea una nuova lista immutabile sostituendo l'elemento
-            Issues = Issues.Replace(oldIssue, updatedIssue);
-        }
-    }
+    // Metodi rimossi perché il modello ora è mutabile
 }

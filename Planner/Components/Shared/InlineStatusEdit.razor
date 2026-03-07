@@ -1,85 +1,92 @@
-@* @using Planner.Clients *@
-@* @using Planner.Domain *@
-@* @inject JiraReadClient ReadClient *@
-@* @inject JiraWriteClient WriteClient *@
-@* @inject ISnackbar Snackbar *@
-@* *@
-@* <MudTooltip Text="@($"Category: {Status.StatusCategory.Name}")" Arrow="true"> *@
-@*     <MudMenu Icon="" ActivationEvent="MouseEvent.LeftClick" Dense="true" AnchorOrigin="Origin.BottomLeft"> *@
-@*         <ActivatorContent> *@
-@*             <MudChip T="string" Size="Size.Small" Color="@ChipColor" Icon="@ChipIcon" Variant="Variant.Filled" Class="cursor-pointer"> *@
-@*                 @Status.FormattedDisplayName *@
-@*             </MudChip> *@
-@*         </ActivatorContent> *@
-@*         <ChildContent> *@
-@*             @if (_loading) *@
-@*             { *@
-@*                 <MudMenuItem Disabled="true"> *@
-@*                     <MudProgressCircular Size="Size.Small" Indeterminate="true" Class="mr-2" /> Caricamento... *@
-@*                 </MudMenuItem> *@
-@*             } *@
-@*             else *@
-@*             { *@
-@*                 @foreach (var transition in _transitions) *@
-@*                 { *@
-@*                     <MudMenuItem OnClick="() => DoTransition(transition)"> *@
-@*                         @transition.Name *@
-@*                     </MudMenuItem> *@
-@*                 } *@
-@*             } *@
-@*         </ChildContent> *@
-@*     </MudMenu> *@
-@* </MudTooltip> *@
-@* *@
-@* @code { *@
-@*     [Parameter, EditorRequired] public required string IssueKey { get; set; } *@
-@*     [Parameter, EditorRequired] public required Status Status { get; set; } *@
-@*     [Parameter] public EventCallback OnChanged { get; set; } *@
-@*     [CascadingParameter(Name = "RefreshIssues")] public Func<Task>? RefreshIssues { get; set; } *@
-@* *@
-@*     private IReadOnlyList<Domain.Transition> _transitions = []; *@
-@*     private bool _loading; *@
-@* *@
-@*     protected override async Task OnParametersSetAsync() *@
-@*     { *@
-@*         _loading = true; *@
-@*         try *@
-@*         { *@
-@*             _transitions = await ReadClient.GetTransitionsAsync(IssueKey); *@
-@*         } *@
-@*         catch *@
-@*         { *@
-@*             _transitions = []; *@
-@*         } *@
-@*         finally *@
-@*         { *@
-@*             _loading = false; *@
-@*         } *@
-@*     } *@
-@* *@
-@*     private async Task DoTransition(Domain.Transition transition) *@
-@*     { *@
-@*         try *@
-@*         { *@
-@*             await WriteClient.TransitionAsync(IssueKey, transition.Id); *@
-@*             Snackbar.Add($"{IssueKey} → {transition.Name}", Severity.Success); *@
-@*             if (OnChanged.HasDelegate) await OnChanged.InvokeAsync(); *@
-@*             if (RefreshIssues is not null) await RefreshIssues(); *@
-@*         } *@
-@*         catch (Exception ex) *@
-@*         { *@
-@*             Snackbar.Add($"Errore transizione: {ex.Message}", Severity.Error); *@
-@*         } *@
-@*     } *@
-@* *@
-@*     private (Color Color, string Icon) Style => Status.StatusCategory.Name switch *@
-@*     { *@
-@*         "To Do" => (Color.Default, Icons.Material.Filled.RadioButtonUnchecked), *@
-@*         "In Progress" => (Color.Info, Icons.Material.Filled.Autorenew), *@
-@*         "Done" => (Color.Success, Icons.Material.Filled.CheckCircle), *@
-@*         _ => (Color.Default, Icons.Material.Filled.Circle) *@
-@*     }; *@
-@* *@
-@*     private Color ChipColor => Style.Color; *@
-@*     private string ChipIcon => Style.Icon; *@
-@* } *@
+@using Planner.Clients
+@using Planner.Domain
+@using Planner.Model
+@inject JiraReadClient ReadClient
+@inject JiraWriteClient WriteClient
+@inject ISnackbar Snackbar
+
+<MudTooltip Text="@($"Category: {Value.Category}")" Arrow="true">
+    <MudMenu Icon="" ActivationEvent="MouseEvent.LeftClick" Dense="true" AnchorOrigin="Origin.BottomLeft">
+        <ActivatorContent>
+            <MudChip T="string" Size="Size.Small" Color="@ChipColor" Icon="@ChipIcon" Variant="Variant.Filled" Class="cursor-pointer">
+                @Value.Name
+            </MudChip>
+        </ActivatorContent>
+        <ChildContent>
+            @if (_loading)
+            {
+                <MudMenuItem Disabled="true">
+                    <MudProgressCircular Size="Size.Small" Indeterminate="true" Class="mr-2" /> Caricamento...
+                </MudMenuItem>
+            }
+            else
+            {
+                @foreach (var transition in _transitions)
+                {
+                    <MudMenuItem OnClick="() => DoTransition(transition)">
+                        @transition.Name
+                    </MudMenuItem>
+                }
+            }
+        </ChildContent>
+    </MudMenu>
+</MudTooltip>
+
+@code {
+    [Parameter, EditorRequired] public required string IssueKey { get; set; }
+    [Parameter, EditorRequired] public required StatusModel Value { get; set; }
+    [Parameter] public EventCallback<StatusModel> ValueChanged { get; set; }
+    [Parameter] public EventCallback OnChanged { get; set; }
+    [CascadingParameter(Name = "RefreshIssues")] public Func<Task>? RefreshIssues { get; set; }
+
+    private IReadOnlyList<Domain.Transition> _transitions = [];
+    private bool _loading;
+
+    protected override async Task OnParametersSetAsync()
+    {
+        _loading = true;
+        try
+        {
+            _transitions = await ReadClient.GetTransitionsAsync(IssueKey);
+        }
+        catch
+        {
+            _transitions = [];
+        }
+        finally
+        {
+            _loading = false;
+        }
+    }
+
+    private async Task DoTransition(Domain.Transition transition)
+    {
+        try
+        {
+            await WriteClient.TransitionAsync(IssueKey, transition.Id);
+            Snackbar.Add($"{IssueKey} → {transition.Name}", Severity.Success);
+            
+            var newStatus = new StatusModel(transition.To);
+            Value = newStatus;
+            await ValueChanged.InvokeAsync(Value);
+
+            if (OnChanged.HasDelegate) await OnChanged.InvokeAsync();
+            if (RefreshIssues is not null) await RefreshIssues();
+        }
+        catch (Exception ex)
+        {
+            Snackbar.Add($"Errore transizione: {ex.Message}", Severity.Error);
+        }
+    }
+
+    private (Color Color, string Icon) Style => Value.Category switch
+    {
+        "To Do" => (Color.Default, Icons.Material.Filled.RadioButtonUnchecked),
+        "In Progress" => (Color.Info, Icons.Material.Filled.Autorenew),
+        "Done" => (Color.Success, Icons.Material.Filled.CheckCircle),
+        _ => (Color.Default, Icons.Material.Filled.Circle)
+    };
+
+    private Color ChipColor => Style.Color;
+    private string ChipIcon => Style.Icon;
+}

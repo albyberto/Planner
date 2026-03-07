@@ -1,12 +1,12 @@
-@using Planner.Domain
+@using Planner.Model
 
-@if (!string.IsNullOrEmpty(IssueType.IconUrl))
+@if (!string.IsNullOrEmpty(Type?.IconUrl))
 {
-    <MudTooltip Text="@IssueType.Name" Arrow="true">
-        <MudImage Src="@IssueType.IconUrl" Width="20" Height="20" Alt="@IssueType.Name" Class="d-inline-flex" />
+    <MudTooltip Text="@Type.Name" Arrow="true">
+        <MudImage Src="@Type.IconUrl" Width="20" Height="20" Alt="@Type.Name" Class="d-inline-flex" />
     </MudTooltip>
 }
 
 @code {
-    [Parameter, EditorRequired] public required IssueType IssueType { get; set; } = null!;
+    [Parameter, EditorRequired] public required IssueTypeModel Type { get; set; } = null!;
 }

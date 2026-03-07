@@ -5,7 +5,7 @@ namespace Planner.Model;
 
 public record ProjectModel
 {
-    public string Key { get; init; }
+    public string Key { get; set; }
     
     // Le property Lazy ora contengono i nostri nuovi Model, non più il dominio
     private readonly Lazy<Task<ImmutableList<StatusModel>>> _statusesLoader;

@@ -1,64 +1,70 @@
-@* @using Planner.Clients *@
-@* @inject JiraWriteClient WriteClient *@
-@* @inject ISnackbar Snackbar *@
-@* *@
-@* @if (_editing) *@
-@* { *@
-@*     <MudTextField @bind-Value="_value" Variant="Variant.Outlined" Margin="Margin.Dense" *@
-@*                   Immediate="true" OnKeyDown="OnKeyDown" OnBlur="Cancel" *@
-@*                   AutoFocus="true" Typo="Typo.body2" Placeholder="es. 2d 4h 30m" /> *@
-@* } *@
-@* else *@
-@* { *@
-@*     <MudTooltip Text="@($"Click per modificare {Label}")" Arrow="true"> *@
-@*         <MudText Typo="Typo.body2" Color="@DisplayColor" Class="cursor-pointer" @onclick="StartEdit"> *@
-@*             @DisplayValue *@
-@*         </MudText> *@
-@*     </MudTooltip> *@
-@* } *@
-@* *@
-@* @code { *@
-@*     [Parameter, EditorRequired] public required string IssueKey { get; set; } *@
-@*     [Parameter, EditorRequired] public required string DisplayValue { get; set; } *@
-@*     [Parameter] public string Label { get; set; } = "tempo"; *@
-@*     [Parameter] public Color DisplayColor { get; set; } = Color.Default; *@
-@* *@
-@*     /// <summary>"originalEstimate" or "remainingEstimate"</summary> *@
-@*     [Parameter, EditorRequired] public required string Field { get; set; } *@
-@*     [Parameter] public EventCallback OnChanged { get; set; } *@
-@*     [CascadingParameter(Name = "RefreshIssues")] public Func<Task>? RefreshIssues { get; set; } *@
-@* *@
-@*     private bool _editing; *@
-@*     private string _value = string.Empty; *@
-@* *@
-@*     private void StartEdit() *@
-@*     { *@
-@*         _value = string.Empty; *@
-@*         _editing = true; *@
-@*     } *@
-@* *@
-@*     private void Cancel() => _editing = false; *@
-@* *@
-@*     private async Task OnKeyDown(KeyboardEventArgs e) *@
-@*     { *@
-@*         if (e.Key == "Escape") { Cancel(); return; } *@
-@*         if (e.Key != "Enter" || string.IsNullOrWhiteSpace(_value)) return; *@
-@* *@
-@*         try *@
-@*         { *@
-@*             var original = Field == "originalEstimate" ? _value : null; *@
-@*             var remaining = Field == "remainingEstimate" ? _value : null; *@
-@* *@
-@*             await WriteClient.UpdateFieldsAsync(IssueKey, originalEstimate: original, remainingEstimate: remaining); *@
-@*             Snackbar.Add($"{IssueKey} {Label} aggiornato a {_value}", Severity.Success); *@
-@*             _editing = false; *@
-@*             if (OnChanged.HasDelegate) await OnChanged.InvokeAsync(); *@
-@*             if (RefreshIssues is not null) await RefreshIssues(); *@
-@*         } *@
-@*         catch (Exception ex) *@
-@*         { *@
-@*             Snackbar.Add($"Errore: {ex.Message}", Severity.Error); *@
-@*         } *@
-@*     } *@
-@* } *@
+@using Planner.Clients
+@inject JiraWriteClient WriteClient
+@inject ISnackbar Snackbar
+
+@if (_editing)
+{
+    <MudTextField @bind-Value="_value" Variant="Variant.Outlined" Margin="Margin.Dense"
+                  Immediate="true" OnKeyDown="OnKeyDown" OnBlur="Cancel"
+                  AutoFocus="true" Typo="Typo.body2" Placeholder="es. 2d 4h 30m" />
+}
+else
+{
+    <MudTooltip Text="@($"Click per modificare {Label}")" Arrow="true">
+        <MudText Typo="Typo.body2" Color="@DisplayColor" Class="cursor-pointer" @onclick="StartEdit">
+            @DisplayValue
+        </MudText>
+    </MudTooltip>
+}
+
+@code {
+    [Parameter, EditorRequired] public required string IssueKey { get; set; }
+    [Parameter, EditorRequired] public required string DisplayValue { get; set; }
+    [Parameter] public EventCallback<string> DisplayValueChanged { get; set; }
+    [Parameter] public string Label { get; set; } = "tempo";
+    [Parameter] public Color DisplayColor { get; set; } = Color.Default;
+
+    /// <summary>"originalEstimate" or "remainingEstimate"</summary>
+    [Parameter, EditorRequired] public required string Field { get; set; }
+    [Parameter] public EventCallback OnChanged { get; set; }
+    [CascadingParameter(Name = "RefreshIssues")] public Func<Task>? RefreshIssues { get; set; }
+
+    private bool _editing;
+    private string _value = string.Empty;
+
+    private void StartEdit()
+    {
+        _value = string.Empty;
+        _editing = true;
+    }
+
+    private void Cancel() => _editing = false;
+
+    private async Task OnKeyDown(KeyboardEventArgs e)
+    {
+        if (e.Key == "Escape") { Cancel(); return; }
+        if (e.Key != "Enter" || string.IsNullOrWhiteSpace(_value)) return;
+
+        try
+        {
+            var original = Field == "originalEstimate" ? _value : null;
+            var remaining = Field == "remainingEstimate" ? _value : null;
+
+            var update = new Planner.Builders.IssueUpdateBuilder().SetTimeTracking(originalEstimate: original, remainingEstimate: remaining);
+            await WriteClient.UpdateIssueAsync(IssueKey, update);
+            Snackbar.Add($"{IssueKey} {Label} aggiornato a {_value}", Severity.Success);
+            _editing = false;
+
+            DisplayValue = _value;
+            await DisplayValueChanged.InvokeAsync(DisplayValue);
+
+            if (OnChanged.HasDelegate) await OnChanged.InvokeAsync();
+            if (RefreshIssues is not null) await RefreshIssues();
+        }
+        catch (Exception ex)
+        {
+            Snackbar.Add($"Errore: {ex.Message}", Severity.Error);
+        }
+    }
+}
 @* *@

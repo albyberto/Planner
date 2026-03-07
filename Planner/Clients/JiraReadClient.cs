@@ -1,4 +1,4 @@
-﻿using System.Collections.Immutable;
+using System.Collections.Immutable;
 using System.Text.Json;
 using Microsoft.Extensions.Caching.Distributed;
 using Microsoft.Extensions.Options;
@@ -186,7 +186,7 @@ public class JiraReadClient(HttpClient httpClient, IOptions<JiraQueryOptions> op
 
     #region Issues
 
-    private async Task<IReadOnlyList<Transition>> GetTransitionsAsync(string issueKey, CancellationToken cancellationToken = default)
+    public async Task<IReadOnlyList<Transition>> GetTransitionsAsync(string issueKey, CancellationToken cancellationToken = default)
     {
         try
         {

@@ -1,82 +1,91 @@
-@* @using Planner.Clients *@
-@* @using Planner.Domain *@
-@* @inject JiraReadClient ReadClient *@
-@* @inject JiraWriteClient WriteClient *@
-@* @inject ISnackbar Snackbar *@
-@* *@
-@* <MudMenu ActivationEvent="MouseEvent.LeftClick" Dense="true" AnchorOrigin="Origin.BottomLeft"> *@
-@*     <ActivatorContent> *@
-@*         <MudTooltip Text="@($"{IssueType.Name} — click per cambiare")" Arrow="true"> *@
-@*             @if (!string.IsNullOrEmpty(IssueType.IconUrl)) *@
-@*             { *@
-@*                 <MudImage Src="@IssueType.IconUrl" Width="20" Height="20" Alt="@IssueType.Name" Class="d-inline-flex cursor-pointer" /> *@
-@*             } *@
-@*         </MudTooltip> *@
-@*     </ActivatorContent> *@
-@*     <ChildContent> *@
-@*         @if (_loading) *@
-@*         { *@
-@*             <MudMenuItem Disabled="true"> *@
-@*                 <MudProgressCircular Size="Size.Small" Indeterminate="true" Class="mr-2" /> Caricamento... *@
-@*             </MudMenuItem> *@
-@*         } *@
-@*         else *@
-@*         { *@
-@*             @foreach (var type in _types) *@
-@*             { *@
-@*                 <MudMenuItem OnClick="() => ChangeType(type)"> *@
-@*                     @if (!string.IsNullOrEmpty(type.IconUrl)) *@
-@*                     { *@
-@*                         <MudImage Src="@type.IconUrl" Width="16" Height="16" Alt="@type.Name" Class="mr-2 d-inline-flex" /> *@
-@*                     } *@
-@*                     @type.Name *@
-@*                 </MudMenuItem> *@
-@*             } *@
-@*         } *@
-@*     </ChildContent> *@
-@* </MudMenu> *@
-@* *@
-@* @code { *@
-@*     [Parameter, EditorRequired] public required string IssueKey { get; set; } *@
-@*     [Parameter, EditorRequired] public required IssueType IssueType { get; set; } *@
-@*     [Parameter] public EventCallback OnChanged { get; set; } *@
-@*     [CascadingParameter(Name = "RefreshIssues")] public Func<Task>? RefreshIssues { get; set; } *@
-@* *@
-@*     private IReadOnlyList<IssueType> _types = []; *@
-@*     private bool _loading; *@
-@* *@
-@*     protected override async Task OnParametersSetAsync() *@
-@*     { *@
-@*         _loading = true; *@
-@*         try *@
-@*         { *@
-@*             _types = await ReadClient.GetProjectIssueTypesAsync(); *@
-@*         } *@
-@*         catch *@
-@*         { *@
-@*             _types = []; *@
-@*         } *@
-@*         finally *@
-@*         { *@
-@*             _loading = false; *@
-@*         } *@
-@*     } *@
-@* *@
-@*     private async Task ChangeType(IssueType type) *@
-@*     { *@
-@*         if (type.Id == IssueType.Id) return; *@
-@* *@
-@*         try *@
-@*         { *@
-@*             await WriteClient.UpdateIssueTypeAsync(IssueKey, type.Id); *@
-@*             Snackbar.Add($"{IssueKey} tipo → {type.Name}", Severity.Success); *@
-@*             if (OnChanged.HasDelegate) await OnChanged.InvokeAsync(); *@
-@*             if (RefreshIssues is not null) await RefreshIssues(); *@
-@*         } *@
-@*         catch (Exception ex) *@
-@*         { *@
-@*             Snackbar.Add($"Errore: {ex.Message}", Severity.Error); *@
-@*         } *@
-@*     } *@
-@* } *@
-@* *@
+@using Planner.Clients
+@using Planner.Domain
+@using Planner.Model
+@inject JiraReadClient ReadClient
+@inject JiraWriteClient WriteClient
+@inject ISnackbar Snackbar
+
+<MudMenu ActivationEvent="MouseEvent.LeftClick" Dense="true" AnchorOrigin="Origin.BottomLeft">
+    <ActivatorContent>
+        <MudTooltip Text="@($"{Value.Name} — click per cambiare")" Arrow="true">
+            <TypeIcon Type="@Value" />
+        </MudTooltip>
+    </ActivatorContent>
+    <ChildContent>
+        @if (_loading)
+        {
+            <MudMenuItem Disabled="true">
+                <MudProgressCircular Size="Size.Small" Indeterminate="true" Class="mr-2" /> Caricamento...
+            </MudMenuItem>
+        }
+        else
+        {
+            @foreach (var type in _types)
+            {
+                <MudMenuItem OnClick="() => ChangeType(type)">
+                    @if (!string.IsNullOrEmpty(type.IconUrl))
+                    {
+                        <MudImage Src="@type.IconUrl" Width="16" Height="16" Alt="@type.Name" Class="mr-2 d-inline-flex" />
+                    }
+                    @type.Name
+                </MudMenuItem>
+            }
+        }
+    </ChildContent>
+</MudMenu>
+
+@code {
+    [Parameter, EditorRequired] public required string IssueKey { get; set; }
+    [Parameter, EditorRequired] public required IssueTypeModel Value { get; set; }
+    [Parameter] public EventCallback<IssueTypeModel> ValueChanged { get; set; }
+    [Parameter] public EventCallback OnChanged { get; set; }
+    [CascadingParameter(Name = "RefreshIssues")] public Func<Task>? RefreshIssues { get; set; }
+
+    private IReadOnlyList<IssueTypeModel> _types = [];
+    private bool _loading;
+
+    protected override async Task OnParametersSetAsync()
+    {
+        _loading = true;
+        try
+        {
+            var projectKey = IssueKey.Split('-')[0];
+            var project = ReadClient.GetProjects().FirstOrDefault(p => p.Key.Equals(projectKey, StringComparison.OrdinalIgnoreCase));
+            if (project is not null)
+            {
+                var models = await project.GetIssueTypesAsync();
+                _types = models;
+            }
+        }
+        catch
+        {
+            _types = [];
+        }
+        finally
+        {
+            _loading = false;
+        }
+    }
+
+    private async Task ChangeType(IssueTypeModel type)
+    {
+        if (type.Value == Value.Value) return;
+
+        try
+        {
+            var update = new Planner.Builders.IssueUpdateBuilder().SetIssueType(type.Value);
+            await WriteClient.UpdateIssueAsync(IssueKey, update);
+            Snackbar.Add($"{IssueKey} tipo → {type.Name}", Severity.Success);
+            
+            Value = type;
+            await ValueChanged.InvokeAsync(Value);
+
+            if (OnChanged.HasDelegate) await OnChanged.InvokeAsync();
+            if (RefreshIssues is not null) await RefreshIssues();
+        }
+        catch (Exception ex)
+        {
+            Snackbar.Add($"Errore: {ex.Message}", Severity.Error);
+        }
+    }
+}

@@ -5,13 +5,13 @@ namespace Planner.Model;
 
 public record UserModel
 {
-    public string AccountId { get; init; }
-    public string EmailAddress { get; init; }
-    public string DisplayName { get; init; }
-    public string _48x48 { get; init; }
-    public string _24x24 { get; init; }
-    public string _16x16 { get; init; }
-    public string _32x32 { get; init; }
+    public string AccountId { get; set; }
+    public string EmailAddress { get; set; }
+    public string DisplayName { get; set; }
+    public string _48x48 { get; set; }
+    public string _24x24 { get; set; }
+    public string _16x16 { get; set; }
+    public string _32x32 { get; set; }
 
     public UserModel(User user)
     {

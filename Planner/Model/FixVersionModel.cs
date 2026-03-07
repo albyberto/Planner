@@ -5,9 +5,9 @@ namespace Planner.Model;
 
 public record FixVersionModel
 {
-    public string Value { get; init; }
-    public string Name { get; init; }
-    public string Description { get; init; }
+    public string Value { get; set; }
+    public string Name { get; set; }
+    public string Description { get; set; }
 
     public FixVersionModel(FixVersion version)
     {

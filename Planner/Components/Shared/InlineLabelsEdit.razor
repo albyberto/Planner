@@ -114,10 +114,8 @@ else
             var update = new IssueUpdateBuilder().SetLabels(newLabels);
             await WriteClient.UpdateIssueAsync(Issue.Key, update);
 
-            var updatedLabels = _selected.ToImmutableList();
-            var updatedIssue = Issue with { Labels = updatedLabels };
-            
-            await IssueChanged.InvokeAsync(updatedIssue);
+            Issue.Labels = _selected.ToImmutableList();
+            await IssueChanged.InvokeAsync(Issue);
 
             Snackbar.Add($"{Issue.Key} labels aggiornate", Severity.Success);
         }

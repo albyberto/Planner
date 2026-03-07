@@ -5,19 +5,19 @@ namespace Planner.Model;
 
 public record IssueModel
 {
-    public string Id { get; init; }
-    public string Key { get; init; }
-    public string ProjectKey { get; init; }
-    public string Summary { get; init; }
-    public StatusModel Status { get; init; }
-    public UserModel Assignee { get; init; }
-    public IssueTypeModel Type { get; init; }
-    public ImmutableList<ComponentModel> Components { get; init; }
-    public ImmutableList<LabelModel> Labels { get; init; }
-    public ImmutableList<FixVersionModel> FixVersions { get; init; }
-    public DateOnly? StartDate { get; init; }
+    public string Id { get; set; }
+    public string Key { get; set; }
+    public string ProjectKey { get; set; }
+    public string Summary { get; set; }
+    public StatusModel Status { get; set; }
+    public UserModel Assignee { get; set; }
+    public IssueTypeModel Type { get; set; }
+    public ImmutableList<ComponentModel> Components { get; set; }
+    public ImmutableList<LabelModel> Labels { get; set; }
+    public ImmutableList<FixVersionModel> FixVersions { get; set; }
+    public DateOnly? StartDate { get; set; }
 
-    public TimeStats Stats { get; init; }
+    public TimeStats Stats { get; set; }
 
     private readonly Lazy<Task<IReadOnlyList<Transition>>> _transitionsLoader;
 
