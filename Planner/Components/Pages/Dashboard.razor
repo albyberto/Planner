@@ -66,8 +66,8 @@
                     <MudTh>Status</MudTh>
                     <MudTh Class="mud-text-align-end">Original</MudTh>
                     <MudTh Class="mud-text-align-end">Spent</MudTh>
-                    <MudTh Class="mud-text-align-end">Calc.Left</MudTh>
                     <MudTh Class="mud-text-align-end">Remaining</MudTh>
+                    <MudTh Class="mud-text-align-end">Calc. Left</MudTh>
                     <MudTh>Components</MudTh>
                     <MudTh>Labels</MudTh>
                 </HeaderContent>
@@ -90,10 +90,10 @@
                     <MudTd DataLabel="Spent" Class="mud-text-align-end">
                         <MudText Typo="Typo.body2" Color="Color.Info">@issue.Stats.FormattedSpent</MudText>
                     </MudTd>
-                    <MudTd DataLabel="Left" Class="mud-text-align-end">
+                    <MudTd DataLabel="Remaining" Class="mud-text-align-end">
                         <InlineRemainingEstimationEdit Issue="@issue" />
                     </MudTd>
-                    <MudTd DataLabel="Calc.Left" Class="mud-text-align-end">
+                    <MudTd DataLabel="Left" Class="mud-text-align-end">
                         <MudText Typo="Typo.body2" Color="Color.Default">@issue.Stats.FormattedCalculatedRemaining</MudText>
                     </MudTd>
                     <MudTd DataLabel="Components">
