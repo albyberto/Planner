@@ -17,6 +17,8 @@ public record IssueModel
     public ImmutableList<LabelModel> Labels { get; set; }
     public ImmutableList<FixVersionModel> FixVersions { get; set; }
     public DateOnly? StartDate { get; set; }
+    public DateOnly? EndDate { get; set; }
+    public DateOnly? DueDate { get; set; }
 
     public TimeStats Stats { get; set; }
 
@@ -38,6 +40,15 @@ public record IssueModel
         StartDate = dto.Fields.StartDate;
 
         var originalEstimate = dto.Fields.TimeTracking?.OriginalEstimateSeconds ?? 0;
+        
+        // MOCK: Generate EndDate and DueDate for Gantt preview using 8h work days based on StartDate
+        if (StartDate.HasValue)
+        {
+            var workingDays = Math.Max(1, originalEstimate / 28800); // 8h = 28800s
+            EndDate = StartDate.Value.AddDays(workingDays);
+            DueDate = EndDate;
+        }
+
         var timeSpent = dto.Fields.Worklog?.Worklogs?.Sum(w => w.TimeSpentSeconds ?? 0) ?? 0;
         var remainingEstimate = dto.Fields.TimeTracking?.RemainingEstimateSeconds;
         

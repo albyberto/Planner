@@ -1,10 +1,14 @@
-﻿@using Microsoft.Extensions.Options
+@using Microsoft.Extensions.Options
 @using Planner.Clients
 @using Planner.Extensions
 @using Planner.Model
 @using Planner.Options
 
 <MudNavMenu>
+    <MudNavLink Href="/gantt" Match="NavLinkMatch.All" Icon="@Icons.Material.Filled.ViewTimeline">
+        Gantt View
+    </MudNavLink>
+
     <MudNavGroup Title="Dashboard" Icon="@Icons.Material.Filled.Dashboard" Expanded="true">
         <MudNavLink Href="/dashboard" Match="NavLinkMatch.All" Icon="@Icons.Material.Filled.Groups">
             Team
