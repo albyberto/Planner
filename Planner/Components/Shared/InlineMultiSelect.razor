@@ -68,8 +68,7 @@ else
 
     private async Task StartEdit()
     {
-        // Se c'è un project key specifico o lo deriviamo dalla chiave della issue
-        var projectKey = Issue.ProjectKey ?? Issue.Key.Split('-')[0];
+        var projectKey = Issue.ProjectKey;
         
         try
         {
@@ -112,7 +111,7 @@ else
         }
 
         var currentItems = Items;
-        var newValues = _selected.Where(i => i is not null).Select(i => i!.Value).OrderBy(v => v).ToList();
+        var newValues = _selected.Where(i => i is not null).Select(i => i.Value).OrderBy(v => v).ToList();
         var oldValues = currentItems.Select(i => i.Value).OrderBy(v => v).ToList();
 
         if (newValues.SequenceEqual(oldValues))
@@ -123,10 +122,10 @@ else
 
         try
         {
-            var builder = UpdateBuilderAction(new IssueUpdateBuilder(), newValues);
+            var builder = UpdateBuilderAction(new(), newValues);
             await SaveIssueAsync(Issue.Key, builder);
 
-            var newImmutableList = _selected.Where(i => i is not null).ToImmutableList()!;
+            var newImmutableList = _selected.Where(i => i is not null).ToImmutableList();
             await ItemsChanged.InvokeAsync(newImmutableList);
 
             Snackbar.Add($"{Issue.Key} {Label} aggiornati", Severity.Success);
