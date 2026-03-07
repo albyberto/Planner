@@ -5,7 +5,7 @@
 @inject ISnackbar Snackbar
 
 <div class="d-flex justify-end align-center gap-2">
-    <InlineTimeEdit @ref="_timeEdit"
+    <InlineTimeEdit
                     TimeValue="@Issue.Stats.FormattedRemaining"
                     TimeValueChanged="SaveRemainingEstimationAsync"
                     Label="rimanente"
@@ -24,25 +24,12 @@
 
 @code {
     [Parameter, EditorRequired] public required IssueModel Issue { get; set; }
-    
-    private InlineTimeEdit? _timeEdit;
-
-    // Removed local _displayValue property as FormattedRemaining is computed and read-only.
-
-    private void SetToZero()
-    {
-        // Interacts with the generic component API to clear the columns
-        if (_timeEdit != null)
-        {
-            _timeEdit.SetToZero();
-        }
-    }
 
     private async Task SaveRemainingEstimationAsync(string newValue)
     {
         try
         {
-            var update = new Planner.Builders.IssueUpdateBuilder().SetTimeTracking(remainingEstimate: newValue);
+            var update = new Builders.IssueUpdateBuilder().SetTimeTracking(remainingEstimate: newValue);
             await WriteClient.UpdateIssueAsync(Issue.Key, update);
 
             Issue.Stats = Issue.Stats with { ExplicitRemaining = TimeStats.ParseTime(newValue) };

@@ -73,7 +73,7 @@
 
         try
         {
-            var update = new Planner.Builders.IssueUpdateBuilder().SetIssueType(type.Value);
+            var update = new Builders.IssueUpdateBuilder().SetIssueType(type.Value);
             await WriteClient.UpdateIssueAsync(IssueKey, update);
             Snackbar.Add($"{IssueKey} tipo → {type.Name}", Severity.Success);
             

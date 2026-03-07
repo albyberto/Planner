@@ -19,7 +19,7 @@
     {
         try
         {
-            var update = new Planner.Builders.IssueUpdateBuilder().SetTimeTracking(originalEstimate: newValue);
+            var update = new Builders.IssueUpdateBuilder().SetTimeTracking(originalEstimate: newValue);
             await WriteClient.UpdateIssueAsync(Issue.Key, update);
 
             Issue.Stats = Issue.Stats with { OriginalEstimate = TimeStats.ParseTime(newValue) };

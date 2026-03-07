@@ -131,25 +131,25 @@ else
     private void HandleWheel(WheelEventArgs e, string unit)
     {
         // deltaY > 0 is scroll down (decrease), deltaY < 0 is scroll up (increase)
-        int direction = e.DeltaY < 0 ? 1 : -1;
+        var direction = e.DeltaY < 0 ? 1 : -1;
         AddValue(unit, direction);
     }
 
     private void AddValue(string unit, int amount)
     {
-        if (unit == "w")
+        switch (unit)
         {
-            _weeks = Math.Max(0, _weeks + amount);
-        }
-        else if (unit == "d")
-        {
-            _days += amount;
-            NormalizeTime();
-        }
-        else if (unit == "h")
-        {
-            _hours += amount;
-            NormalizeTime();
+            case "w":
+                _weeks = Math.Max(0, _weeks + amount);
+                break;
+            case "d":
+                _days += amount;
+                NormalizeTime();
+                break;
+            case "h":
+                _hours += amount;
+                NormalizeTime();
+                break;
         }
     }
 
@@ -189,14 +189,14 @@ else
         if (_hours >= HoursInDay)
         {
             _days += _hours / HoursInDay;
-            _hours = _hours % HoursInDay;
+            _hours %= HoursInDay;
         }
 
         // Carry over days to weeks
         if (_days >= DaysInWeek)
         {
             _weeks += _days / DaysInWeek;
-            _days = _days % DaysInWeek;
+            _days %= DaysInWeek;
         }
         
         // Final negative bounds safety
@@ -230,12 +230,12 @@ else
         
         if (string.IsNullOrWhiteSpace(TimeValue)) return;
 
-        var parts = TimeValue.Split(new[] { ' ' }, StringSplitOptions.RemoveEmptyEntries);
+        var parts = TimeValue.Split([' '], StringSplitOptions.RemoveEmptyEntries);
         foreach (var part in parts)
         {
-            if (part.EndsWith("w") && int.TryParse(part[..^1], out int w)) _weeks = w;
-            else if (part.EndsWith("d") && int.TryParse(part[..^1], out int d)) _days = d;
-            else if (part.EndsWith("h") && int.TryParse(part[..^1], out int h)) _hours = h;
+            if (part.EndsWith("w") && int.TryParse(part[..^1], out var w)) _weeks = w;
+            else if (part.EndsWith("d") && int.TryParse(part[..^1], out var d)) _days = d;
+            else if (part.EndsWith("h") && int.TryParse(part[..^1], out var h)) _hours = h;
             // Support minutes? If the user typed "30m" before, we can just convert to nearest hour or disregard. 
             // For now, if minutes exist, we ignore them since it's a 3-column W/D/H UI as requested.
         }

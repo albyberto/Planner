@@ -41,7 +41,7 @@ else
 
         try
         {
-            var update = new Planner.Builders.IssueUpdateBuilder().SetSummary(_value);
+            var update = new Builders.IssueUpdateBuilder().SetSummary(_value);
             await WriteClient.UpdateIssueAsync(IssueKey, update);
             Snackbar.Add($"{IssueKey} summary aggiornato", Severity.Success);
             _editing = false;
