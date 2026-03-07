@@ -5,34 +5,45 @@
 @inject JiraWriteClient WriteClient
 @inject ISnackbar Snackbar
 
-<MudMenu ActivationEvent="MouseEvent.LeftClick" Dense="true" AnchorOrigin="Origin.BottomLeft">
-    <ActivatorContent>
-        <span class="d-inline-flex cursor-pointer">
-            <TypeIcon Type="@Value" />
-        </span>
-    </ActivatorContent>
-    <ChildContent>
+@if (_editing)
+{
+    <MudSelect T="IssueTypeModel"
+               Value="@Value"
+               ValueChanged="ChangeType"
+               Open="true"
+               OnClose="@(() => _editing = false)"
+               Dense="true"
+               Variant="Variant.Outlined"
+               Margin="Margin.Dense"
+               AnchorOrigin="Origin.BottomLeft"
+               ToStringFunc="@(t => t?.Name ?? string.Empty)">
         @if (_loading)
         {
-            <MudMenuItem Disabled="true">
+            <MudSelectItem T="IssueTypeModel" Value="@null" Disabled="true">
                 <MudProgressCircular Size="Size.Small" Indeterminate="true" Class="mr-2" /> Caricamento...
-            </MudMenuItem>
+            </MudSelectItem>
         }
         else
         {
             @foreach (var type in _types)
             {
-                <MudMenuItem OnClick="() => ChangeType(type)">
+                <MudSelectItem T="IssueTypeModel" Value="@type">
                     @if (!string.IsNullOrEmpty(type.IconUrl))
                     {
                         <MudImage Src="@type.IconUrl" Width="16" Height="16" Alt="@type.Name" Class="mr-2 d-inline-flex" />
                     }
                     @type.Name
-                </MudMenuItem>
+                </MudSelectItem>
             }
         }
-    </ChildContent>
-</MudMenu>
+    </MudSelect>
+}
+else
+{
+    <div class="d-inline-flex cursor-pointer" @onclick="StartEdit" title="@Value.Name">
+        <TypeIcon Type="@Value" />
+    </div>
+}
 
 @code {
     [Parameter, EditorRequired] public required string IssueKey { get; set; }
@@ -43,8 +54,18 @@
 
     private IReadOnlyList<IssueTypeModel> _types = [];
     private bool _loading;
+    private bool _editing;
 
-    protected override async Task OnParametersSetAsync()
+    private async Task StartEdit()
+    {
+        if (_types.Count == 0)
+        {
+            await LoadTypesAsync();
+        }
+        _editing = true;
+    }
+
+    private async Task LoadTypesAsync()
     {
         _loading = true;
         try
@@ -67,9 +88,13 @@
         }
     }
 
-    private async Task ChangeType(IssueTypeModel type)
+    private async Task ChangeType(IssueTypeModel? type)
     {
-        if (type.Value == Value.Value) return;
+        if (type == null || type.Value == Value.Value) 
+        {
+            _editing = false;
+            return;
+        }
 
         try
         {
@@ -85,6 +110,10 @@
         catch (Exception ex)
         {
             Snackbar.Add($"Errore: {ex.Message}", Severity.Error);
+        }
+        finally
+        {
+            _editing = false;
         }
     }
 }
