@@ -50,7 +50,6 @@ else
             await ValueChanged.InvokeAsync(Value);
 
             if (OnChanged.HasDelegate) await OnChanged.InvokeAsync();
-            if (RefreshIssues is not null) await RefreshIssues();
         }
         catch (Exception ex)
         {

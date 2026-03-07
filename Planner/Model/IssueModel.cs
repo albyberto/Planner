@@ -7,6 +7,7 @@ public record IssueModel
 {
     public string Id { get; set; }
     public string Key { get; set; }
+    public string Self { get; set; }
     public string ProjectKey { get; set; }
     public string Summary { get; set; }
     public StatusModel Status { get; set; }
@@ -25,6 +26,7 @@ public record IssueModel
     {
         Id = dto.Id;
         Key = dto.Key;
+        Self = dto.Self;
         ProjectKey = dto.Fields.Project.Key;
         Summary = dto.Fields.Summary;
         Status = new(dto.Fields.Status);

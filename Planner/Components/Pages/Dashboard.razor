@@ -68,25 +68,25 @@
                 </HeaderContent>
                 <RowTemplate Context="issue">
                     <MudTd DataLabel="Type" Class="mud-text-align-center">
-                        @issue.Type
+                        <InlineTypeEdit IssueKey="@issue.Key" @bind-Value="issue.Type" />
                     </MudTd>
                     <MudTd DataLabel="Key">
-                        @issue.Key
+                        <IssueKey Issue="@issue" />
                     </MudTd>
                     <MudTd DataLabel="Summary">
-                        @issue.Summary
+                        <InlineSummaryEdit IssueKey="@issue.Key" @bind-Value="issue.Summary" />
                     </MudTd>
                     <MudTd DataLabel="Status">
-                        @issue.Status.Name
+                        <InlineStatusEdit IssueKey="@issue.Key" @bind-Value="issue.Status" />
                     </MudTd>
                     <MudTd DataLabel="Est" Class="mud-text-align-end">
-                        @issue.Stats.FormattedEstimate
+                        <InlineTimeEdit IssueKey="@issue.Key" DisplayValue="@issue.Stats.FormattedEstimate" Field="originalEstimate" Label="estimate" />
                     </MudTd>
                     <MudTd DataLabel="Spent" Class="mud-text-align-end">
                         <MudText Typo="Typo.body2" Color="Color.Info">@issue.Stats.FormattedSpent</MudText>
                     </MudTd>
                     <MudTd DataLabel="Left" Class="mud-text-align-end">
-                        @issue.Stats.FormattedRemaining
+                        <InlineTimeEdit IssueKey="@issue.Key" DisplayValue="@issue.Stats.FormattedRemaining" Field="remainingEstimate" Label="rimanente" />
                     </MudTd>
                     <MudTd DataLabel="Components">
                         <InlineComponentsEdit Issue="@issue"/>

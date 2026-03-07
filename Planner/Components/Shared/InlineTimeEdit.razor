@@ -59,7 +59,6 @@ else
             await DisplayValueChanged.InvokeAsync(DisplayValue);
 
             if (OnChanged.HasDelegate) await OnChanged.InvokeAsync();
-            if (RefreshIssues is not null) await RefreshIssues();
         }
         catch (Exception ex)
         {
