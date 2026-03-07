@@ -30,21 +30,23 @@
 }
 else
 {
-    <div class="d-inline-flex flex-wrap gap-1 cursor-pointer" @onclick="StartEdit">
-        @if (Issue.Labels is { Count: > 0 })
-        {
+    @if (Issue.Labels is { Count: > 0 })
+    {
+        <MudChipSet T="string" Size="Size.Small" Class="d-inline-flex flex-wrap cursor-pointer" @onclick="StartEdit" ReadOnly="true">
             @foreach (var label in Issue.Labels)
             {
-                <MudChip T="string" Size="Size.Small" Variant="Variant.Outlined" Color="Color.Secondary" Class="mr-1">
+                <MudChip T="string" Variant="Variant.Outlined" Color="Color.Secondary">
                     @label.Label
                 </MudChip>
             }
-        }
-        else
-        {
-            <MudChip T="string" Size="Size.Small" Variant="Variant.Outlined" Color="Color.Default">+</MudChip>
-        }
-    </div>
+        </MudChipSet>
+    }
+    else
+    {
+        <MudTooltip Text="Aggiungi label" Arrow="true">
+            <MudIconButton Icon="@Icons.Material.Filled.Add" Size="Size.Small" Color="Color.Default" @onclick="StartEdit" Class="pa-0" />
+        </MudTooltip>
+    }
 }
 
 @code {

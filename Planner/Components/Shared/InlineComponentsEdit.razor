@@ -30,21 +30,23 @@
 }
 else
 {
-    <div class="d-inline-flex flex-wrap gap-1 cursor-pointer" @onclick="StartEdit">
-        @if (Issue.Components is { Count: > 0 })
-        {
+    @if (Issue.Components is { Count: > 0 })
+    {
+        <MudChipSet T="string" Size="Size.Small" Class="d-inline-flex flex-wrap cursor-pointer" @onclick="StartEdit" ReadOnly="true">
             @foreach (var component in Issue.Components)
             {
-                <MudChip T="string" Size="Size.Small" Variant="Variant.Outlined" Color="Color.Primary" Class="mr-1">
+                <MudChip T="string" Variant="Variant.Outlined" Color="Color.Primary">
                     @component.Name
                 </MudChip>
             }
-        }
-        else
-        {
-            <MudChip T="string" Size="Size.Small" Variant="Variant.Outlined" Color="Color.Default">+</MudChip>
-        }
-    </div>
+        </MudChipSet>
+    }
+    else
+    {
+        <MudTooltip Text="Aggiungi" Arrow="true">
+            <MudIconButton Icon="@Icons.Material.Filled.Add" Size="Size.Small" Color="Color.Default" @onclick="StartEdit" Class="pa-0" />
+        </MudTooltip>
+    }
 }
 
 @code {
@@ -100,7 +102,7 @@ else
         }
 
         var currentComponents = Issue.Components ?? [];
-        var newComponents = _selected.Select(c => c.Value).OrderBy(v => v).ToList();
+        var newComponents = _selected.Where(c => c is not null).Select(c => c!.Value).OrderBy(v => v).ToList();
         var oldComponents = currentComponents.Select(c => c.Value).OrderBy(v => v).ToList();
 
         if (newComponents.SequenceEqual(oldComponents))
@@ -114,7 +116,7 @@ else
             var update = new IssueUpdateBuilder().SetComponents(newComponents);
             await WriteClient.UpdateIssueAsync(Issue.Key, update);
 
-            Issue.Components = _selected.Where(component => component is null).ToImmutableList();
+            Issue.Components = _selected.Where(c => c is not null).ToImmutableList()!;
             if (IssueChanged.HasDelegate)
             {
                 await IssueChanged.InvokeAsync(Issue);
