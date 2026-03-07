@@ -94,7 +94,7 @@
                                MultiSelectionTextFunc="@(selected => GetSelectedLabelsText(selected))">
                         @foreach (var label in _labels)
                         {
-                            <MudSelectItem T="string" Value="@label.Value">@label.Label</MudSelectItem>
+                            <MudSelectItem T="string" Value="@label.Value">@label.Name</MudSelectItem>
                         }
                     </MudSelect>
                 </MudItem>
@@ -221,7 +221,7 @@
         _statuses = (await project.GetStatusesAsync()).OrderBy(x => x.Name).ToImmutableList();
         _assignees = (await project.GetAssigneesAsync()).OrderBy(x => x.DisplayName).ToImmutableList();
         _components = (await project.GetComponentsAsync()).OrderBy(x => x.Name).ToImmutableList();
-        _labels = (await project.GetLabelsAsync()).OrderBy(x => x.Label).ToImmutableList();
+        _labels = (await project.GetLabelsAsync()).OrderBy(x => x.Name).ToImmutableList();
         _issueTypes = (await project.GetIssueTypesAsync()).OrderBy(x => x.Name).ToImmutableList();
     }
 
@@ -285,7 +285,7 @@
     private string GetSelectedLabelsText(IReadOnlyCollection<string?>? values)
     {
         if (values is null || values.Count == 0) return string.Empty;
-        var labels = _labels.Where(x => values.Contains(x.Value)).Select(x => x.Label);
+        var labels = _labels.Where(x => values.Contains(x.Value)).Select(x => x.Name);
         return string.Join(", ", labels);
     }
 

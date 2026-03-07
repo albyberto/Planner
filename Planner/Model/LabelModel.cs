@@ -1,13 +1,9 @@
+using Planner.Extensions;
+
 namespace Planner.Model;
 
-public record LabelModel
+public record LabelModel(string Value) : IMultiSelect
 {
-    public string Value { get; set; }
-    public string Label { get; set; }
-
-    public LabelModel(string label)
-    {
-        Value = label;
-        Label = label;
-    }
+    public string Value { get; set; } = Value;
+    public string Name { get; set; } = Value.ToTitleCase();
 }

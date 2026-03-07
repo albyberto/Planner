@@ -1,0 +1,145 @@
+@using System.Collections.Immutable
+@using Planner.Builders
+@using Planner.Model
+@inject ISnackbar Snackbar
+@typeparam TItem where TItem : IMultiSelect
+
+@if (_editing)
+{
+    <MudSelect T="TItem"
+               MultiSelection="true"
+               SelectedValues="_selected"
+               SelectedValuesChanged="OnSelectionChanged"
+               Open="_isOpen"
+               OpenChanged="OnOpenChanged"
+               Label="@Label"
+               Dense="true"
+               Variant="Variant.Outlined"
+               Margin="Margin.Dense"
+               AnchorOrigin="Origin.BottomLeft"
+               CloseIcon="@Icons.Material.Filled.Close"
+               ToStringFunc="GetItemText">
+        @foreach (var item in _availableItems)
+        {
+            <MudSelectItem T="TItem" Value="@item">@item.Name</MudSelectItem>
+        }
+    </MudSelect>
+}
+else
+{
+    @if (Items is { Count: > 0 })
+    {
+        <MudChipSet T="string" Size="Size.Small" Class="d-inline-flex flex-wrap cursor-pointer" @onclick="StartEdit" ReadOnly="true">
+            @foreach (var item in Items)
+            {
+                <MudChip T="string" Variant="Variant.Outlined" Color="@ChipColor">
+                    @item.Name
+                </MudChip>
+            }
+        </MudChipSet>
+    }
+    else
+    {
+        <MudTooltip Text="@EmptyTooltip" Arrow="true">
+            <MudIconButton Icon="@Icons.Material.Filled.Add" Size="Size.Small" Color="Color.Default" @onclick="StartEdit" Class="pa-0" />
+        </MudTooltip>
+    }
+}
+
+@code {
+    [Parameter][EditorRequired] public required IssueModel Issue { get; set; }
+    [Parameter][EditorRequired] public required IReadOnlyCollection<TItem> Items { get; set; }
+    [Parameter] public EventCallback<IReadOnlyCollection<TItem>> ItemsChanged { get; set; }
+    
+    [Parameter][EditorRequired] public required Func<string, Task<IReadOnlyList<TItem>>> LoadItemsAsync { get; set; }
+    [Parameter][EditorRequired] public required Func<IssueUpdateBuilder, IReadOnlyList<string>, IssueUpdateBuilder> UpdateBuilderAction { get; set; }
+    [Parameter][EditorRequired] public required Func<string, IssueUpdateBuilder, Task> SaveIssueAsync { get; set; }
+
+    [Parameter] public string Label { get; set; } = "Items";
+    [Parameter] public Color ChipColor { get; set; } = Color.Primary;
+    [Parameter] public string EmptyTooltip { get; set; } = "Aggiungi";
+
+    private bool _editing;
+    private bool _isOpen;
+    private bool _isDirty;
+    
+    private IReadOnlyCollection<TItem> _selected = [];
+    private IReadOnlyList<TItem> _availableItems = [];
+
+    private async Task StartEdit()
+    {
+        // Se c'è un project key specifico o lo deriviamo dalla chiave della issue
+        var projectKey = Issue.ProjectKey ?? Issue.Key.Split('-')[0];
+        
+        try
+        {
+            _availableItems = await LoadItemsAsync(projectKey);
+        }
+        catch (Exception ex)
+        {
+            Snackbar.Add($"Errore nel caricamento opzioni: {ex.Message}", Severity.Error);
+        }
+
+        _selected = Items;
+        
+        _isDirty = false;
+        _editing = true;
+        _isOpen = true; 
+    }
+
+    private void OnSelectionChanged(IReadOnlyCollection<TItem>? values)
+    {
+        _selected = values ?? [];
+        _isDirty = true; 
+    }
+
+    private async Task OnOpenChanged(bool isOpen)
+    {
+        _isOpen = isOpen;
+        
+        if (!isOpen)
+        {
+            await SaveAndCloseAsync();
+        }
+    }
+
+    private async Task SaveAndCloseAsync()
+    {
+        if (!_isDirty)
+        {
+            _editing = false;
+            return;
+        }
+
+        var currentItems = Items;
+        var newValues = _selected.Where(i => i is not null).Select(i => i!.Value).OrderBy(v => v).ToList();
+        var oldValues = currentItems.Select(i => i.Value).OrderBy(v => v).ToList();
+
+        if (newValues.SequenceEqual(oldValues))
+        {
+            _editing = false; 
+            return;
+        }
+
+        try
+        {
+            var builder = UpdateBuilderAction(new IssueUpdateBuilder(), newValues);
+            await SaveIssueAsync(Issue.Key, builder);
+
+            var newImmutableList = _selected.Where(i => i is not null).ToImmutableList()!;
+            await ItemsChanged.InvokeAsync(newImmutableList);
+
+            Snackbar.Add($"{Issue.Key} {Label} aggiornati", Severity.Success);
+        }
+        catch (Exception ex)
+        {
+            Snackbar.Add($"Errore: {ex.Message}", Severity.Error);
+        }
+        finally
+        {
+            _editing = false;
+        }
+    }
+
+    private static string GetItemText(TItem? item) => item?.Name ?? string.Empty;
+}
