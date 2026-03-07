@@ -1,15 +1,14 @@
+@inject ISnackbar Snackbar
 @using System.Collections.Immutable
 @using Planner.Builders
 @using Planner.Model
-@inject ISnackbar Snackbar
-@typeparam TItem where TItem : IMultiSelect
+@typeparam TItem where TItem : Planner.Model.IMultiSelect
 
 @if (_editing)
 {
     <MudSelect T="TItem"
                MultiSelection="true"
-               SelectedValues="_selected"
-               SelectedValuesChanged="OnSelectionChanged"
+               @bind-SelectedValues="SelectedValues"
                Open="_isOpen"
                OpenChanged="OnOpenChanged"
                Label="@Label"
@@ -29,7 +28,8 @@ else
 {
     @if (Items is { Count: > 0 })
     {
-        <MudChipSet T="string" Size="Size.Small" Class="d-inline-flex flex-wrap cursor-pointer" @onclick="StartEdit" ReadOnly="true">
+        <MudChipSet T="string" Size="Size.Small" Class="d-inline-flex flex-wrap cursor-pointer" @onclick="StartEdit"
+                    ReadOnly="true">
             @foreach (var item in Items)
             {
                 <MudChip T="string" Variant="Variant.Outlined" Color="@ChipColor">
@@ -41,19 +41,20 @@ else
     else
     {
         <MudTooltip Text="@EmptyTooltip" Arrow="true">
-            <MudIconButton Icon="@Icons.Material.Filled.Add" Size="Size.Small" Color="Color.Default" @onclick="StartEdit" Class="pa-0" />
+            <MudIconButton Icon="@Icons.Material.Filled.Add" Size="Size.Small" Color="Color.Default"
+                           @onclick="StartEdit" Class="pa-0"/>
         </MudTooltip>
     }
 }
 
 @code {
-    [Parameter][EditorRequired] public required IssueModel Issue { get; set; }
-    [Parameter][EditorRequired] public required IReadOnlyCollection<TItem> Items { get; set; }
+    [Parameter] [EditorRequired] public required IssueModel Issue { get; set; }
+    [Parameter] [EditorRequired] public required IReadOnlyCollection<TItem> Items { get; set; }
     [Parameter] public EventCallback<IReadOnlyCollection<TItem>> ItemsChanged { get; set; }
-    
-    [Parameter][EditorRequired] public required Func<string, Task<IReadOnlyList<TItem>>> LoadItemsAsync { get; set; }
-    [Parameter][EditorRequired] public required Func<IssueUpdateBuilder, IReadOnlyList<string>, IssueUpdateBuilder> UpdateBuilderAction { get; set; }
-    [Parameter][EditorRequired] public required Func<string, IssueUpdateBuilder, Task> SaveIssueAsync { get; set; }
+
+    [Parameter] [EditorRequired] public required Func<string, Task<IReadOnlyList<TItem>>> LoadItemsAsync { get; set; }
+    [Parameter] [EditorRequired] public required Func<IssueUpdateBuilder, IReadOnlyList<string>, IssueUpdateBuilder> UpdateBuilderAction { get; set; }
+    [Parameter] [EditorRequired] public required Func<string, IssueUpdateBuilder, Task> SaveIssueAsync { get; set; }
 
     [Parameter] public string Label { get; set; } = "Items";
     [Parameter] public Color ChipColor { get; set; } = Color.Primary;
@@ -62,14 +63,24 @@ else
     private bool _editing;
     private bool _isOpen;
     private bool _isDirty;
-    
+
     private IReadOnlyCollection<TItem> _selected = [];
     private IReadOnlyList<TItem> _availableItems = [];
+
+    private IReadOnlyCollection<TItem?>? SelectedValues
+    {
+        get => _selected;
+        set
+        {
+            _selected = value?.OfType<TItem>().ToList() ?? [];
+            _isDirty = true;
+        }
+    }
 
     private async Task StartEdit()
     {
         var projectKey = Issue.ProjectKey;
-        
+
         try
         {
             _availableItems = await LoadItemsAsync(projectKey);
@@ -80,22 +91,17 @@ else
         }
 
         _selected = Items;
-        
+
         _isDirty = false;
         _editing = true;
-        _isOpen = true; 
+        _isOpen = true;
     }
 
-    private void OnSelectionChanged(IReadOnlyCollection<TItem>? values)
-    {
-        _selected = values ?? [];
-        _isDirty = true; 
-    }
 
     private async Task OnOpenChanged(bool isOpen)
     {
         _isOpen = isOpen;
-        
+
         if (!isOpen)
         {
             await SaveAndCloseAsync();
@@ -111,12 +117,12 @@ else
         }
 
         var currentItems = Items;
-        var newValues = _selected.Where(i => i is not null).Select(i => i.Value).OrderBy(v => v).ToList();
+        var newValues = _selected.Select(i => i.Value).OrderBy(v => v).ToList();
         var oldValues = currentItems.Select(i => i.Value).OrderBy(v => v).ToList();
 
         if (newValues.SequenceEqual(oldValues))
         {
-            _editing = false; 
+            _editing = false;
             return;
         }
 
@@ -125,7 +131,7 @@ else
             var builder = UpdateBuilderAction(new(), newValues);
             await SaveIssueAsync(Issue.Key, builder);
 
-            var newImmutableList = _selected.Where(i => i is not null).ToImmutableList();
+            var newImmutableList = _selected.ToImmutableList();
             await ItemsChanged.InvokeAsync(newImmutableList);
 
             Snackbar.Add($"{Issue.Key} {Label} aggiornati", Severity.Success);
