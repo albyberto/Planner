@@ -5,32 +5,30 @@
 @inject JiraWriteClient WriteClient
 @inject ISnackbar Snackbar
 
-<MudTooltip Text="@($"Category: {Value.Category}")" Arrow="true">
-    <MudMenu Icon="" ActivationEvent="MouseEvent.LeftClick" Dense="true" AnchorOrigin="Origin.BottomLeft">
-        <ActivatorContent>
-            <MudChip T="string" Size="Size.Small" Color="@ChipColor" Icon="@ChipIcon" Variant="Variant.Filled" Class="cursor-pointer">
-                @Value.Name
-            </MudChip>
-        </ActivatorContent>
-        <ChildContent>
-            @if (_loading)
+<MudMenu Icon="" ActivationEvent="MouseEvent.LeftClick" Dense="true" AnchorOrigin="Origin.BottomLeft">
+    <ActivatorContent>
+        <MudChip T="string" Size="Size.Small" Color="@ChipColor" Icon="@ChipIcon" Variant="Variant.Filled" Class="cursor-pointer">
+            @Value.Name
+        </MudChip>
+    </ActivatorContent>
+    <ChildContent>
+        @if (_loading)
+        {
+            <MudMenuItem Disabled="true">
+                <MudProgressCircular Size="Size.Small" Indeterminate="true" Class="mr-2" /> Caricamento...
+            </MudMenuItem>
+        }
+        else
+        {
+            @foreach (var transition in _transitions)
             {
-                <MudMenuItem Disabled="true">
-                    <MudProgressCircular Size="Size.Small" Indeterminate="true" Class="mr-2" /> Caricamento...
+                <MudMenuItem OnClick="() => DoTransition(transition)">
+                    @transition.Name
                 </MudMenuItem>
             }
-            else
-            {
-                @foreach (var transition in _transitions)
-                {
-                    <MudMenuItem OnClick="() => DoTransition(transition)">
-                        @transition.Name
-                    </MudMenuItem>
-                }
-            }
-        </ChildContent>
-    </MudMenu>
-</MudTooltip>
+        }
+    </ChildContent>
+</MudMenu>
 
 @code {
     [Parameter, EditorRequired] public required string IssueKey { get; set; }

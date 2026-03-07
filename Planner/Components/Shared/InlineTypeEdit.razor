@@ -7,9 +7,9 @@
 
 <MudMenu ActivationEvent="MouseEvent.LeftClick" Dense="true" AnchorOrigin="Origin.BottomLeft">
     <ActivatorContent>
-        <MudTooltip Text="@($"{Value.Name} — click per cambiare")" Arrow="true">
+        <span class="d-inline-flex cursor-pointer">
             <TypeIcon Type="@Value" />
-        </MudTooltip>
+        </span>
     </ActivatorContent>
     <ChildContent>
         @if (_loading)
