@@ -7,13 +7,13 @@ public static class GroupByExtensions
 {
     extension(IEnumerable<IssueModel> issues)
     {
-        public IEnumerable<(string VersionName, List<IssueModel> Issues)> GroupByFixVersion() =>
+        public IEnumerable<(FixVersionModel Version, List<IssueModel> Issues)> GroupByFixVersion() =>
             issues
                 .SelectMany(issue => issue.FixVersions is { Count: > 0 }
-                    ? issue.FixVersions.Select(v => (Version: v.Name, Issue: issue))
-                    : [(Version: "Senza Fix Version", Issue: issue)])
-                .GroupBy(tuple => tuple.Version)
+                    ? issue.FixVersions.Select(v => (Version: v, Issue: issue))
+                    : [(Version: new FixVersionModel(new FixVersion("", "", "", "Senza Fix Version", false, false)), Issue: issue)])
+                .GroupBy(tuple => tuple.Version.Name)
                 .OrderBy(group => group.Key)
-                .Select(group => (group.Key, group.Select(x => x.Issue).ToList()));
+                .Select(group => (group.First().Version, group.Select(x => x.Issue).ToList()));
     }
 }

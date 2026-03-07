@@ -43,17 +43,29 @@
         var g = group.Issues.GetTimeStats();
 
         <MudPaper Class="pa-4 mb-4" Elevation="2">
-            <MudGrid Spacing="2" Class="mb-3 align-center">
-                <MudItem xs="12" md="6">
-                    <MudIcon Icon="@Icons.Material.Filled.NewReleases" Size="Size.Small" Color="Color.Primary" Class="mr-1" />
-                    <MudText Typo="Typo.subtitle1" Class="d-inline"><b>@group.VersionName</b></MudText>
-                    <MudChip T="string" Size="Size.Small" Color="Color.Primary" Variant="Variant.Text">@g.FormattedEstimate</MudChip>
-                    <MudChip T="string" Size="Size.Small" Color="Color.Info" Variant="Variant.Text">@g.FormattedSpent</MudChip>
-                    <MudChip T="string" Size="Size.Small" Color="@(g.IsOverBudget ? Color.Error : Color.Success)" Variant="Variant.Text">
+            <div class="d-flex justify-space-between align-center mb-1">
+                <div class="d-flex flex-column">
+                    <div class="d-flex align-center">
+                        <MudIcon Icon="@Icons.Material.Filled.NewReleases" Size="Size.Small" Color="Color.Primary" />
+                        <InlineVersionEdit Version="@group.Version" />
+                    </div>
+                    @if (!string.IsNullOrWhiteSpace(group.Version.Description))
+                    {
+                        <MudText Typo="Typo.caption" Color="Color.Default" Class="ml-6 mud-text-secondary">@group.Version.Description</MudText>
+                    }
+                </div>
+                <div class="d-flex align-center justify-end flex-wrap gap-1">
+                    <MudChip T="string" Size="Size.Small" Color="Color.Primary" Variant="Variant.Text" Class="ma-0">@g.FormattedEstimate</MudChip>
+                    <MudChip T="string" Size="Size.Small" Color="Color.Info" Variant="Variant.Text" Class="ma-0">@g.FormattedSpent</MudChip>
+                    <MudChip T="string" Size="Size.Small" Color="@(g.IsOverBudget ? Color.Error : Color.Warning)" Variant="Variant.Text" Class="ma-0">
                         @g.FormattedRemaining
                     </MudChip>
-                </MudItem>
-                <MudItem xs="12" md="6">
+                    <MudChip T="string" Size="Size.Small" Color="Color.Default" Variant="Variant.Text" Class="ma-0">@g.FormattedCalculatedRemaining</MudChip>
+                </div>
+            </div>
+
+            <MudGrid Spacing="2" Class="mb-3 align-center">
+                <MudItem xs="12">
                     <TimeProgressBar Stats="@g" Size="Size.Small" />
                 </MudItem>
             </MudGrid>

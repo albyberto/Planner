@@ -1,0 +1,74 @@
+@using Planner.Clients
+@using Planner.Model
+@inject JiraWriteClient WriteClient
+@inject ISnackbar Snackbar
+
+@if (Version.Value == null || Version.Value == "-1" || string.IsNullOrEmpty(Version.Value))
+{
+    @* If there is no FixVersion, we just display the fallback text safely without edit capabilities. *@
+    <MudText Typo="Typo.subtitle1" Class="d-inline ml-1 font-weight-bold">
+        @Version.Name
+    </MudText>
+}
+else
+{
+    @if (_editing)
+    {
+        <MudTextField @bind-Value="_value" Variant="Variant.Outlined" Margin="Margin.Dense"
+                      Immediate="true" OnKeyDown="OnKeyDown" OnBlur="Cancel"
+                      AutoFocus="true" Typo="Typo.subtitle1" Class="d-inline font-weight-bold ml-1" />
+    }
+    else
+    {
+        <MudTooltip Text="Click per rinominare (modifica globale)" Arrow="true">
+            <MudText Typo="Typo.subtitle1" Class="d-inline cursor-pointer ml-1 font-weight-bold" @onclick="StartEdit">
+                @Version.Name
+            </MudText>
+        </MudTooltip>
+    }
+}
+
+@code {
+    [Parameter, EditorRequired] public required FixVersionModel Version { get; set; }
+    [Parameter] public EventCallback<FixVersionModel> VersionChanged { get; set; }
+    [Parameter] public EventCallback OnChanged { get; set; }
+    [CascadingParameter(Name = "RefreshIssues")] public Func<Task>? RefreshIssues { get; set; }
+
+    private bool _editing;
+    private string _value = string.Empty;
+
+    private void StartEdit()
+    {
+        if (string.IsNullOrEmpty(Version.Value)) return; // Prevent editing dummy versions
+        
+        _value = Version.Name;
+        _editing = true;
+    }
+
+    private void Cancel() => _editing = false;
+
+    private async Task OnKeyDown(KeyboardEventArgs e)
+    {
+        if (e.Key == "Escape") { Cancel(); return; }
+        if (e.Key != "Enter") return;
+        if (string.IsNullOrWhiteSpace(_value)) { Cancel(); return; }
+        if (_value == Version.Name) { Cancel(); return; }
+
+        try
+        {
+            await WriteClient.UpdateVersionAsync(Version.Value, _value, Version.Description);
+            
+            Snackbar.Add($"Release {Version.Name} rinominata in {_value}", Severity.Success);
+            _editing = false;
+            
+            Version = Version with { Name = _value };
+            await VersionChanged.InvokeAsync(Version);
+
+            if (OnChanged.HasDelegate) await OnChanged.InvokeAsync();
+        }
+        catch (Exception ex)
+        {
+            Snackbar.Add($"Errore nell'aggiornamento della release: {ex.Message}", Severity.Error);
+        }
+    }
+}
