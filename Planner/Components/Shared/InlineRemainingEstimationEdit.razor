@@ -4,7 +4,7 @@
 @inject JiraWriteClient WriteClient
 @inject ISnackbar Snackbar
 
-<div class="d-inline-flex align-center gap-1">
+<div class="d-flex justify-end align-center gap-2">
     <InlineTimeEdit @ref="_timeEdit"
                     TimeValue="@Issue.Stats.FormattedRemaining"
                     TimeValueChanged="SaveRemainingEstimationAsync"
@@ -16,7 +16,7 @@
     @if (!string.IsNullOrWhiteSpace(Issue.Stats.FormattedRemaining) && Issue.Stats.FormattedRemaining != "0h")
     {
         <MudTooltip Text="Azzera rimanente" Arrow="true">
-            <MudIconButton Icon="@Icons.Material.Filled.Check" Size="Size.Small" Color="Color.Success" Class="pa-0" OnClick="@(() => SaveRemainingEstimationAsync("0m"))" />
+            <MudIconButton Icon="@Icons.Material.Filled.CleanHands" Size="Size.Small" Color="Color.Default" Class="pa-0" OnClick="@(() => SaveRemainingEstimationAsync("0m"))" />
         </MudTooltip>
     }
 </div>

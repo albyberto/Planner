@@ -2,13 +2,15 @@ namespace Planner.Model;
 
 public record TimeStats(int OriginalEstimate, int TimeSpent, int? ExplicitRemaining = null)
 {
-    public int Remaining => ExplicitRemaining ?? Math.Max(OriginalEstimate - TimeSpent, 0);
+    public int CalculatedRemaining => Math.Max(OriginalEstimate - TimeSpent, 0);
+    public int Remaining => ExplicitRemaining ?? CalculatedRemaining;
     public int OverBudgetAmount => Math.Max(TimeSpent - OriginalEstimate, 0);
     public bool IsOverBudget => OriginalEstimate > 0 && TimeSpent > OriginalEstimate;
     public double ProgressPercent => OriginalEstimate > 0 ? Math.Min((double)TimeSpent / OriginalEstimate * 100, 100) : 0;
 
     public string FormattedEstimate => FormatTime(OriginalEstimate);
     public string FormattedSpent => FormatTime(TimeSpent);
+    public string FormattedCalculatedRemaining => FormatTime(CalculatedRemaining);
     public string FormattedRemaining => IsOverBudget ? $"-{FormatTime(OverBudgetAmount)}" : FormatTime(Remaining);
 
     public static int ParseTime(string time)
