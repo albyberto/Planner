@@ -1,0 +1,245 @@
+@using MudBlazor
+@using Microsoft.AspNetCore.Components.Web
+
+@if (_editing)
+{
+    @* Anchor for Popover *@
+    <div id="@_popoverId" class="d-inline-flex">
+        <MudTooltip Text="Click to save and close" Arrow="true">
+            <MudText Typo="Typo.body2" Color="Color.Primary" Class="cursor-pointer" @onclick="SaveAndClose">
+                @FormatDisplayValue()
+            </MudText>
+        </MudTooltip>
+    </div>
+
+    <MudPopover Open="@_editing" AnchorOrigin="Origin.BottomLeft" TransformOrigin="Origin.TopLeft" RelativeToElement="@_popoverId" Class="pa-4">
+        <div class="d-flex flex-column gap-3">
+            <div class="d-flex flex-row gap-4 align-center justify-center">
+                @* Weeks Column *@
+                <div class="d-flex flex-column align-center justify-center cursor-ns-resize user-select-none" 
+                     @onwheel="@(e => HandleWheel(e, "w"))" @onwheel:preventDefault>
+                    <MudText Typo="Typo.caption" Color="Color.Secondary">Weeks</MudText>
+                    <MudIconButton Icon="@Icons.Material.Filled.KeyboardArrowUp" Size="Size.Small" OnClick="@(() => AddValue("w", 1))" />
+                    <MudText Typo="Typo.h5" Class="my-1">@_weeks</MudText>
+                    <MudIconButton Icon="@Icons.Material.Filled.KeyboardArrowDown" Size="Size.Small" OnClick="@(() => AddValue("w", -1))" />
+                </div>
+
+                @* Days Column *@
+                <div class="d-flex flex-column align-center justify-center cursor-ns-resize user-select-none" 
+                     @onwheel="@(e => HandleWheel(e, "d"))" @onwheel:preventDefault>
+                    <MudText Typo="Typo.caption" Color="Color.Secondary">Days</MudText>
+                    <MudIconButton Icon="@Icons.Material.Filled.KeyboardArrowUp" Size="Size.Small" OnClick="@(() => AddValue("d", 1))" />
+                    <MudText Typo="Typo.h5" Class="my-1">@_days</MudText>
+                    <MudIconButton Icon="@Icons.Material.Filled.KeyboardArrowDown" Size="Size.Small" OnClick="@(() => AddValue("d", -1))" />
+                </div>
+
+                @* Hours Column *@
+                <div class="d-flex flex-column align-center justify-center cursor-ns-resize user-select-none" 
+                     @onwheel="@(e => HandleWheel(e, "h"))" @onwheel:preventDefault>
+                    <MudText Typo="Typo.caption" Color="Color.Secondary">Hours</MudText>
+                    <MudIconButton Icon="@Icons.Material.Filled.KeyboardArrowUp" Size="Size.Small" OnClick="@(() => AddValue("h", 1))" />
+                    <MudText Typo="Typo.h5" Class="my-1">@_hours</MudText>
+                    <MudIconButton Icon="@Icons.Material.Filled.KeyboardArrowDown" Size="Size.Small" OnClick="@(() => AddValue("h", -1))" />
+                </div>
+            </div>
+            
+            @if (ChildContent != null)
+            {
+                <MudDivider />
+                <div class="d-flex justify-center">
+                    @ChildContent
+                </div>
+            }
+
+            <div class="d-flex justify-end mt-2">
+                <MudTooltip Text="Cancel" Arrow="true" Placement="Placement.Top">
+                    <MudIconButton Icon="@Icons.Material.Filled.Close" Size="Size.Small" OnClick="Cancel" />
+                </MudTooltip>
+                <MudTooltip Text="Save" Arrow="true" Placement="Placement.Top">
+                    <MudIconButton Icon="@Icons.Material.Filled.Save" Size="Size.Small" Color="Color.Primary" OnClick="SaveAndClose" />
+                </MudTooltip>
+            </div>
+        </div>
+    </MudPopover>
+    
+    @* Overlay to detect clicks outside *@
+    <MudOverlay Visible="true" OnClick="Cancel" AutoClose="true" DarkBackground="false" ZIndex="9" />
+}
+else
+{
+    @if (string.IsNullOrWhiteSpace(TimeValue))
+    {
+        <MudTooltip Text="@EmptyTooltip" Arrow="true">
+            <MudIconButton Icon="@Icons.Material.Filled.Add" Size="Size.Small" Color="Color.Default"
+                           @onclick="StartEdit" Class="pa-0"/>
+        </MudTooltip>
+    }
+    else
+    {
+        <MudTooltip Text="@($"Click per modificare {Label}")" Arrow="true">
+            <MudText Typo="Typo.body2" Color="@DisplayColor" Class="cursor-pointer" @onclick="StartEdit">
+                @TimeValue
+            </MudText>
+        </MudTooltip>
+    }
+}
+
+@code {
+    [Parameter] public string TimeValue { get; set; } = string.Empty;
+    [Parameter] public EventCallback<string> TimeValueChanged { get; set; }
+
+    [Parameter] public string Label { get; set; } = "tempo";
+    [Parameter] public string EmptyTooltip { get; set; } = "Aggiungi tempo";
+    [Parameter] public Color DisplayColor { get; set; } = Color.Default;
+    [Parameter] public RenderFragment? ChildContent { get; set; }
+
+    private bool _editing;
+    private readonly string _popoverId = "timeedit-" + Guid.NewGuid().ToString("N");
+    
+    private int _weeks = 0;
+    private int _days = 0;
+    private int _hours = 0;
+    
+    // Jira defaults: 1w = 5d, 1d = 8h
+    private const int HoursInDay = 8;
+    private const int DaysInWeek = 5;
+
+    private void StartEdit()
+    {
+        ParseInitialValue();
+        _editing = true;
+    }
+
+    private void Cancel()
+    {
+        _editing = false;
+    }
+
+    private async Task SaveAndClose()
+    {
+        var newValue = FormatDisplayValue();
+        
+        if (newValue != TimeValue)
+        {
+            TimeValue = newValue;
+            await TimeValueChanged.InvokeAsync(TimeValue);
+        }
+        
+        _editing = false;
+    }
+
+    private void HandleWheel(WheelEventArgs e, string unit)
+    {
+        // deltaY > 0 is scroll down (decrease), deltaY < 0 is scroll up (increase)
+        int direction = e.DeltaY < 0 ? 1 : -1;
+        AddValue(unit, direction);
+    }
+
+    private void AddValue(string unit, int amount)
+    {
+        if (unit == "w")
+        {
+            _weeks = Math.Max(0, _weeks + amount);
+        }
+        else if (unit == "d")
+        {
+            _days += amount;
+            NormalizeTime();
+        }
+        else if (unit == "h")
+        {
+            _hours += amount;
+            NormalizeTime();
+        }
+    }
+
+    private void NormalizeTime()
+    {
+        // Handle negative hours by borrowing from days
+        while (_hours < 0)
+        {
+            if (_days > 0 || _weeks > 0)
+            {
+                _days--;
+                _hours += HoursInDay;
+            }
+            else
+            {
+                _hours = 0;
+                break;
+            }
+        }
+
+        // Handle negative days by borrowing from weeks
+        while (_days < 0)
+        {
+            if (_weeks > 0)
+            {
+                _weeks--;
+                _days += DaysInWeek;
+            }
+            else
+            {
+                _days = 0;
+                break;
+            }
+        }
+
+        // Carry over hours to days
+        if (_hours >= HoursInDay)
+        {
+            _days += _hours / HoursInDay;
+            _hours = _hours % HoursInDay;
+        }
+
+        // Carry over days to weeks
+        if (_days >= DaysInWeek)
+        {
+            _weeks += _days / DaysInWeek;
+            _days = _days % DaysInWeek;
+        }
+        
+        // Final negative bounds safety
+        _weeks = Math.Max(0, _weeks);
+        _days = Math.Max(0, _days);
+        _hours = Math.Max(0, _hours);
+    }
+
+    public void SetToZero()
+    {
+        _weeks = 0;
+        _days = 0;
+        _hours = 0;
+    }
+
+    private string FormatDisplayValue()
+    {
+        if (_weeks == 0 && _days == 0 && _hours == 0) return "0h";
+        
+        var parts = new List<string>();
+        if (_weeks > 0) parts.Add($"{_weeks}w");
+        if (_days > 0) parts.Add($"{_days}d");
+        if (_hours > 0) parts.Add($"{_hours}h");
+        
+        return string.Join(" ", parts);
+    }
+
+    private void ParseInitialValue()
+    {
+        _weeks = _days = _hours = 0;
+        
+        if (string.IsNullOrWhiteSpace(TimeValue)) return;
+
+        var parts = TimeValue.Split(new[] { ' ' }, StringSplitOptions.RemoveEmptyEntries);
+        foreach (var part in parts)
+        {
+            if (part.EndsWith("w") && int.TryParse(part[..^1], out int w)) _weeks = w;
+            else if (part.EndsWith("d") && int.TryParse(part[..^1], out int d)) _days = d;
+            else if (part.EndsWith("h") && int.TryParse(part[..^1], out int h)) _hours = h;
+            // Support minutes? If the user typed "30m" before, we can just convert to nearest hour or disregard. 
+            // For now, if minutes exist, we ignore them since it's a 3-column W/D/H UI as requested.
+        }
+        
+        NormalizeTime();
+    }
+}

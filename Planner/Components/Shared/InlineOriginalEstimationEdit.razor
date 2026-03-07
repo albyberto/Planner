@@ -1,0 +1,40 @@
+@using Planner.Clients
+@using Planner.Model
+@using Planner.Components.Shared.MudBlazorWrappers
+@inject JiraWriteClient WriteClient
+@inject JiraReadClient ReadClient
+@inject ISnackbar Snackbar
+
+<InlineTimeEdit TimeValue="@Issue.Stats.FormattedEstimate"
+                TimeValueChanged="SaveOriginalEstimationAsync"
+                Label="estimate"
+                EmptyTooltip="Aggiungi estimate">
+</InlineTimeEdit>
+
+@code {
+    [Parameter, EditorRequired] public required IssueModel Issue { get; set; }
+    
+    // Removed local _displayValue property as FormattedEstimate is computed and read-only.
+
+    private async Task SaveOriginalEstimationAsync(string newValue)
+    {
+        try
+        {
+            var update = new Planner.Builders.IssueUpdateBuilder().SetTimeTracking(originalEstimate: newValue);
+            await WriteClient.UpdateIssueAsync(Issue.Key, update);
+
+            // Fetch updated issue to refresh stats without reloading the whole page
+            var updatedIssue = await ReadClient.GetIssueAsync(Issue.Key);
+            if (updatedIssue != null)
+            {
+                Issue.Stats = updatedIssue.Stats;
+            }
+            
+            Snackbar.Add($"{Issue.Key} estimate aggiornato a {newValue}", Severity.Success);
+        }
+        catch (Exception ex)
+        {
+            Snackbar.Add($"Errore nel salvataggio: {ex.Message}", Severity.Error);
+        }
+    }
+}

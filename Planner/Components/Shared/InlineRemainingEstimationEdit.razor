@@ -1,0 +1,62 @@
+@using Planner.Clients
+@using Planner.Model
+@using Planner.Components.Shared.MudBlazorWrappers
+@inject JiraWriteClient WriteClient
+@inject JiraReadClient ReadClient
+@inject ISnackbar Snackbar
+
+<div class="d-inline-flex align-center gap-1">
+    <InlineTimeEdit @ref="_timeEdit"
+                    TimeValue="@Issue.Stats.FormattedRemaining"
+                    TimeValueChanged="SaveRemainingEstimationAsync"
+                    Label="rimanente"
+                    EmptyTooltip="Aggiungi rimanente"
+                    DisplayColor="Color.Warning">
+    </InlineTimeEdit>
+    
+    @if (!string.IsNullOrWhiteSpace(Issue.Stats.FormattedRemaining) && Issue.Stats.FormattedRemaining != "0h")
+    {
+        <MudTooltip Text="Azzera rimanente" Arrow="true">
+            <MudIconButton Icon="@Icons.Material.Filled.Check" Size="Size.Small" Color="Color.Success" Class="pa-0" OnClick="@(() => SaveRemainingEstimationAsync("0m"))" />
+        </MudTooltip>
+    }
+</div>
+
+@code {
+    [Parameter, EditorRequired] public required IssueModel Issue { get; set; }
+    
+    private InlineTimeEdit? _timeEdit;
+
+    // Removed local _displayValue property as FormattedRemaining is computed and read-only.
+
+    private void SetToZero()
+    {
+        // Interacts with the generic component API to clear the columns
+        if (_timeEdit != null)
+        {
+            _timeEdit.SetToZero();
+        }
+    }
+
+    private async Task SaveRemainingEstimationAsync(string newValue)
+    {
+        try
+        {
+            var update = new Planner.Builders.IssueUpdateBuilder().SetTimeTracking(remainingEstimate: newValue);
+            await WriteClient.UpdateIssueAsync(Issue.Key, update);
+
+            // Fetch updated issue to refresh stats without reloading the whole page
+            var updatedIssue = await ReadClient.GetIssueAsync(Issue.Key);
+            if (updatedIssue != null)
+            {
+                Issue.Stats = updatedIssue.Stats;
+            }
+            
+            Snackbar.Add($"{Issue.Key} rimanente aggiornato a {newValue}", Severity.Success);
+        }
+        catch (Exception ex)
+        {
+            Snackbar.Add($"Errore nel salvataggio: {ex.Message}", Severity.Error);
+        }
+    }
+}

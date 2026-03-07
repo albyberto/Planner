@@ -84,13 +84,13 @@
                         <InlineStatusEdit IssueKey="@issue.Key" @bind-Value="issue.Status" />
                     </MudTd>
                     <MudTd DataLabel="Est" Class="mud-text-align-end">
-                        <InlineTimeEdit IssueKey="@issue.Key" DisplayValue="@issue.Stats.FormattedEstimate" Field="originalEstimate" Label="estimate" />
+                        <InlineOriginalEstimationEdit Issue="@issue" />
                     </MudTd>
                     <MudTd DataLabel="Spent" Class="mud-text-align-end">
                         <MudText Typo="Typo.body2" Color="Color.Info">@issue.Stats.FormattedSpent</MudText>
                     </MudTd>
                     <MudTd DataLabel="Left" Class="mud-text-align-end">
-                        <InlineTimeEdit IssueKey="@issue.Key" DisplayValue="@issue.Stats.FormattedRemaining" Field="remainingEstimate" Label="rimanente" />
+                        <InlineRemainingEstimationEdit Issue="@issue" />
                     </MudTd>
                     <MudTd DataLabel="Components">
                         <InlineComponentsSelect Issue="@issue" />
