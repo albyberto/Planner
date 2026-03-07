@@ -10,12 +10,13 @@
     <MudSelect T="IssueTypeModel"
                Value="@Value"
                ValueChanged="ChangeType"
-               Open="true"
-               OnClose="@(() => _editing = false)"
+               Open="_editing"
+               OpenChanged="OnOpenChanged"
                Dense="true"
                Variant="Variant.Outlined"
                Margin="Margin.Dense"
                AnchorOrigin="Origin.BottomLeft"
+               CloseIcon="@Icons.Material.Filled.Close"
                ToStringFunc="@(t => t?.Name ?? string.Empty)">
         @if (_loading)
         {
@@ -63,6 +64,14 @@ else
             await LoadTypesAsync();
         }
         _editing = true;
+    }
+
+    private void OnOpenChanged(bool isOpen)
+    {
+        if (!isOpen)
+        {
+            _editing = false;
+        }
     }
 
     private async Task LoadTypesAsync()
