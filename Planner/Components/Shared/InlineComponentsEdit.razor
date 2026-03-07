@@ -55,13 +55,12 @@ else
     private bool _isOpen;
     private bool _isDirty;
     
-    private IReadOnlyCollection<ComponentModel> _selected = [];
+    private IReadOnlyCollection<ComponentModel?> _selected = [];
     private IReadOnlyList<ComponentModel> _availableComponents = [];
 
     private async Task StartEdit()
     {
-        // Se non hai la proprietà ProjectKey su IssueModel, puoi usare: var projectKey = Issue.Key.Split('-')[0];
-        var projectKey = Issue.ProjectKey ?? Issue.Key.Split('-')[0]; 
+        var projectKey = Issue.ProjectKey; 
         var project = ReadClient.GetProjects().FirstOrDefault(p => p.Key.Equals(projectKey, StringComparison.OrdinalIgnoreCase));
 
         if (project is not null)
@@ -69,14 +68,14 @@ else
             _availableComponents = await project.GetComponentsAsync();
         }
 
-        _selected = Issue.Components ?? [];
+        _selected = Issue.Components;
         
         _isDirty = false;
         _editing = true;
         _isOpen = true; 
     }
 
-    private void OnSelectionChanged(IReadOnlyCollection<ComponentModel> values)
+    private void OnSelectionChanged(IReadOnlyCollection<ComponentModel?>? values)
     {
         _selected = values ?? [];
         _isDirty = true; 
@@ -115,7 +114,7 @@ else
             var update = new IssueUpdateBuilder().SetComponents(newComponents);
             await WriteClient.UpdateIssueAsync(Issue.Key, update);
 
-            Issue.Components = _selected.ToImmutableList();
+            Issue.Components = _selected.Where(component => component is null).ToImmutableList();
             if (IssueChanged.HasDelegate)
             {
                 await IssueChanged.InvokeAsync(Issue);
@@ -133,5 +132,5 @@ else
         }
     }
 
-    private string GetComponentText(ComponentModel? component) => component?.Name ?? string.Empty;
+    private static string GetComponentText(ComponentModel? component) => component?.Name ?? string.Empty;
 }
