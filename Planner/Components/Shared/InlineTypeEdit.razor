@@ -16,6 +16,8 @@
                Variant="Variant.Outlined"
                Margin="Margin.Dense"
                AnchorOrigin="Origin.BottomLeft"
+               Class="text-nowrap"
+               PopoverClass="text-nowrap"
                CloseIcon="@Icons.Material.Filled.Close"
                ToStringFunc="@(t => t?.Name ?? string.Empty)">
         @if (_loading)
@@ -28,7 +30,7 @@
         {
             @foreach (var type in _types)
             {
-                <MudSelectItem T="IssueTypeModel" Value="@type">
+                <MudSelectItem T="IssueTypeModel" Value="@type" Class="text-nowrap">
                     @if (!string.IsNullOrEmpty(type.IconUrl))
                     {
                         <MudImage Src="@type.IconUrl" Width="16" Height="16" Alt="@type.Name" Class="mr-2 d-inline-flex" />
