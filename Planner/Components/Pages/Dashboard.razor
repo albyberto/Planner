@@ -93,34 +93,10 @@
                         <InlineTimeEdit IssueKey="@issue.Key" DisplayValue="@issue.Stats.FormattedRemaining" Field="remainingEstimate" Label="rimanente" />
                     </MudTd>
                     <MudTd DataLabel="Components">
-                        <InlineMultiSelect TItem="ComponentModel"
-                                           Issue="@issue"
-                                           Items="@issue.Components"
-                                           ItemsChanged="@(val => issue.Components = System.Collections.Immutable.ImmutableList.CreateRange(val))"
-                                           LoadItemsAsync="@(async pk => {
-                                               var p = ReadClient.GetProjects().FirstOrDefault(x => x.Key.Equals(pk, StringComparison.OrdinalIgnoreCase));
-                                               return p != null ? (IReadOnlyList<ComponentModel>)await p.GetComponentsAsync() : Array.Empty<ComponentModel>();
-                                           })"
-                                           UpdateBuilderAction="@((builder, values) => builder.SetComponents(values))"
-                                           SaveIssueAsync="@(async (k, u) => await WriteClient.UpdateIssueAsync(k, u))"
-                                           Label="Components"
-                                           ChipColor="Color.Primary"
-                                           EmptyTooltip="Aggiungi Component" />
+                        <InlineComponentsSelect Issue="@issue" />
                     </MudTd>
                     <MudTd DataLabel="Labels">
-                        <InlineMultiSelect TItem="LabelModel"
-                                           Issue="@issue"
-                                           Items="@issue.Labels"
-                                           ItemsChanged="@(val => issue.Labels = System.Collections.Immutable.ImmutableList.CreateRange(val))"
-                                           LoadItemsAsync="@(async pk => {
-                                               var p = ReadClient.GetProjects().FirstOrDefault(x => x.Key.Equals(pk, StringComparison.OrdinalIgnoreCase));
-                                               return p != null ? (IReadOnlyList<LabelModel>)await p.GetLabelsAsync() : Array.Empty<LabelModel>();
-                                           })"
-                                           UpdateBuilderAction="@((builder, values) => builder.SetLabels(values))"
-                                           SaveIssueAsync="@(async (k, u) => await WriteClient.UpdateIssueAsync(k, u))"
-                                           Label="Labels"
-                                           ChipColor="Color.Secondary"
-                                           EmptyTooltip="Aggiungi Label" />
+                        <InlineLabelsSelect Issue="@issue" />
                     </MudTd>
                 </RowTemplate>
             </MudTable>

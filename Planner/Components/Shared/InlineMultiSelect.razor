@@ -1,8 +1,10 @@
-@inject ISnackbar Snackbar
-@using System.Collections.Immutable
 @using Planner.Builders
 @using Planner.Model
-@typeparam TItem where TItem : Planner.Model.IMultiSelect
+@using Planner.Clients
+@using System.Collections.Immutable
+@inject ISnackbar Snackbar
+@inject JiraWriteClient WriteClient
+@typeparam TItem where TItem : IMultiSelect
 
 @if (_editing)
 {
@@ -41,8 +43,7 @@ else
     else
     {
         <MudTooltip Text="@EmptyTooltip" Arrow="true">
-            <MudIconButton Icon="@Icons.Material.Filled.Add" Size="Size.Small" Color="Color.Default"
-                           @onclick="StartEdit" Class="pa-0"/>
+            <MudIconButton Icon="@Icons.Material.Filled.Add" Size="Size.Small" Color="Color.Default" @onclick="StartEdit" Class="pa-0"/>
         </MudTooltip>
     }
 }
@@ -54,7 +55,6 @@ else
 
     [Parameter] [EditorRequired] public required Func<string, Task<IReadOnlyList<TItem>>> LoadItemsAsync { get; set; }
     [Parameter] [EditorRequired] public required Func<IssueUpdateBuilder, IReadOnlyList<string>, IssueUpdateBuilder> UpdateBuilderAction { get; set; }
-    [Parameter] [EditorRequired] public required Func<string, IssueUpdateBuilder, Task> SaveIssueAsync { get; set; }
 
     [Parameter] public string Label { get; set; } = "Items";
     [Parameter] public Color ChipColor { get; set; } = Color.Primary;
@@ -129,7 +129,7 @@ else
         try
         {
             var builder = UpdateBuilderAction(new(), newValues);
-            await SaveIssueAsync(Issue.Key, builder);
+            await WriteClient.UpdateIssueAsync(Issue.Key, builder);
 
             var newImmutableList = _selected.ToImmutableList();
             await ItemsChanged.InvokeAsync(newImmutableList);
