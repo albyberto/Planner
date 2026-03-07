@@ -90,11 +90,11 @@
                     <MudTd DataLabel="Spent" Class="mud-text-align-end">
                         <MudText Typo="Typo.body2" Color="Color.Info">@issue.Stats.FormattedSpent</MudText>
                     </MudTd>
-                    <MudTd DataLabel="Calc.Left" Class="mud-text-align-end">
-                        <MudText Typo="Typo.body2" Color="Color.Default">@issue.Stats.FormattedCalculatedRemaining</MudText>
-                    </MudTd>
                     <MudTd DataLabel="Left" Class="mud-text-align-end">
                         <InlineRemainingEstimationEdit Issue="@issue" />
+                    </MudTd>
+                    <MudTd DataLabel="Calc.Left" Class="mud-text-align-end">
+                        <MudText Typo="Typo.body2" Color="Color.Default">@issue.Stats.FormattedCalculatedRemaining</MudText>
                     </MudTd>
                     <MudTd DataLabel="Components">
                         <InlineComponentsSelect Issue="@issue" />

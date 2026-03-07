@@ -12,13 +12,14 @@
                     EmptyTooltip="Aggiungi rimanente"
                     DisplayColor="Color.Warning">
     </InlineTimeEdit>
-    
-    @if (!string.IsNullOrWhiteSpace(Issue.Stats.FormattedRemaining) && Issue.Stats.FormattedRemaining != "0h")
-    {
-        <MudTooltip Text="Azzera rimanente" Arrow="true">
-            <MudIconButton Icon="@Icons.Material.Filled.CleanHands" Size="Size.Small" Color="Color.Default" Class="pa-0" OnClick="@(() => SaveRemainingEstimationAsync("0m"))" />
-        </MudTooltip>
+    @{
+        var isZero = string.IsNullOrWhiteSpace(Issue.Stats.FormattedRemaining) || Issue.Stats.FormattedRemaining == "0h";
     }
+    <div style="@(isZero ? "visibility: hidden;" : "")" class="d-flex align-center">
+        <MudTooltip Text="Azzera rimanente" Arrow="true" Disabled="@isZero">
+            <MudIconButton Icon="@Icons.Material.Filled.CleanHands" Size="Size.Small" Color="Color.Default" Class="pa-0" OnClick="@(() => SaveRemainingEstimationAsync("0m"))" Disabled="@isZero"/>
+        </MudTooltip>
+    </div>
 </div>
 
 @code {
