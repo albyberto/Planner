@@ -5,6 +5,7 @@
 @using Planner.Services
 @using Planner.Components.Shared
 @using Microsoft.Extensions.Options
+@using JQLBuilder
 
 <PageTitle>Jira Chat</PageTitle>
 
@@ -13,10 +14,10 @@
     Jira Chat
 </MudText>
 
-@if (string.IsNullOrWhiteSpace(_me))
+@if (string.IsNullOrWhiteSpace(_me.Email))
 {
     <MudAlert Severity="Severity.Warning">
-        Configura la proprietà "Me" in appsettings.json sotto "JiraFilters" per visualizzare le chat.
+        Configura le proprietà Name ed Email nell'oggetto "Me" in appsettings.json sotto "JiraFilters" per visualizzare le chat.
     </MudAlert>
 }
 else
@@ -30,7 +31,7 @@ else
     }
     else if (!_issues.Any())
     {
-        <MudAlert Severity="Severity.Info">Nessuna conversazione trovata per @_me con i filtri correnti.</MudAlert>
+        <MudAlert Severity="Severity.Info">Nessuna conversazione trovata per @_me.Name con i filtri correnti.</MudAlert>
     }
     else
     {
@@ -42,26 +43,74 @@ else
                         <IssueKey Issue="@issue" /> - @issue.Summary
                     </MudText>
                     
-                    <MudDivider Class="my-3"/>
-                    
-                    <MudStack Spacing="3">
+                    <MudStack Spacing="3" Class="pa-4" Style="background-color: var(--mud-palette-background-grey); border-radius: 8px;">
                         @foreach (var comment in issue.Comments.OrderBy(c => c.Created))
                         {
-                            var isMe = comment.Author.DisplayName?.Contains(_me, StringComparison.OrdinalIgnoreCase) == true;
-                            <div class="d-flex @(isMe ? "justify-end" : "justify-start")">
-                                <MudPaper Class="pa-3" Style="@(isMe ? "background-color: var(--mud-palette-primary-lighten); max-width: 80%;" : "background-color: var(--mud-palette-background-grey); max-width: 80%;")" Elevation="1">
-                                    <MudText Typo="Typo.caption" Color="@(isMe ? Color.Primary : Color.Secondary)" Class="mb-1 d-block">
-                                        <strong>@comment.Author.DisplayName</strong> - @(comment.Created?.ToString("g") ?? "")
-                                    </MudText>
-                                    <MudText Typo="Typo.body2" Style="white-space: pre-wrap;">@comment.Body</MudText>
+                            var isMe = comment.Author.EmailAddress?.Equals(_me.Email, StringComparison.OrdinalIgnoreCase) == true;
+                            
+                            var alignClass = isMe ? "justify-end" : "justify-start";
+                            var bubbleColor = isMe ? "var(--mud-palette-success-lighten)" : "var(--mud-palette-surface)";
+                            var borderRadius = isMe ? "16px 16px 4px 16px" : "16px 16px 16px 4px";
+                            var authorColor = isMe ? "var(--mud-palette-success-darken)" : "var(--mud-palette-primary)";
+                            
+                            <div class="d-flex w-100 @alignClass">
+                                <MudPaper Elevation="1" 
+                                          Style="@($"background-color: {bubbleColor}; border-radius: {borderRadius}; max-width: 80%; padding: 8px 12px; position: relative;")">
+                                    
+                                    @if (!isMe)
+                                    {
+                                        <div style="@($"color: {authorColor}; font-weight: 600; font-size: 0.8rem; margin-bottom: 4px;")">
+                                            @comment.Author.DisplayName
+                                        </div>
+                                    }
+                                    
+                                    <div style="font-size: 0.9rem; white-space: pre-wrap; word-break: break-word; line-height: 1.4; color: var(--mud-palette-text-primary);">
+                                        @comment.Body
+                                    </div>
+                                    
+                                    <div class="d-flex justify-end mt-1">
+                                        <span style="font-size: 0.7rem; color: var(--mud-palette-text-secondary); opacity: 0.8;">
+                                            @(comment.Created?.ToString("HH:mm") ?? "")
+                                        </span>
+                                    </div>
                                 </MudPaper>
                             </div>
                         }
-                        @if (!issue.Comments.Any())
-                        {
-                            <MudText Typo="Typo.body2" Color="Color.Secondary">Nessun commento.</MudText>
-                        }
                     </MudStack>
+                    
+                    <MudDivider Class="my-3"/>
+                    
+                    <div class="d-flex align-center gap-2 mt-2">
+                        <MudSelect T="TeamMember" 
+                                   Value="@_selectedMembers.GetValueOrDefault(issue.Key)" 
+                                   ValueChanged="@(m => OnMemberSelected(issue.Key, m))" 
+                                   Label="Tagga" 
+                                   Dense="true" 
+                                   Variant="Variant.Outlined" 
+                                   Margin="Margin.Dense" 
+                                   Style="max-width: 150px;">
+                            <MudSelectItem T="TeamMember" Value="null">Nessuno</MudSelectItem>
+                            @foreach (var member in FilterOptions.Value.TeamMembers)
+                            {
+                                <MudSelectItem T="TeamMember" Value="@member">@member.Email</MudSelectItem>
+                            }
+                        </MudSelect>
+                        
+                        <MudTextField @bind-Value="_draftComments[issue.Key]" 
+                                      Label="Scrivi un commento..." 
+                                      Variant="Variant.Outlined" 
+                                      Margin="Margin.Dense" 
+                                      Lines="1" 
+                                      Class="flex-grow-1"
+                                      OnKeyDown="@(e => HandleKeyDown(e, issue.Key))" />
+                                      
+                        <MudIconButton Icon="@Icons.Material.Filled.Send" 
+                                       Color="Color.Primary" 
+                                       Variant="Variant.Filled"
+                                       Size="Size.Medium" 
+                                       OnClick="@(() => SendCommentAsync(issue))" 
+                                       Disabled="@(string.IsNullOrWhiteSpace(_draftComments.GetValueOrDefault(issue.Key)) || _sending.Contains(issue.Key))" />
+                    </div>
                 </MudPaper>
             }
         </MudStack>
@@ -74,23 +123,111 @@ else
     [Inject] private ISnackbar Snackbar { get; set; } = default!;
     [Inject] private JqlFilterBuilder QueryBuilder { get; set; } = default!;
 
-    private string _me = string.Empty;
+    [Inject] private JiraWriteClient WriteClient { get; set; } = default!;
+
+    private MeOptions _me = new();
     private bool _loading = true;
     private List<IssueModel> _issues = new();
     private Filter? _currentFilter;
+    
+    // Reply State Maps
+    private Dictionary<string, string> _draftComments = new();
+    private Dictionary<string, TeamMember?> _selectedMembers = new();
+    private HashSet<string> _sending = new();
 
     protected override void OnInitialized()
     {
         _me = FilterOptions.Value.Me;
-        if (string.IsNullOrWhiteSpace(_me))
+        if (string.IsNullOrWhiteSpace(_me.Email) && string.IsNullOrWhiteSpace(_me.Name))
         {
             _loading = false;
         }
     }
 
+    private void OnMemberSelected(string issueKey, TeamMember? member)
+    {
+        _selectedMembers[issueKey] = member;
+    }
+    
+    private async Task HandleKeyDown(KeyboardEventArgs e, string issueKey)
+    {
+        if (e.Key == "Enter" && !e.ShiftKey)
+        {
+            var issue = _issues.FirstOrDefault(i => i.Key == issueKey);
+            if (issue != null && !string.IsNullOrWhiteSpace(_draftComments.GetValueOrDefault(issueKey)))
+            {
+                await SendCommentAsync(issue);
+            }
+        }
+    }
+
+    private async Task SendCommentAsync(IssueModel issue)
+    {
+        var draft = _draftComments.GetValueOrDefault(issue.Key);
+        if (string.IsNullOrWhiteSpace(draft)) return;
+
+        try
+        {
+            _sending.Add(issue.Key);
+            StateHasChanged();
+
+            var mentionedMember = _selectedMembers.GetValueOrDefault(issue.Key);
+            
+            // Build ADF Body
+            var contentList = new List<object>();
+            
+            if (mentionedMember != null && !string.IsNullOrWhiteSpace(mentionedMember.Email))
+            {
+                // To mention someone, Jira ADF requires the accountId.
+                // For simplicity in this local client, since we only have emails, 
+                // we'll try to find an exact matching User object from the issue Assignees/Reporters if possible,
+                // or just post it as raw text if we don't have the AccountId.
+                // In a real app, you would query `/rest/api/3/user/search?query=email` to get the accountId.
+                // Assuming we still want to put the @name visually:
+                contentList.Add(new { type = "text", text = $"@{mentionedMember.Email} ", marks = new[] { new { type = "strong" } } });
+            }
+
+            contentList.Add(new { type = "text", text = draft });
+
+            var adfBody = new
+            {
+                version = 1,
+                type = "doc",
+                content = new[]
+                {
+                    new
+                    {
+                        type = "paragraph",
+                        content = contentList.ToArray()
+                    }
+                }
+            };
+
+            await WriteClient.AddCommentAsync(issue.Key, adfBody);
+            
+            Snackbar.Add("Commento inviato con successo", Severity.Success);
+            
+            // Clear inputs
+            _draftComments[issue.Key] = string.Empty;
+            _selectedMembers[issue.Key] = null;
+            
+            // Reload the issues to see the new comment
+            await LoadIssuesAsync();
+        }
+        catch (Exception)
+        {
+            Snackbar.Add("Errore durante l'invio del commento", Severity.Error);
+        }
+        finally
+        {
+            _sending.Remove(issue.Key);
+            StateHasChanged();
+        }
+    }
+
     private async Task OnFilterChanged(Filter filter)
     {
-        if (string.IsNullOrWhiteSpace(_me)) return;
+        if (string.IsNullOrWhiteSpace(_me.Email)) return;
 
         _currentFilter = filter;
         await LoadIssuesAsync();
@@ -105,24 +242,36 @@ else
             _loading = true;
             StateHasChanged();
 
-            // 1. Build the base query using the selected filters
-            var baseJql = QueryBuilder.BuildDashboardQuery(_currentFilter);
+            // 1. Build the base query using the selected filters via JqlFilterBuilder
+            var baseJqlString = QueryBuilder.BuildDashboardQuery(_currentFilter);
             
-            // 2. Append the Jira Chat logic (assignee, reporter or mentions)
-            var safeMe = _me.Replace("\"", "\\\"");
-            var chatJql = $"(assignee = \"{safeMe}\" OR reporter = \"{safeMe}\" OR comment ~ \"\\\"{safeMe}\\\"\") ORDER BY updated DESC";
+            // 2. Build the Jira Chat specific query via JQLBuilder
+            var meUser = (JQLBuilder.Types.JqlTypes.JqlHistoricalJqlUser)_me.Email;
+            var chatQuery = JQLBuilder.JqlBuilder.Query
+                .Where(f => f.User.Assignee == meUser | f.User.Reporter == meUser | f.Text.Comment.Contains(_me.Name));
             
-            // Combine both - the base query might be complex, so wrap in parenthesis
-            var combinedJql = string.IsNullOrWhiteSpace(baseJql) ? chatJql : $"({baseJql.Replace(" ORDER BY updated DESC", "")}) AND {chatJql}";
+            var chatJqlString = chatQuery.ToString() + " ORDER BY updated DESC";
+            
+            // Combine both 
+            var combinedJql = string.IsNullOrWhiteSpace(baseJqlString) ? chatJqlString : $"({baseJqlString.Replace(" ORDER BY updated DESC", "")}) AND {chatJqlString}";
 
             var fetchedIssues = await ReadClient.GetIssuesAsync(combinedJql);
             
-            // Local fallback logic to ensure exact matches in Comments Body or Author DisplayName
+            // Local fallback logic to ensure exact matches in Comments Body or Author DisplayName 
+            // Also filter out any issue that doesn't actually have any comment.
             _issues = fetchedIssues.Where(i => 
-                (i.Assignee?.DisplayName?.Contains(_me, StringComparison.OrdinalIgnoreCase) == true) ||
-                i.Comments.Any(c => c.Body.Contains(_me, StringComparison.OrdinalIgnoreCase) || 
-                                    c.Author.DisplayName?.Contains(_me, StringComparison.OrdinalIgnoreCase) == true)
+                i.Comments.Any() &&
+                ((i.Assignee?.EmailAddress?.Equals(_me.Email, StringComparison.OrdinalIgnoreCase) == true) ||
+                 i.Comments.Any(c => c.Body.Contains(_me.Name, StringComparison.OrdinalIgnoreCase) || 
+                                     c.Author.EmailAddress?.Equals(_me.Email, StringComparison.OrdinalIgnoreCase) == true))
             ).ToList();
+            
+            // Initialize draft states for new issues
+            foreach (var i in _issues)
+            {
+                _draftComments.TryAdd(i.Key, string.Empty);
+                _selectedMembers.TryAdd(i.Key, null);
+            }
         }
         catch (Exception ex)
         {

@@ -32,6 +32,13 @@ public class JiraWriteClient(HttpClient httpClient, ILogger<JiraWriteClient> log
         await EnsureSuccessAsync(response, $"UpdateVersionAsync({versionId})", ct);
     }
 
+    public async Task AddCommentAsync(string issueKey, object adfBody, CancellationToken ct = default)
+    {
+        var body = new { body = adfBody };
+        var response = await httpClient.PostAsJsonAsync($"issue/{issueKey}/comment", body, ct);
+        await EnsureSuccessAsync(response, $"AddCommentAsync({issueKey})", ct);
+    }
+    
     private async Task EnsureSuccessAsync(HttpResponseMessage response, string operation, CancellationToken ct)
     {
         if (response.IsSuccessStatusCode) return;

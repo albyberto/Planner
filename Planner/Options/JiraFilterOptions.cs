@@ -9,7 +9,7 @@ public class JiraFilterOptions
     [Required, MinLength(2)]
     public string DefaultProject { get; init; } = string.Empty;
     
-    public string Me { get; init; } = string.Empty;
+    public MeOptions Me { get; init; } = new();
     
     public HashSet<string> DefaultStatuses { get; init; } = [];
     public HashSet<TeamMember> TeamMembers { get; init; } = [];
@@ -27,5 +27,11 @@ public class JiraPreset
 {
     public string Name { get; init; } = string.Empty;
     public string Jql { get; init; } = string.Empty;
+}
+
+public class MeOptions
+{
+    public string Name { get; init; } = string.Empty;
+    public string Email { get; init; } = string.Empty;
 }
 
