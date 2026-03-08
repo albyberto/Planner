@@ -19,7 +19,7 @@
 @if (string.IsNullOrWhiteSpace(_me.Email))
 {
     <MudAlert Severity="Severity.Warning">
-        Configura le proprietà Name ed Email nell'oggetto "Me" in appsettings.json sotto "JiraFilters" per visualizzare le chat.
+        Configura la proprietà Email nell'oggetto "Me" in appsettings.json sotto "JiraFilters" per visualizzare le chat.
     </MudAlert>
 }
 else
@@ -33,7 +33,7 @@ else
     }
     else if (!_issues.Any())
     {
-        <MudAlert Severity="Severity.Info">Nessuna conversazione trovata per @_me.Name con i filtri correnti.</MudAlert>
+        <MudAlert Severity="Severity.Info">Nessuna conversazione trovata per @_meDisplayName con i filtri correnti.</MudAlert>
     }
     else
     {
@@ -119,7 +119,7 @@ else
                     <MudDivider Class="my-3"/>
                     
                     <div style="overflow-x: auto; white-space: nowrap; padding-bottom: 8px;" class="mb-2 scrollbar-thin">
-                        @foreach (var user in _projectUsers)
+                        @foreach (var user in _projectUsers.Where(u => _teamMemberEmails.Contains(u.EmailAddress, StringComparer.OrdinalIgnoreCase)))
                         {
                             <MudChip T="UserModel" Size="Size.Small" Variant="Variant.Outlined" Color="Color.Primary" OnClick="@(() => AppendMentionToDraft(issue.Key, user))">
                                 <MudAvatar Size="Size.Small" Class="mr-1">
@@ -130,10 +130,34 @@ else
                         }
                     </div>
 
-                    <div class="d-flex align-center gap-2 mt-2 w-100">
+                    <div class="d-flex align-center gap-2 mt-2 w-100" style="position: relative;">
+                        <!-- Autocomplete Popover per Menzioni -->
+                        <MudPopover Open="@(_activeMentionIssueKey == issue.Key && _showMentionPopover)" AnchorOrigin="Origin.TopLeft" TransformOrigin="Origin.BottomLeft" MaxHeight="300" Class="pa-0">
+                            @if (_filteredUsers.Any())
+                            {
+                                <MudList T="UserModel" Clickable="true" Dense="true" Class="py-0">
+                                    @foreach (var u in _filteredUsers)
+                                    {
+                                        <MudListItem T="UserModel" OnClick="@(() => OnMentionSelected(issue.Key, u))">
+                                            <div class="d-flex align-center">
+                                                <MudAvatar Size="Size.Small" Class="mr-2">
+                                                    <MudImage Src="@u._48x48" />
+                                                </MudAvatar>
+                                                @u.DisplayName
+                                            </div>
+                                        </MudListItem>
+                                    }
+                                </MudList>
+                            }
+                            else
+                            {
+                                <MudText Typo="Typo.body2" Class="pa-2">Nessun utente trovato</MudText>
+                            }
+                        </MudPopover>
+
                         <MudTextField T="string"
-                                      Value="_draftComments.GetValueOrDefault(issue.Key)" 
-                                      ValueChanged="@(v => OnDraftChanged(issue.Key, v))"
+                                      Value="@(_draftComments.GetValueOrDefault(issue.Key))" 
+                                      ValueChanged="@(v => OnInputCommentChanged(issue.Key, v))"
                                       Immediate="true"
                                       Label="Scrivi un commento..." 
                                       Variant="Variant.Outlined" 
@@ -165,6 +189,9 @@ else
     [Inject] private JiraWriteClient WriteClient { get; set; } = default!;
 
     private MeOptions _me = new();
+    private string _meDisplayName = string.Empty;
+    private HashSet<string> _teamMemberEmails = new(StringComparer.OrdinalIgnoreCase);
+
     private bool _loading = true;
     private List<IssueModel> _issues = new();
     private Filter? _currentFilter;
@@ -176,10 +203,22 @@ else
     private List<UserModel> _projectUsers = new();
     private Dictionary<string, UserModel> _mappedMentions = new();
 
+    // Mentions Autocomplete State
+    private string? _activeMentionIssueKey;
+    private bool _showMentionPopover = false;
+    private string _mentionSearch = string.Empty;
+    private IEnumerable<UserModel> _filteredUsers = [];
+
     protected override async Task OnInitializedAsync()
     {
         _me = FilterOptions.Value.Me;
-        if (string.IsNullOrWhiteSpace(_me.Email) && string.IsNullOrWhiteSpace(_me.Name))
+        var teamMembers = FilterOptions.Value.TeamMembers;
+        foreach (var tm in teamMembers)
+        {
+            if (!string.IsNullOrWhiteSpace(tm.Email)) _teamMemberEmails.Add(tm.Email);
+        }
+
+        if (string.IsNullOrWhiteSpace(_me.Email))
         {
             _loading = false;
         }
@@ -195,6 +234,9 @@ else
                 .Where(u => !string.IsNullOrWhiteSpace(u.DisplayName) && !string.IsNullOrWhiteSpace(u.AccountId))
                 .DistinctBy(u => u.AccountId)
                 .ToList();
+
+            var meUser = _projectUsers.FirstOrDefault(u => string.Equals(u.EmailAddress, _me.Email, StringComparison.OrdinalIgnoreCase));
+            _meDisplayName = meUser?.DisplayName ?? _me.Email;
         }
         catch { /* Fallback */ }
     }
@@ -217,9 +259,53 @@ else
         _draftComments[issueKey] = currentDraft + alias;
     }
 
-    private void OnDraftChanged(string issueKey, string value)
+    private void OnInputCommentChanged(string issueKey, string value)
     {
         _draftComments[issueKey] = value;
+        CheckForMention(issueKey, value);
+    }
+
+    private void CheckForMention(string issueKey, string text)
+    {
+        var lastAtPos = text.LastIndexOf('@');
+        if (lastAtPos >= 0)
+        {
+            var substring = text.Substring(lastAtPos + 1);
+            if (!substring.Contains(' '))
+            {
+                _mentionSearch = substring;
+                _activeMentionIssueKey = issueKey;
+                _showMentionPopover = true;
+
+                _filteredUsers = string.IsNullOrWhiteSpace(_mentionSearch)
+                    ? _projectUsers.Take(10)
+                    : _projectUsers.Where(u => u.DisplayName.Contains(_mentionSearch, StringComparison.OrdinalIgnoreCase)
+                                            || u.EmailAddress.Contains(_mentionSearch, StringComparison.OrdinalIgnoreCase))
+                                   .Take(10);
+                return;
+            }
+        }
+
+        _activeMentionIssueKey = null;
+        _showMentionPopover = false;
+    }
+
+    private void OnMentionSelected(string issueKey, UserModel user)
+    {
+        var currentDraft = _draftComments.GetValueOrDefault(issueKey) ?? string.Empty;
+        var lastAtPos = currentDraft.LastIndexOf('@');
+        
+        if (lastAtPos >= 0)
+        {
+            var alias = $"@{user.DisplayName.Replace(" ", "")} ";
+            _mappedMentions[alias.TrimEnd()] = user;
+            
+            var newDraft = currentDraft.Substring(0, lastAtPos) + alias;
+            _draftComments[issueKey] = newDraft;
+        }
+
+        _activeMentionIssueKey = null;
+        _showMentionPopover = false;
     }
     
     // --- Edit Flow ---
@@ -301,6 +387,18 @@ else
     {
         if (e.Key == "Enter" && !e.ShiftKey)
         {
+            // If the mention popover is open, use Enter to select the first user in the filtered list
+            if (_showMentionPopover && _activeMentionIssueKey == issueKey)
+            {
+                var firstUser = _filteredUsers.FirstOrDefault();
+                if (firstUser != null)
+                {
+                    OnMentionSelected(issueKey, firstUser);
+                }
+                return; // Consume the Enter key, do not send the message
+            }
+
+            // Otherwise, send the message as usual
             if (!string.IsNullOrWhiteSpace(_draftComments.GetValueOrDefault(issueKey)))
             {
                 var issue = _issues.FirstOrDefault(i => i.Key == issueKey);
@@ -426,7 +524,7 @@ else
             // 2. Build the Jira Chat specific query via JQLBuilder
             var meUser = (JQLBuilder.Types.JqlTypes.JqlHistoricalJqlUser)_me.Email;
             var chatQuery = JQLBuilder.JqlBuilder.Query
-                .Where(f => f.User.Assignee == meUser | f.User.Reporter == meUser | f.Text.Comment.Contains(_me.Name));
+                .Where(f => f.User.Assignee == meUser | f.User.Reporter == meUser | f.Text.Comment.Contains(_meDisplayName!));
             
             var chatJqlString = chatQuery.ToString() + " ORDER BY updated DESC";
             
@@ -440,7 +538,7 @@ else
             _issues = fetchedIssues.Where(i => 
                 i.Comments.Any() &&
                 ((i.Assignee?.EmailAddress?.Equals(_me.Email, StringComparison.OrdinalIgnoreCase) == true) ||
-                 i.Comments.Any(c => c.Body.Contains(_me.Name, StringComparison.OrdinalIgnoreCase) || 
+                 i.Comments.Any(c => c.Body.Contains(_meDisplayName, StringComparison.OrdinalIgnoreCase) || 
                                      c.Author.EmailAddress?.Equals(_me.Email, StringComparison.OrdinalIgnoreCase) == true))
             ).ToList();
             
