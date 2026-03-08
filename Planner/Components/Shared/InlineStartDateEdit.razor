@@ -1,0 +1,28 @@
+@using Planner.Builders
+@using Planner.Clients
+@using Planner.Model
+@using Planner.Components.Shared.MudBlazorWrappers
+
+@inject JiraWriteClient WriteClient
+@inject ISnackbar Snackbar
+
+<InlineDateEdit @bind-Value="Issue.StartDate" OnSave="SaveAsync" />
+
+@code {
+    [Parameter, EditorRequired] public required IssueModel Issue { get; set; }
+
+    private async Task SaveAsync(DateOnly? newValue)
+    {
+        try
+        {
+            var dateStr = newValue?.ToString("yyyy-MM-dd");
+            var update = new IssueUpdateBuilder().SetCustomField("customfield_10117", dateStr);
+            await WriteClient.UpdateIssueAsync(Issue.Key, update);
+            Snackbar.Add($"{Issue.Key} Start Date aggiornata", Severity.Success);
+        }
+        catch (Exception ex)
+        {
+            Snackbar.Add($"Errore nel salvataggio: {ex.Message}", Severity.Error);
+        }
+    }
+}

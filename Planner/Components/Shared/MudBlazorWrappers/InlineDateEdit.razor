@@ -1,0 +1,68 @@
+@using Planner.Clients
+@using Planner.Model
+
+<div class="d-flex align-center">
+    @if (_editing)
+    {
+        <MudDatePicker Date="@_currentDate"
+                       DateChanged="OnDateChanged"
+                       Margin="Margin.Dense"
+                       Variant="Variant.Outlined"
+                       AutoClose="true"
+                       Clearable="true"
+                       Style="min-width: 130px; max-width: 140px;"
+                       Class="ma-0" />
+        <MudIconButton Icon="@Icons.Material.Filled.Close" Size="Size.Small" OnClick="CancelEdit" Class="ml-1" />
+    }
+    else
+    {
+        <div class="d-inline-flex align-center cursor-pointer" @onclick="StartEdit" style="min-width: 40px; min-height: 24px;">
+            @if (Value.HasValue)
+            {
+                <MudText Typo="Typo.body2">@Value.Value.ToString("dd/MM/yyyy")</MudText>
+            }
+            else
+            {
+                <MudIcon Icon="@Icons.Material.Filled.CalendarToday" Size="Size.Small" Color="Color.Default" />
+            }
+        </div>
+    }
+</div>
+
+@code {
+    [Parameter, EditorRequired] public DateOnly? Value { get; set; }
+    [Parameter] public EventCallback<DateOnly?> ValueChanged { get; set; }
+    [Parameter] public EventCallback<DateOnly?> OnSave { get; set; }
+
+    private bool _editing;
+    private DateTime? _currentDate;
+
+    private void StartEdit()
+    {
+        _currentDate = Value?.ToDateTime(TimeOnly.MinValue);
+        _editing = true;
+    }
+
+    private void CancelEdit()
+    {
+        _editing = false;
+    }
+
+    private async Task OnDateChanged(DateTime? newDate)
+    {
+        _currentDate = newDate;
+        _editing = false;
+        
+        var newDateOnly = newDate.HasValue ? DateOnly.FromDateTime(newDate.Value) : (DateOnly?)null;
+        
+        if (newDateOnly != Value)
+        {
+            Value = newDateOnly;
+            await ValueChanged.InvokeAsync(Value);
+            if (OnSave.HasDelegate)
+            {
+                await OnSave.InvokeAsync(Value);
+            }
+        }
+    }
+}

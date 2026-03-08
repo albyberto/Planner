@@ -41,7 +41,7 @@ public class IssueUpdateBuilder
         return this;
     }
 
-    public IssueUpdateBuilder SetCustomField(string fieldId, object value)
+    public IssueUpdateBuilder SetCustomField(string fieldId, object? value)
     {
         Fields[fieldId] = value;
         return this;

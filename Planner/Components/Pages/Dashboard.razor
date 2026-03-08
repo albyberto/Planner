@@ -76,6 +76,8 @@
                     <MudTh>Key</MudTh>
                     <MudTh>Summary</MudTh>
                     <MudTh>Status</MudTh>
+                    <MudTh Class="mud-text-align-center">Start</MudTh>
+                    <MudTh Class="mud-text-align-center">End</MudTh>
                     <MudTh Class="mud-text-align-end">Original</MudTh>
                     <MudTh Class="mud-text-align-end">Spent</MudTh>
                     <MudTh Class="mud-text-align-end">Remaining</MudTh>
@@ -95,6 +97,12 @@
                     </MudTd>
                     <MudTd DataLabel="Status">
                         <InlineStatusEdit IssueKey="@issue.Key" @bind-Value="issue.Status" />
+                    </MudTd>
+                    <MudTd DataLabel="Start" Class="mud-text-align-center">
+                        <InlineStartDateEdit Issue="@issue" />
+                    </MudTd>
+                    <MudTd DataLabel="End" Class="mud-text-align-center">
+                        <InlineEndDateEdit Issue="@issue" />
                     </MudTd>
                     <MudTd DataLabel="Est" Class="mud-text-align-end">
                         <InlineOriginalEstimationEdit Issue="@issue" />

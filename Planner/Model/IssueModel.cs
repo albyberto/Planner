@@ -38,17 +38,10 @@ public record IssueModel
         Labels = dto.Fields.Labels.Select(label => new LabelModel(label)).ToImmutableList();
         FixVersions = dto.Fields.FixVersions.Select(version => new FixVersionModel(version)).ToImmutableList() ?? [];
         StartDate = dto.Fields.StartDate;
+        EndDate = dto.Fields.EndDate;
+        DueDate = dto.Fields.DueDate;
 
         var originalEstimate = dto.Fields.TimeTracking?.OriginalEstimateSeconds ?? 0;
-        
-        // MOCK: Generate EndDate and DueDate for Gantt preview using 8h work days based on StartDate
-        if (StartDate.HasValue)
-        {
-            var workingDays = Math.Max(1, originalEstimate / 28800); // 8h = 28800s
-            EndDate = StartDate.Value.AddDays(workingDays);
-            DueDate = EndDate;
-        }
-
         var timeSpent = dto.Fields.Worklog?.Worklogs?.Sum(w => w.TimeSpentSeconds ?? 0) ?? 0;
         var remainingEstimate = dto.Fields.TimeTracking?.RemainingEstimateSeconds;
         
