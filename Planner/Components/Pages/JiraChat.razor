@@ -2,6 +2,8 @@
 @using Planner.Clients
 @using Planner.Model
 @using Planner.Options
+@using Planner.Services
+@using Planner.Components.Shared
 @using Microsoft.Extensions.Options
 
 <PageTitle>Jira Chat</PageTitle>
@@ -17,74 +19,105 @@
         Configura la proprietà "Me" in appsettings.json sotto "JiraFilters" per visualizzare le chat.
     </MudAlert>
 }
-else if (_loading)
-{
-    <MudProgressLinear Color="Color.Primary" Indeterminate="true" Class="my-4" />
-}
-else if (!_issues.Any())
-{
-    <MudAlert Severity="Severity.Info">Nessuna conversazione trovata per @_me.</MudAlert>
-}
 else
 {
-    <MudStack Spacing="4">
-        @foreach (var issue in _issues)
-        {
-            <MudPaper Class="pa-4" Elevation="2">
-                <MudText Typo="Typo.h6">
-                    <IssueKey Issue="@issue" /> - @issue.Summary
-                </MudText>
-                
-                <MudDivider Class="my-3"/>
-                
-                <MudStack Spacing="3">
-                    @foreach (var comment in issue.Comments.OrderBy(c => c.Created))
-                    {
-                        var isMe = comment.Author.DisplayName?.Contains(_me, StringComparison.OrdinalIgnoreCase) == true;
-                        <div class="d-flex @(isMe ? "justify-end" : "justify-start")">
-                            <MudPaper Class="pa-3" Style="@(isMe ? "background-color: var(--mud-palette-primary-lighten); max-width: 80%;" : "background-color: var(--mud-palette-background-grey); max-width: 80%;")" Elevation="1">
-                                <MudText Typo="Typo.caption" Color="@(isMe ? Color.Primary : Color.Secondary)" Class="mb-1 d-block">
-                                    <strong>@comment.Author.DisplayName</strong> - @(comment.Created?.ToString("g") ?? "")
-                                </MudText>
-                                <MudText Typo="Typo.body2" Style="white-space: pre-wrap;">@comment.Body</MudText>
-                            </MudPaper>
-                        </div>
-                    }
-                    @if (!issue.Comments.Any())
-                    {
-                        <MudText Typo="Typo.body2" Color="Color.Secondary">Nessun commento.</MudText>
-                    }
-                </MudStack>
-            </MudPaper>
-        }
-    </MudStack>
+    @* Add filters to Jira Chat page *@
+    <Filters OnFilterChanged="OnFilterChanged" ShowAssigneeFilter="false" />
+
+    @if (_loading)
+    {
+        <MudProgressLinear Color="Color.Primary" Indeterminate="true" Class="my-4" />
+    }
+    else if (!_issues.Any())
+    {
+        <MudAlert Severity="Severity.Info">Nessuna conversazione trovata per @_me con i filtri correnti.</MudAlert>
+    }
+    else
+    {
+        <MudStack Spacing="4">
+            @foreach (var issue in _issues)
+            {
+                <MudPaper Class="pa-4" Elevation="2">
+                    <MudText Typo="Typo.h6">
+                        <IssueKey Issue="@issue" /> - @issue.Summary
+                    </MudText>
+                    
+                    <MudDivider Class="my-3"/>
+                    
+                    <MudStack Spacing="3">
+                        @foreach (var comment in issue.Comments.OrderBy(c => c.Created))
+                        {
+                            var isMe = comment.Author.DisplayName?.Contains(_me, StringComparison.OrdinalIgnoreCase) == true;
+                            <div class="d-flex @(isMe ? "justify-end" : "justify-start")">
+                                <MudPaper Class="pa-3" Style="@(isMe ? "background-color: var(--mud-palette-primary-lighten); max-width: 80%;" : "background-color: var(--mud-palette-background-grey); max-width: 80%;")" Elevation="1">
+                                    <MudText Typo="Typo.caption" Color="@(isMe ? Color.Primary : Color.Secondary)" Class="mb-1 d-block">
+                                        <strong>@comment.Author.DisplayName</strong> - @(comment.Created?.ToString("g") ?? "")
+                                    </MudText>
+                                    <MudText Typo="Typo.body2" Style="white-space: pre-wrap;">@comment.Body</MudText>
+                                </MudPaper>
+                            </div>
+                        }
+                        @if (!issue.Comments.Any())
+                        {
+                            <MudText Typo="Typo.body2" Color="Color.Secondary">Nessun commento.</MudText>
+                        }
+                    </MudStack>
+                </MudPaper>
+            }
+        </MudStack>
+    }
 }
 
 @code {
     [Inject] private JiraReadClient ReadClient { get; set; } = default!;
     [Inject] private IOptions<JiraFilterOptions> FilterOptions { get; set; } = default!;
     [Inject] private ISnackbar Snackbar { get; set; } = default!;
+    [Inject] private JqlFilterBuilder QueryBuilder { get; set; } = default!;
 
     private string _me = string.Empty;
     private bool _loading = true;
     private List<IssueModel> _issues = new();
+    private Filter? _currentFilter;
 
-    protected override async Task OnInitializedAsync()
+    protected override void OnInitialized()
     {
         _me = FilterOptions.Value.Me;
         if (string.IsNullOrWhiteSpace(_me))
         {
             _loading = false;
-            return;
         }
+    }
+
+    private async Task OnFilterChanged(Filter filter)
+    {
+        if (string.IsNullOrWhiteSpace(_me)) return;
+
+        _currentFilter = filter;
+        await LoadIssuesAsync();
+    }
+
+    private async Task LoadIssuesAsync()
+    {
+        if (_currentFilter == null) return;
 
         try
         {
+            _loading = true;
+            StateHasChanged();
+
+            // 1. Build the base query using the selected filters
+            var baseJql = QueryBuilder.BuildDashboardQuery(_currentFilter);
+            
+            // 2. Append the Jira Chat logic (assignee, reporter or mentions)
             var safeMe = _me.Replace("\"", "\\\"");
-            var query = $"(assignee = \"{safeMe}\" OR reporter = \"{safeMe}\" OR comment ~ \"\\\"{safeMe}\\\"\") ORDER BY updated DESC";
+            var chatJql = $"(assignee = \"{safeMe}\" OR reporter = \"{safeMe}\" OR comment ~ \"\\\"{safeMe}\\\"\") ORDER BY updated DESC";
             
-            var fetchedIssues = await ReadClient.GetIssuesAsync(query);
+            // Combine both - the base query might be complex, so wrap in parenthesis
+            var combinedJql = string.IsNullOrWhiteSpace(baseJql) ? chatJql : $"({baseJql.Replace(" ORDER BY updated DESC", "")}) AND {chatJql}";
+
+            var fetchedIssues = await ReadClient.GetIssuesAsync(combinedJql);
             
+            // Local fallback logic to ensure exact matches in Comments Body or Author DisplayName
             _issues = fetchedIssues.Where(i => 
                 (i.Assignee?.DisplayName?.Contains(_me, StringComparison.OrdinalIgnoreCase) == true) ||
                 i.Comments.Any(c => c.Body.Contains(_me, StringComparison.OrdinalIgnoreCase) || 
@@ -98,6 +131,7 @@ else
         finally
         {
             _loading = false;
+            StateHasChanged();
         }
     }
 }
