@@ -38,7 +38,7 @@ else
     else
     {
         <MudStack Spacing="4">
-            @foreach (var issue in _issues.OrderByDescending(i => i.Comments.Max(c => c.Created ?? DateTime.MinValue)))
+            @foreach (var issue in _issues.OrderByDescending(i => i.Comments.Any() ? i.Comments.Max(c => c.Created ?? DateTime.MinValue) : DateTime.MinValue))
             {
                 <MudPaper Class="pa-4" Elevation="2">
                     <MudText Typo="Typo.h6">
