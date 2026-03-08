@@ -32,11 +32,27 @@ public class JiraWriteClient(HttpClient httpClient, ILogger<JiraWriteClient> log
         await EnsureSuccessAsync(response, $"UpdateVersionAsync({versionId})", ct);
     }
 
-    public async Task AddCommentAsync(string issueKey, object adfBody, CancellationToken ct = default)
+    public async Task<Planner.Model.IssueCommentModel?> AddCommentAsync(string issueKey, object adfBody, CancellationToken ct = default)
     {
         var body = new { body = adfBody };
         var response = await httpClient.PostAsJsonAsync($"issue/{issueKey}/comment", body, ct);
         await EnsureSuccessAsync(response, $"AddCommentAsync({issueKey})", ct);
+        
+        var dto = await response.Content.ReadFromJsonAsync<Planner.Domain.IssueComment>(cancellationToken: ct);
+        return dto != null ? new Planner.Model.IssueCommentModel(dto) : null;
+    }
+
+    public async Task UpdateCommentAsync(string issueKey, string commentId, object adfBody, CancellationToken ct = default)
+    {
+        var body = new { body = adfBody };
+        var response = await httpClient.PutAsJsonAsync($"issue/{issueKey}/comment/{commentId}", body, ct);
+        await EnsureSuccessAsync(response, $"UpdateCommentAsync({issueKey}, {commentId})", ct);
+    }
+
+    public async Task DeleteCommentAsync(string issueKey, string commentId, CancellationToken ct = default)
+    {
+        var response = await httpClient.DeleteAsync($"issue/{issueKey}/comment/{commentId}", ct);
+        await EnsureSuccessAsync(response, $"DeleteCommentAsync({issueKey}, {commentId})", ct);
     }
     
     private async Task EnsureSuccessAsync(HttpResponseMessage response, string operation, CancellationToken ct)

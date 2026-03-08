@@ -43,12 +43,23 @@ public record IssueCommentModel
     {
         if (element.ValueKind == JsonValueKind.Object)
         {
-            if (element.TryGetProperty("type", out var typeProp) && typeProp.GetString() == "text" &&
-                element.TryGetProperty("text", out var textProp) && textProp.ValueKind == JsonValueKind.String)
+            if (element.TryGetProperty("type", out var typeProp))
             {
-                var text = textProp.GetString();
-                if (!string.IsNullOrWhiteSpace(text))
-                    textParts.Add(text);
+                if (typeProp.GetString() == "text" &&
+                    element.TryGetProperty("text", out var textProp) && textProp.ValueKind == JsonValueKind.String)
+                {
+                    var text = textProp.GetString();
+                    if (!string.IsNullOrWhiteSpace(text))
+                        textParts.Add(text);
+                }
+                else if (typeProp.GetString() == "mention" &&
+                         element.TryGetProperty("attrs", out var attrsProp) &&
+                         attrsProp.TryGetProperty("text", out var mentionTextProp) && mentionTextProp.ValueKind == JsonValueKind.String)
+                {
+                    var text = mentionTextProp.GetString();
+                    if (!string.IsNullOrWhiteSpace(text))
+                        textParts.Add(text);
+                }
             }
 
             if (element.TryGetProperty("content", out var contentProp) && contentProp.ValueKind == JsonValueKind.Array)
