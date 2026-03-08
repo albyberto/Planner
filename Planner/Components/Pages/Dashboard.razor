@@ -47,7 +47,7 @@
                 <div class="d-flex flex-column">
                     <div class="d-flex align-center">
                         <MudIcon Icon="@Icons.Material.Filled.NewReleases" Size="Size.Small" Color="Color.Primary" />
-                        <InlineVersionEdit Version="@group.Version" />
+                        <InlineVersionEdit Version="@group.Version" Issues="@group.Issues" />
                     </div>
                     @if (!string.IsNullOrWhiteSpace(group.Version.Description))
                     {

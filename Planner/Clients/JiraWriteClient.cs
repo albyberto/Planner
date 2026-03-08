@@ -19,9 +19,15 @@ public class JiraWriteClient(HttpClient httpClient, ILogger<JiraWriteClient> log
         await EnsureSuccessAsync(response, $"TransitionAsync({issueKey}, {transitionId})", ct);
     }
 
-    public async Task UpdateVersionAsync(string versionId, string name, string? description = null, CancellationToken ct = default)
+    public async Task UpdateVersionAsync(string versionId, string name, string? description = null, DateOnly? startDate = null, DateOnly? releaseDate = null, CancellationToken ct = default)
     {
-        var body = new { name, description };
+        var body = new 
+        { 
+            name, 
+            description,
+            startDate = startDate?.ToString("yyyy-MM-dd"),
+            releaseDate = releaseDate?.ToString("yyyy-MM-dd")
+        };
         var response = await httpClient.PutAsJsonAsync($"version/{versionId}", body, ct);
         await EnsureSuccessAsync(response, $"UpdateVersionAsync({versionId})", ct);
     }
