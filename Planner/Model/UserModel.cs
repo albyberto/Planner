@@ -13,14 +13,20 @@ public record UserModel
     public string _16x16 { get; set; }
     public string _32x32 { get; set; }
 
-    public UserModel(User user)
+    public UserModel(User? user)
     {
-        AccountId = user.AccountId;
-        EmailAddress = user.EmailAddress.ToLowerInvariant(); 
-        DisplayName = string.IsNullOrWhiteSpace(user.DisplayName) ? user.EmailAddress : user.DisplayName.ToTitleCase();
-        _16x16 = user.AvatarUrls._16x16;
-        _24x24 = user.AvatarUrls._24x24;
-        _32x32 = user.AvatarUrls._32x32;
-        _48x48 = user.AvatarUrls._48x48;
+        if (user is null) return;
+        
+        AccountId = user.AccountId ?? string.Empty;
+        EmailAddress = user.EmailAddress?.ToLowerInvariant() ?? string.Empty; 
+        DisplayName = string.IsNullOrWhiteSpace(user.DisplayName) ? EmailAddress : user.DisplayName.ToTitleCase();
+        
+        if (user.AvatarUrls is not null)
+        {
+            _16x16 = user.AvatarUrls._16x16 ?? string.Empty;
+            _24x24 = user.AvatarUrls._24x24 ?? string.Empty;
+            _32x32 = user.AvatarUrls._32x32 ?? string.Empty;
+            _48x48 = user.AvatarUrls._48x48 ?? string.Empty;
+        }
     }
 }

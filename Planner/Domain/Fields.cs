@@ -17,5 +17,6 @@ public record Fields(
     [property: JsonPropertyName("customfield_10117")] DateOnly? StartDate,
     [property: JsonPropertyName("customfield_10118")] DateOnly? EndDate,
     [property: JsonPropertyName("duedate")] DateOnly? DueDate,
-    [property: JsonPropertyName("project")] Project Project
+    [property: JsonPropertyName("project")] Project Project,
+    [property: JsonPropertyName("comment")] IssueComments? Comment
 );

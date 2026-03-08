@@ -217,7 +217,7 @@ public class JiraReadClient(HttpClient httpClient, IOptions<JiraQueryOptions> op
                     {
                         "summary", "status", "assignee", "fixVersions",
                         "created", "updated", "issuetype", "components",
-                        "labels", "timetracking", "worklog", "customfield_10117", "project"
+                        "labels", "timetracking", "worklog", "customfield_10117", "project", "comment"
                     }
                 };
 

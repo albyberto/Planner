@@ -9,6 +9,8 @@ public class JiraFilterOptions
     [Required, MinLength(2)]
     public string DefaultProject { get; init; } = string.Empty;
     
+    public string Me { get; init; } = string.Empty;
+    
     public HashSet<string> DefaultStatuses { get; init; } = [];
     public HashSet<TeamMember> TeamMembers { get; init; } = [];
     public bool IncludeUnassignedByDefault { get; init; }
