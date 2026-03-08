@@ -8,6 +8,7 @@
 @using Planner.Domain
 @using JQLBuilder
 @using MudBlazor
+@using Planner.Components.Pages.ChatComponents
 
 <PageTitle>Jira Chat</PageTitle>
 
@@ -45,135 +46,22 @@ else
                         <IssueKey Issue="@issue" /> - @issue.Summary
                     </MudText>
                     
-                    <MudStack Spacing="3" Class="pa-4" Style="background-color: var(--mud-palette-background-grey); border-radius: 8px;">
-                        @foreach (var comment in issue.Comments.OrderBy(c => c.Created))
-                        {
-                            var isMe = comment.Author.EmailAddress?.Equals(_me.Email, StringComparison.OrdinalIgnoreCase) == true;
-                            var isEditing = _editingCommentId == comment.Id && _editingIssueKey == issue.Key;
-                            
-                            var alignClass = isMe ? "justify-end" : "justify-start";
-                            var bubbleColor = isMe ? "var(--mud-palette-success-lighten)" : "var(--mud-palette-surface)";
-                            var borderRadius = isMe ? "16px 16px 4px 16px" : "16px 16px 16px 4px";
-                            var authorColor = isMe ? "var(--mud-palette-success-darken)" : "var(--mud-palette-primary)";
-                            
-                            <div class="d-flex w-100 @alignClass">
-                                @if (isEditing)
-                                {
-                                    <MudPaper Elevation="2" Class="pa-3 w-100" Style="border: 2px solid var(--mud-palette-primary);">
-                                        <MudTextField T="string" 
-                                                      @bind-Value="_editDraft" 
-                                                      Label="Modifica commento..." 
-                                                      Variant="Variant.Outlined" 
-                                                      Margin="Margin.Dense" 
-                                                      Lines="3" />
-                                        
-                                        <div class="d-flex justify-end gap-2 mt-2">
-                                            <MudButton Size="Size.Small" OnClick="CancelEdit">Annulla</MudButton>
-                                            <MudButton Size="Size.Small" Color="Color.Primary" Variant="Variant.Filled" OnClick="@(() => SaveEditAsync(issue))" Disabled="@(_savingEdit || string.IsNullOrWhiteSpace(_editDraft))">
-                                                @if (_savingEdit) { <MudProgressCircular Size="Size.Small" Indeterminate="true" Class="mr-2"/> }
-                                                Salva
-                                            </MudButton>
-                                        </div>
-                                    </MudPaper>
-                                }
-                                else
-                                {
-                                    <MudPaper Elevation="1" 
-                                              Style="@($"background-color: {bubbleColor}; border-radius: {borderRadius}; max-width: 80%; padding: 8px 12px; position: relative;")"
-                                              @onmouseenter="@(() => _hoveredCommentId = comment.Id)"
-                                              @onmouseleave="@(() => _hoveredCommentId = null)">
-                                        
-                                        @if (!isMe)
-                                        {
-                                            <div style="@($"color: {authorColor}; font-weight: 600; font-size: 0.8rem; margin-bottom: 4px;")">
-                                                @comment.Author.DisplayName
-                                            </div>
-                                        }
-                                        
-                                        <div style="font-size: 0.9rem; white-space: pre-wrap; word-break: break-word; line-height: 1.4; color: var(--mud-palette-text-primary);">
-                                            @comment.Body
-                                        </div>
-                                        
-                                        <div class="d-flex justify-space-between align-center mt-1">
-                                            <div>
-                                                @if (isMe && _hoveredCommentId == comment.Id)
-                                                {
-                                                    <MudIconButton Icon="@Icons.Material.Filled.Edit" Size="Size.Small" Color="Color.Default" Class="pa-0 mr-2" OnClick="@(() => StartEdit(issue.Key, comment))" />
-                                                    <MudIconButton Icon="@Icons.Material.Filled.Delete" Size="Size.Small" Color="Color.Error" Class="pa-0" OnClick="@(() => DeleteCommentAsync(issue, comment))" />
-                                                }
-                                            </div>
-                                            <span style="font-size: 0.7rem; color: var(--mud-palette-text-secondary); opacity: 0.8;">
-                                                @(comment.Created?.ToString("HH:mm") ?? "")
-                                                @if (comment.Updated > comment.Created)
-                                                {
-                                                    <span class="ml-1">(Modificato)</span>
-                                                }
-                                            </span>
-                                        </div>
-                                    </MudPaper>
-                                }
-                            </div>
-                        }
-                    </MudStack>
+                    <IssueChatThread Issue="@issue" MeEmail="@_me.Email" 
+                                     OnEdit="@((c, body) => SaveEditAsync(issue, c, body))" 
+                                     OnDelete="@((c) => DeleteCommentAsync(issue, c))" 
+                                     OnReply="@((c) => ReplyToComment(issue.Key, c))" />
                     
                     <MudDivider Class="my-3"/>
                     
-                    <div style="overflow-x: auto; white-space: nowrap; padding-bottom: 8px;" class="mb-2 scrollbar-thin">
-                        @foreach (var user in _projectUsers.Where(u => _teamMemberEmails.Contains(u.EmailAddress, StringComparer.OrdinalIgnoreCase)))
-                        {
-                            <MudChip T="UserModel" Size="Size.Small" Variant="Variant.Outlined" Color="Color.Primary" OnClick="@(() => AppendMentionToDraft(issue.Key, user))">
-                                <MudAvatar Size="Size.Small" Class="mr-1">
-                                    <MudImage Src="@user._48x48" />
-                                </MudAvatar>
-                                @user.DisplayName
-                            </MudChip>
-                        }
-                    </div>
+                    <TeamChips Users="@_projectUsers.Where(u => _teamMemberEmails.Contains(u.EmailAddress, StringComparer.OrdinalIgnoreCase))" 
+                               OnUserSelected="@((user) => AppendMentionToDraft(issue.Key, user))" />
 
-                    <div class="d-flex align-center gap-2 mt-2 w-100" style="position: relative;">
-                        <!-- Autocomplete Popover per Menzioni -->
-                        <MudPopover Open="@(_activeMentionIssueKey == issue.Key && _showMentionPopover)" AnchorOrigin="Origin.TopLeft" TransformOrigin="Origin.BottomLeft" MaxHeight="300" Class="pa-0">
-                            @if (_filteredUsers.Any())
-                            {
-                                <MudList T="UserModel" Clickable="true" Dense="true" Class="py-0">
-                                    @foreach (var u in _filteredUsers)
-                                    {
-                                        <MudListItem T="UserModel" OnClick="@(() => OnMentionSelected(issue.Key, u))">
-                                            <div class="d-flex align-center">
-                                                <MudAvatar Size="Size.Small" Class="mr-2">
-                                                    <MudImage Src="@u._48x48" />
-                                                </MudAvatar>
-                                                @u.DisplayName
-                                            </div>
-                                        </MudListItem>
-                                    }
-                                </MudList>
-                            }
-                            else
-                            {
-                                <MudText Typo="Typo.body2" Class="pa-2">Nessun utente trovato</MudText>
-                            }
-                        </MudPopover>
-
-                        <MudTextField T="string"
-                                      Value="@(_draftComments.GetValueOrDefault(issue.Key))" 
-                                      ValueChanged="@(v => OnInputCommentChanged(issue.Key, v))"
-                                      Immediate="true"
-                                      Label="Scrivi un commento..." 
-                                      Variant="Variant.Outlined" 
-                                      Margin="Margin.Dense" 
-                                      Lines="1" 
-                                      MaxLines="5"
-                                      Class="flex-grow-1"
-                                      OnKeyDown="@(e => HandleKeyDown(e, issue.Key))" />
-                                      
-                        <MudIconButton Icon="@Icons.Material.Filled.Send" 
-                                       Color="Color.Primary" 
-                                       Variant="Variant.Filled"
-                                       Size="Size.Medium" 
-                                       OnClick="@(() => SendCommentAsync(issue))" 
-                                       Disabled="@(string.IsNullOrWhiteSpace(_draftComments.GetValueOrDefault(issue.Key)) || _sending.Contains(issue.Key))" />
-                    </div>
+                    <ChatInput Draft="@(_draftComments.GetValueOrDefault(issue.Key) ?? string.Empty)"
+                               DraftChanged="@((val) => _draftComments[issue.Key] = val)"
+                               ProjectUsers="@_projectUsers"
+                               IsSending="@_sending.Contains(issue.Key)"
+                               OnSend="@(() => SendCommentAsync(issue))"
+                               OnMentionMapped="@(MapMention)" />
                 </MudPaper>
             }
         </MudStack>
@@ -181,33 +69,27 @@ else
 }
 
 @code {
-    [Inject] private JiraReadClient ReadClient { get; set; } = default!;
-    [Inject] private IOptions<JiraFilterOptions> FilterOptions { get; set; } = default!;
-    [Inject] private ISnackbar Snackbar { get; set; } = default!;
-    [Inject] private JqlFilterBuilder QueryBuilder { get; set; } = default!;
+    [Inject] private JiraReadClient ReadClient { get; set; } = null!;
+    [Inject] private IOptions<JiraFilterOptions> FilterOptions { get; set; } = null!;
+    [Inject] private ISnackbar Snackbar { get; set; } = null!;
+    [Inject] private JqlFilterBuilder QueryBuilder { get; set; } = null!;
 
-    [Inject] private JiraWriteClient WriteClient { get; set; } = default!;
+    [Inject] private JiraWriteClient WriteClient { get; set; } = null!;
 
     private MeOptions _me = new();
     private string _meDisplayName = string.Empty;
-    private HashSet<string> _teamMemberEmails = new(StringComparer.OrdinalIgnoreCase);
+    private readonly HashSet<string> _teamMemberEmails = new(StringComparer.OrdinalIgnoreCase);
 
     private bool _loading = true;
-    private List<IssueModel> _issues = new();
+    private List<IssueModel> _issues = [];
     private Filter? _currentFilter;
     
     // Reply & Mention State
-    private Dictionary<string, string> _draftComments = new();
-    private HashSet<string> _sending = new();
+    private readonly Dictionary<string, string> _draftComments = new();
+    private readonly HashSet<string> _sending = [];
     
-    private List<UserModel> _projectUsers = new();
-    private Dictionary<string, UserModel> _mappedMentions = new();
-
-    // Mentions Autocomplete State
-    private string? _activeMentionIssueKey;
-    private bool _showMentionPopover = false;
-    private string _mentionSearch = string.Empty;
-    private IEnumerable<UserModel> _filteredUsers = [];
+    private List<UserModel> _projectUsers = [];
+    private readonly Dictionary<string, UserModel> _mappedMentions = new();
 
     protected override async Task OnInitializedAsync()
     {
@@ -241,14 +123,7 @@ else
         catch { /* Fallback */ }
     }
 
-    // Editing State
-    private string? _hoveredCommentId;
-    private string? _editingCommentId;
-    private string? _editingIssueKey;
-    private string _editDraft = string.Empty;
-    private bool _savingEdit = false;
-
-    [Inject] private IDialogService DialogService { get; set; } = default!;
+    [Inject] private IDialogService DialogService { get; set; } = null!;
 
     private void AppendMentionToDraft(string issueKey, UserModel user)
     {
@@ -259,90 +134,43 @@ else
         _draftComments[issueKey] = currentDraft + alias;
     }
 
-    private void OnInputCommentChanged(string issueKey, string value)
-    {
-        _draftComments[issueKey] = value;
-        CheckForMention(issueKey, value);
-    }
-
-    private void CheckForMention(string issueKey, string text)
-    {
-        var lastAtPos = text.LastIndexOf('@');
-        if (lastAtPos >= 0)
-        {
-            var substring = text.Substring(lastAtPos + 1);
-            if (!substring.Contains(' '))
-            {
-                _mentionSearch = substring;
-                _activeMentionIssueKey = issueKey;
-                _showMentionPopover = true;
-
-                _filteredUsers = string.IsNullOrWhiteSpace(_mentionSearch)
-                    ? _projectUsers.Take(10)
-                    : _projectUsers.Where(u => u.DisplayName.Contains(_mentionSearch, StringComparison.OrdinalIgnoreCase)
-                                            || u.EmailAddress.Contains(_mentionSearch, StringComparison.OrdinalIgnoreCase))
-                                   .Take(10);
-                return;
-            }
-        }
-
-        _activeMentionIssueKey = null;
-        _showMentionPopover = false;
-    }
-
-    private void OnMentionSelected(string issueKey, UserModel user)
+    private void ReplyToComment(string issueKey, IssueCommentModel comment)
     {
         var currentDraft = _draftComments.GetValueOrDefault(issueKey) ?? string.Empty;
-        var lastAtPos = currentDraft.LastIndexOf('@');
+        var alias = $"@{comment.Author.DisplayName.Replace(" ", "")} ";
         
-        if (lastAtPos >= 0)
+        // Assicurati che se rispondi a qualcuno, venga parsato come Menzionabile
+        var user = _projectUsers.FirstOrDefault(u => u.AccountId == comment.Author.AccountId);
+        if (user != null)
         {
-            var alias = $"@{user.DisplayName.Replace(" ", "")} ";
             _mappedMentions[alias.TrimEnd()] = user;
-            
-            var newDraft = currentDraft.Substring(0, lastAtPos) + alias;
-            _draftComments[issueKey] = newDraft;
         }
-
-        _activeMentionIssueKey = null;
-        _showMentionPopover = false;
+        
+        _draftComments[issueKey] = currentDraft + alias;
     }
-    
+
+    private void MapMention(UserModel user)
+    {
+        var alias = $"@{user.DisplayName.Replace(" ", "")} ";
+        _mappedMentions[alias.TrimEnd()] = user;
+    }
+
     // --- Edit Flow ---
-    private void StartEdit(string issueKey, IssueCommentModel comment)
+    private async Task SaveEditAsync(IssueModel issue, IssueCommentModel comment, string newBody)
     {
-        _editingIssueKey = issueKey;
-        _editingCommentId = comment.Id;
-        _editDraft = comment.Body;
-    }
-
-    private void CancelEdit()
-    {
-        _editingIssueKey = null;
-        _editingCommentId = null;
-        _editDraft = string.Empty;
-    }
-
-    private async Task SaveEditAsync(IssueModel issue)
-    {
-        if (string.IsNullOrWhiteSpace(_editDraft) || _editingCommentId == null) return;
         try
         {
-            _savingEdit = true;
-            StateHasChanged();
-            
-            var adfBody = BuildAdfFromText(_editDraft);
-            await WriteClient.UpdateCommentAsync(issue.Key, _editingCommentId, adfBody);
+            var adfBody = BuildAdfFromText(newBody);
+            await WriteClient.UpdateCommentAsync(issue.Key, comment.Id, adfBody);
 
-            var commentToUpdate = issue.Comments.FirstOrDefault(c => c.Id == _editingCommentId);
+            var commentToUpdate = issue.Comments.FirstOrDefault(c => c.Id == comment.Id);
             if (commentToUpdate != null)
             {
-                commentToUpdate.Body = _editDraft;
+                commentToUpdate.Body = newBody;
                 commentToUpdate.Updated = DateTime.Now;
             }
             
             Snackbar.Add("Commento aggiornato", Severity.Success);
-            CancelEdit();
         }
         catch (Exception)
         {
@@ -350,7 +178,6 @@ else
         }
         finally
         {
-            _savingEdit = false;
             StateHasChanged();
         }
     }
@@ -383,29 +210,6 @@ else
         }
     }
 
-    private async Task HandleKeyDown(KeyboardEventArgs e, string issueKey)
-    {
-        if (e.Key == "Enter" && !e.ShiftKey)
-        {
-            // If the mention popover is open, use Enter to select the first user in the filtered list
-            if (_showMentionPopover && _activeMentionIssueKey == issueKey)
-            {
-                var firstUser = _filteredUsers.FirstOrDefault();
-                if (firstUser != null)
-                {
-                    OnMentionSelected(issueKey, firstUser);
-                }
-                return; // Consume the Enter key, do not send the message
-            }
-
-            // Otherwise, send the message as usual
-            if (!string.IsNullOrWhiteSpace(_draftComments.GetValueOrDefault(issueKey)))
-            {
-                var issue = _issues.FirstOrDefault(i => i.Key == issueKey);
-                if (issue != null) await SendCommentAsync(issue);
-            }
-        }
-    }
 
     private class MentionToken { public string Text { get; set; } = ""; public bool IsMention { get; set; } }
 
@@ -442,13 +246,33 @@ else
 
         foreach (var token in tokens)
         {
-            if (token.IsMention && _mappedMentions.TryGetValue(token.Text, out var user))
+            if (token.IsMention)
             {
-                contentList.Add(new
+                if (_mappedMentions.TryGetValue(token.Text, out var user))
                 {
-                    type = "mention",
-                    attrs = new { id = user.AccountId, text = token.Text }
-                });
+                    contentList.Add(new
+                    {
+                        type = "mention",
+                        attrs = new { id = user.AccountId, text = token.Text }
+                    });
+                }
+                else
+                {
+                    // Fallback to searching the project users in case it was a loaded mention from the API
+                    var fallbackUser = _projectUsers.FirstOrDefault(u => $"@{u.DisplayName.Replace(" ", "")}" == token.Text);
+                    if (fallbackUser != null)
+                    {
+                        contentList.Add(new
+                        {
+                            type = "mention",
+                            attrs = new { id = fallbackUser.AccountId, text = token.Text }
+                        });
+                    }
+                    else
+                    {
+                        contentList.Add(new { type = "text", text = token.Text });
+                    }
+                }
             }
             else
             {
@@ -526,7 +350,7 @@ else
             var chatQuery = JQLBuilder.JqlBuilder.Query
                 .Where(f => f.User.Assignee == meUser | f.User.Reporter == meUser | f.Text.Comment.Contains(_meDisplayName!));
             
-            var chatJqlString = chatQuery.ToString() + " ORDER BY updated DESC";
+            var chatJqlString = chatQuery + " ORDER BY updated DESC";
             
             // Combine both 
             var combinedJql = string.IsNullOrWhiteSpace(baseJqlString) ? chatJqlString : $"({baseJqlString.Replace(" ORDER BY updated DESC", "")}) AND {chatJqlString}";

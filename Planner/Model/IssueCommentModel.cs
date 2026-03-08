@@ -58,7 +58,11 @@ public record IssueCommentModel
                 {
                     var text = mentionTextProp.GetString();
                     if (!string.IsNullOrWhiteSpace(text))
-                        textParts.Add(text);
+                    {
+                        var alias = text.Replace(" ", "");
+                        if (!alias.StartsWith("@")) alias = "@" + alias;
+                        textParts.Add(alias);
+                    }
                 }
             }
 
