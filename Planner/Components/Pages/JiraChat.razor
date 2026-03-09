@@ -1,4 +1,5 @@
 @page "/jira-chat"
+@implements IDisposable
 @using Planner.Clients
 @using Planner.Model
 @using Planner.Options
@@ -41,7 +42,7 @@ else
         <MudStack Spacing="4">
             @foreach (var issue in _issues.OrderByDescending(i => i.Comments.Any() ? i.Comments.Max(c => c.Created ?? DateTime.MinValue) : DateTime.MinValue))
             {
-                <MudPaper Class="pa-4" Elevation="2">
+                <MudPaper @key="issue.Key" Class="pa-4" Elevation="2">
                     <MudText Typo="Typo.h6">
                         <IssueKey Issue="@issue" /> - @issue.Summary
                     </MudText>
@@ -92,6 +93,9 @@ else
     
     private List<UserModel> _projectUsers = [];
     private readonly Dictionary<string, UserModel> _mappedMentions = new();
+    
+    private System.Threading.PeriodicTimer? _timer;
+    private readonly System.Threading.CancellationTokenSource _cts = new();
 
     protected override async Task OnInitializedAsync()
     {
@@ -123,6 +127,28 @@ else
             _meDisplayName = meUser?.DisplayName ?? _me.Email;
         }
         catch { /* Fallback */ }
+
+        _ = RunPeriodicRefreshAsync();
+    }
+
+    private async Task RunPeriodicRefreshAsync()
+    {
+        _timer = new System.Threading.PeriodicTimer(TimeSpan.FromSeconds(5));
+        try
+        {
+            while (await _timer.WaitForNextTickAsync(_cts.Token))
+            {
+                await LoadIssuesAsync(true);
+            }
+        }
+        catch (OperationCanceledException) { }
+    }
+
+    public void Dispose()
+    {
+        _cts.Cancel();
+        _cts.Dispose();
+        _timer?.Dispose();
     }
 
     [Inject] private IDialogService DialogService { get; set; } = null!;
@@ -335,14 +361,17 @@ else
         await LoadIssuesAsync();
     }
 
-    private async Task LoadIssuesAsync()
+    private async Task LoadIssuesAsync(bool isSilent = false)
     {
         if (_currentFilter == null) return;
 
         try
         {
-            _loading = true;
-            StateHasChanged();
+            if (!isSilent)
+            {
+                _loading = true;
+                StateHasChanged();
+            }
 
             // 1. Build the base query using the selected filters via JqlFilterBuilder
             var baseJqlString = QueryBuilder.BuildDashboardQuery(_currentFilter);
@@ -385,11 +414,17 @@ else
         }
         catch (Exception ex)
         {
-            Snackbar.Add("Errore durante il caricamento della Jira Chat", Severity.Error);
+            if (!isSilent)
+            {
+                Snackbar.Add("Errore durante il caricamento della Jira Chat", Severity.Error);
+            }
         }
         finally
         {
-            _loading = false;
+            if (!isSilent)
+            {
+                _loading = false;
+            }
             StateHasChanged();
         }
     }
