@@ -15,21 +15,15 @@
         <div class="d-flex w-100 @alignClass">
             @if (isEditing)
             {
-                <MudPaper Elevation="2" Class="pa-3 w-100" Style="border: 2px solid var(--mud-palette-primary);">
-                    <MudTextField T="string" 
-                                  @bind-Value="_editDraft" 
-                                  Label="Modifica commento..." 
-                                  Variant="Variant.Outlined" 
-                                  Margin="Margin.Dense" 
-                                  Lines="3" />
-                    
-                    <div class="d-flex justify-end gap-2 mt-2">
-                        <MudButton Size="Size.Small" OnClick="CancelEdit">Annulla</MudButton>
-                        <MudButton Size="Size.Small" Color="Color.Primary" Variant="Variant.Filled" OnClick="@(() => SaveEditAsync(comment))" Disabled="@(_savingEdit || string.IsNullOrWhiteSpace(_editDraft))">
-                            @if (_savingEdit) { <MudProgressCircular Size="Size.Small" Indeterminate="true" Class="mr-2"/> }
-                            Salva
-                        </MudButton>
-                    </div>
+                <MudPaper Elevation="2" Class="pa-3 flex-grow-1 w-100" Style="border: 2px solid var(--mud-palette-primary);">
+                    <ChatInput Draft="@_editDraft"
+                               DraftChanged="@((val) => _editDraft = val)"
+                               ProjectUsers="ProjectUsers"
+                               IsSending="_savingEdit"
+                               IsEditMode="true"
+                               OnCancel="CancelEdit"
+                               OnSend="@(() => SaveEditAsync(comment))"
+                               OnMentionMapped="OnMentionMapped" />
                 </MudPaper>
             }
             else
@@ -78,6 +72,9 @@
 </MudStack>
 
 @code {
+    [Parameter, EditorRequired] public IEnumerable<UserModel> ProjectUsers { get; set; } = [];
+    [Parameter, EditorRequired] public EventCallback<UserModel> OnMentionMapped { get; set; }
+
     [Parameter, EditorRequired] public IssueModel Issue { get; set; } = default!;
     [Parameter, EditorRequired] public string MeEmail { get; set; } = string.Empty;
     

@@ -47,6 +47,8 @@ else
                     </MudText>
                     
                     <IssueChatThread Issue="@issue" MeEmail="@_me.Email" 
+                                     ProjectUsers="@_projectUsers"
+                                     OnMentionMapped="@MapMention"
                                      OnEdit="@((c, body) => SaveEditAsync(issue, c, body))" 
                                      OnDelete="@((c) => DeleteCommentAsync(issue, c))" 
                                      OnReply="@((c) => ReplyToComment(issue.Key, c))" />
