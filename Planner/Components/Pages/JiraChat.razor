@@ -354,8 +354,17 @@ else
             
             var chatJqlString = chatQuery + " ORDER BY updated DESC";
             
-            // Combine both 
-            var combinedJql = string.IsNullOrWhiteSpace(baseJqlString) ? chatJqlString : $"({baseJqlString.Replace(" ORDER BY updated DESC", "")}) AND {chatJqlString}";
+            // Combine both - Ensure baseJql is fully wrapped in isolated parentheses, and chatJql is fully wrapped too.
+            // Example Base: status IN ("To Do", "In Progress")
+            // Example Chat: assignee = a OR reporter = a OR comment ~ a
+            // Result: (status IN ("To Do", "In Progress")) AND (assignee = a OR reporter = a OR comment ~ a) ORDER BY updated DESC
+            
+            var baseJqlCleaned = baseJqlString.Replace(" ORDER BY updated DESC", "");
+            var chatJqlCleaned = chatJqlString.Replace(" ORDER BY updated DESC", "");
+            
+            var combinedJql = string.IsNullOrWhiteSpace(baseJqlCleaned) 
+                ? chatJqlString 
+                : $"({baseJqlCleaned}) AND ({chatJqlCleaned}) ORDER BY updated DESC";
 
             var fetchedIssues = await ReadClient.GetIssuesAsync(combinedJql);
             
