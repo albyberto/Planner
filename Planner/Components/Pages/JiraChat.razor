@@ -9,6 +9,7 @@
 @using Planner.Domain
 @using JQLBuilder
 @using MudBlazor
+@using Planner.Services
 @using Planner.Components.Pages.ChatComponents
 
 <PageTitle>Jira Chat</PageTitle>
@@ -76,6 +77,7 @@ else
     [Inject] private IOptions<JiraFilterOptions> FilterOptions { get; set; } = null!;
     [Inject] private ISnackbar Snackbar { get; set; } = null!;
     [Inject] private JqlFilterBuilder QueryBuilder { get; set; } = null!;
+    [Inject] private JiraNotificationService NotificationService { get; set; } = null!;
 
     [Inject] private JiraWriteClient WriteClient { get; set; } = null!;
 
@@ -93,9 +95,6 @@ else
     
     private List<UserModel> _projectUsers = [];
     private readonly Dictionary<string, UserModel> _mappedMentions = new();
-    
-    private System.Threading.PeriodicTimer? _timer;
-    private readonly System.Threading.CancellationTokenSource _cts = new();
 
     protected override async Task OnInitializedAsync()
     {
@@ -128,27 +127,17 @@ else
         }
         catch { /* Fallback */ }
 
-        _ = RunPeriodicRefreshAsync();
+        NotificationService.OnIssuesUpdated += HandleBackgroundUpdate;
     }
 
-    private async Task RunPeriodicRefreshAsync()
+    private void HandleBackgroundUpdate(List<IssueModel> latestIssues)
     {
-        _timer = new System.Threading.PeriodicTimer(TimeSpan.FromSeconds(5));
-        try
-        {
-            while (await _timer.WaitForNextTickAsync(_cts.Token))
-            {
-                await LoadIssuesAsync(true);
-            }
-        }
-        catch (OperationCanceledException) { }
+        InvokeAsync(() => LoadIssuesAsync(true));
     }
 
     public void Dispose()
     {
-        _cts.Cancel();
-        _cts.Dispose();
-        _timer?.Dispose();
+        NotificationService.OnIssuesUpdated -= HandleBackgroundUpdate;
     }
 
     [Inject] private IDialogService DialogService { get; set; } = null!;
@@ -342,7 +331,7 @@ else
             Snackbar.Add("Commento inviato regolarmente", Severity.Success);
             _draftComments[issue.Key] = string.Empty;
         }
-        catch (Exception ex)
+        catch (Exception)
         {
             Snackbar.Add("Errore durante l'invio del commento", Severity.Error);
         }
@@ -399,12 +388,14 @@ else
             
             // Local fallback logic to ensure exact matches in Comments Body or Author DisplayName 
             // Also filter out any issue that doesn't actually have any comment.
-            _issues = fetchedIssues.Where(i => 
+            var newlyFetchedFilteredIssues = fetchedIssues.Where(i => 
                 i.Comments.Any() &&
                 ((i.Assignee?.EmailAddress?.Equals(_me.Email, StringComparison.OrdinalIgnoreCase) == true) ||
                  i.Comments.Any(c => c.Body.Contains(_meDisplayName, StringComparison.OrdinalIgnoreCase) || 
                                      c.Author.EmailAddress?.Equals(_me.Email, StringComparison.OrdinalIgnoreCase) == true))
             ).ToList();
+
+            _issues = newlyFetchedFilteredIssues;
             
             // Initialize draft states for new issues
             foreach (var i in _issues)
@@ -412,7 +403,7 @@ else
                 _draftComments.TryAdd(i.Key, string.Empty);
             }
         }
-        catch (Exception ex)
+        catch (Exception)
         {
             if (!isSilent)
             {

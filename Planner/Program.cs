@@ -47,6 +47,8 @@ builder.Services.AddOptions<JiraFilterOptions>()
 
 // Services
 builder.Services.AddSingleton<JqlFilterBuilder>();
+builder.Services.AddSingleton<JiraNotificationService>();
+builder.Services.AddHostedService<JiraChatBackgroundService>();
 
 // HTTP Clients
 builder.Services.AddHttpClient<JiraReadClient>((provider, client) =>
