@@ -1,9 +1,10 @@
 @using System.Collections.Immutable
+@using Planner.Background
 @using Planner.Clients
-@using Planner.Domain
 @using Planner.Extensions
 @using Planner.Model
 @using Planner.Services
+@implements IDisposable
 
 <PageTitle>@_displayTitle</PageTitle>
 
@@ -31,6 +32,7 @@ else
 @inject JqlFilterBuilder QueryBuilder
 @inject JiraReadClient ReadClient
 @inject ISnackbar Snackbar
+@inject JiraNotificationService NotificationService
 
 @code {
     [Parameter, EditorRequired] public required string Title { get; set; } = string.Empty;
@@ -78,6 +80,23 @@ else
         }
     }
 
+    protected override void OnInitialized()
+    {
+        NotificationService.OnDashboardIssuesUpdated += HandleBackgroundUpdate;
+    }
+
+    private void HandleBackgroundUpdate(List<IssueModel> _)
+    {
+        // Ricarica silenziosamente (senza progress bar) quando il background service notifica
+        if (_lastFilter is not null)
+            InvokeAsync(() => LoadIssuesAsync(_lastFilter, silent: true));
+    }
+
+    public void Dispose()
+    {
+        NotificationService.OnDashboardIssuesUpdated -= HandleBackgroundUpdate;
+    }
+
     private async Task OnFilterChanged(Filter filter)
     {
         _lastFilter = filter;
@@ -90,18 +109,22 @@ else
             await LoadIssuesAsync(_lastFilter);
     }
 
-    private async Task LoadIssuesAsync(Filter filter)
+    private async Task LoadIssuesAsync(Filter filter, bool silent = false)
     {
         try
         {
-            _loading = true;
-            StateHasChanged();
+            if (!silent)
+            {
+                _loading = true;
+                StateHasChanged();
+            }
             var jql = QueryBuilder.BuildDashboardQuery(filter);
             _issues = await ReadClient.GetIssuesAsync(jql);
         }
         catch (Exception)
         {
-            Snackbar.Add("Errore durante il recupero delle issue.", Severity.Error);
+            if (!silent)
+                Snackbar.Add("Errore durante il recupero delle issue.", Severity.Error);
         }
         finally
         {

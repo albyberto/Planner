@@ -1,12 +1,15 @@
-using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Options;
 using Planner.Clients;
 using Planner.Model;
 using Planner.Options;
 using JQLBuilder;
 
-namespace Planner.Services;
+namespace Planner.Background;
 
+/// <summary>
+/// Background service che esegue il polling periodico di Jira per le conversazioni
+/// della Chat (commenti). Notifica i componenti Blazor tramite <see cref="JiraNotificationService"/>.
+/// </summary>
 public class JiraChatBackgroundService : BackgroundService
 {
     private readonly IServiceScopeFactory _scopeFactory;
@@ -28,35 +31,41 @@ public class JiraChatBackgroundService : BackgroundService
 
     protected override async Task ExecuteAsync(CancellationToken stoppingToken)
     {
-        // Attendi prima di iniziare per far sì che l'app avvii tutto il resto
+        // Attendi prima di iniziare per far sì che l'app abbia avviato tutto il resto
         await Task.Delay(TimeSpan.FromSeconds(5), stoppingToken);
-        
+
         using var timer = new PeriodicTimer(TimeSpan.FromSeconds(30));
-        
+
         while (!stoppingToken.IsCancellationRequested)
         {
-            try 
+            try
             {
                 await PollJiraChatAsync(stoppingToken);
             }
+            catch (OperationCanceledException)
+            {
+                break;
+            }
             catch (Exception ex)
             {
-                _logger.LogError(ex, "Errore durante il polling di Jira Chat nel background service");
+                _logger.LogError(ex, "Errore durante il polling di Jira Chat");
             }
-            
-            try 
+
+            try
             {
                 await timer.WaitForNextTickAsync(stoppingToken);
             }
             catch (OperationCanceledException) { break; }
         }
+
+        _logger.LogInformation("JiraChatBackgroundService terminato.");
     }
 
     private async Task PollJiraChatAsync(CancellationToken ct)
     {
         using var scope = _scopeFactory.CreateScope();
         var filterOptions = scope.ServiceProvider.GetRequiredService<IOptions<JiraFilterOptions>>().Value;
-        
+
         var meOptions = filterOptions.Me;
         if (string.IsNullOrWhiteSpace(meOptions.Email)) return;
 
@@ -72,7 +81,9 @@ public class JiraChatBackgroundService : BackgroundService
             {
                 users.AddRange(await proj.GetAssigneesAsync());
             }
-            var meUserObj = users.DistinctBy(u => u.AccountId).FirstOrDefault(u => string.Equals(u.EmailAddress, meOptions.Email, StringComparison.OrdinalIgnoreCase));
+            var meUserObj = users
+                .DistinctBy(u => u.AccountId)
+                .FirstOrDefault(u => string.Equals(u.EmailAddress, meOptions.Email, StringComparison.OrdinalIgnoreCase));
             if (meUserObj != null && !string.IsNullOrWhiteSpace(meUserObj.DisplayName))
             {
                 meDisplayName = meUserObj.DisplayName;
@@ -80,31 +91,37 @@ public class JiraChatBackgroundService : BackgroundService
         }
         catch { /* Fallback a email */ }
 
-        // Build Query per recuperare esattamente quello che serve alla chat indipendentemente dai filtri visivi ui
         var meUser = (JQLBuilder.Types.JqlTypes.JqlHistoricalJqlUser)meOptions.Email;
         var chatQuery = JQLBuilder.JqlBuilder.Query
             .Where(f => f.User.Assignee == meUser | f.User.Reporter == meUser | f.Text.Comment.Contains(meDisplayName));
-        
+
         var jqlString = chatQuery + " ORDER BY updated DESC";
 
         var fetchedIssues = await readClient.GetIssuesAsync(jqlString);
-        
-        var validIssues = fetchedIssues.Where(i => 
+
+        var validIssues = fetchedIssues.Where(i =>
             i.Comments.Any() &&
             ((i.Assignee?.EmailAddress?.Equals(meOptions.Email, StringComparison.OrdinalIgnoreCase) == true) ||
-             i.Comments.Any(c => c.Body.Contains(meDisplayName, StringComparison.OrdinalIgnoreCase) || 
-                                 c.Author.EmailAddress?.Equals(meOptions.Email, StringComparison.OrdinalIgnoreCase) == true))
+             i.Comments.Any(c =>
+                 c.Body.Contains(meDisplayName, StringComparison.OrdinalIgnoreCase) ||
+                 c.Author.EmailAddress?.Equals(meOptions.Email, StringComparison.OrdinalIgnoreCase) == true))
         ).ToList();
 
         CheckForNewCommentsAndNotify(_lastKnownIssues, validIssues, meOptions.Email, _isFirstRun);
 
         _lastKnownIssues = validIssues;
         _isFirstRun = false;
-        
-        _notificationService.NotifyIssuesUpdated(validIssues);
+
+        _notificationService.NotifyChatIssuesUpdated(validIssues);
+
+        _logger.LogDebug("JiraChatBackgroundService: poll completato, {Count} issue trovate.", validIssues.Count);
     }
-    
-    private void CheckForNewCommentsAndNotify(List<IssueModel> oldIssues, List<IssueModel> newIssues, string myEmail, bool isFirstRun)
+
+    private void CheckForNewCommentsAndNotify(
+        List<IssueModel> oldIssues,
+        List<IssueModel> newIssues,
+        string myEmail,
+        bool isFirstRun)
     {
         int newCommentCount = 0;
         string? lastIssueKey = null;
@@ -126,15 +143,17 @@ public class JiraChatBackgroundService : BackgroundService
             else
             {
                 var oldCommentIds = oldIssue.Comments.Select(c => c.Id).ToHashSet();
-                var newlyAddedComments = newIssue.Comments.Where(c => !oldCommentIds.Contains(c.Id)).ToList();
-                
-                var otherPeopleComments = newlyAddedComments.Where(c => c.Author.EmailAddress != null && !c.Author.EmailAddress.Equals(myEmail, StringComparison.OrdinalIgnoreCase)).ToList();
+                var newlyAdded = newIssue.Comments.Where(c => !oldCommentIds.Contains(c.Id)).ToList();
+                var byOthers = newlyAdded
+                    .Where(c => c.Author.EmailAddress != null &&
+                                !c.Author.EmailAddress.Equals(myEmail, StringComparison.OrdinalIgnoreCase))
+                    .ToList();
 
-                newCommentCount += otherPeopleComments.Count;
-                if (otherPeopleComments.Any())
+                newCommentCount += byOthers.Count;
+                if (byOthers.Any())
                 {
                     lastIssueKey = newIssue.Key;
-                    lastCommentAuthor = otherPeopleComments.Last().Author.DisplayName;
+                    lastCommentAuthor = byOthers.Last().Author.DisplayName;
                 }
             }
         }

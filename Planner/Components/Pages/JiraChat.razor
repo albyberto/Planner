@@ -3,13 +3,10 @@
 @using Planner.Clients
 @using Planner.Model
 @using Planner.Options
+@using Planner.Background
 @using Planner.Services
-@using Planner.Components.Shared
 @using Microsoft.Extensions.Options
-@using Planner.Domain
 @using JQLBuilder
-@using MudBlazor
-@using Planner.Services
 @using Planner.Components.Pages.ChatComponents
 
 <PageTitle>Jira Chat</PageTitle>
@@ -21,54 +18,54 @@
 
 @if (string.IsNullOrWhiteSpace(_me.Email))
 {
-    <MudAlert Severity="Severity.Warning">
-        Configura la proprietà Email nell'oggetto "Me" in appsettings.json sotto "JiraFilters" per visualizzare le chat.
-    </MudAlert>
+        <MudAlert Severity="Severity.Warning">
+            Configura la proprietà Email nell'oggetto "Me" in appsettings.json sotto "JiraFilters" per visualizzare le chat.
+        </MudAlert>
 }
 else
 {
     @* Add filters to Jira Chat page *@
-    <Filters OnFilterChanged="OnFilterChanged" ShowAssigneeFilter="false" />
+        <Filters OnFilterChanged="OnFilterChanged" ShowAssigneeFilter="false" />
 
     @if (_loading)
     {
-        <MudProgressLinear Color="Color.Primary" Indeterminate="true" Class="my-4" />
+                <MudProgressLinear Color="Color.Primary" Indeterminate="true" Class="my-4" />
     }
     else if (!_issues.Any())
     {
-        <MudAlert Severity="Severity.Info">Nessuna conversazione trovata per @_meDisplayName con i filtri correnti.</MudAlert>
+                <MudAlert Severity="Severity.Info">Nessuna conversazione trovata per @_meDisplayName con i filtri correnti.</MudAlert>
     }
     else
     {
-        <MudStack Spacing="4">
+                <MudStack Spacing="4">
             @foreach (var issue in _issues.OrderByDescending(i => i.Comments.Any() ? i.Comments.Max(c => c.Created ?? DateTime.MinValue) : DateTime.MinValue))
             {
-                <MudPaper @key="issue.Key" Class="pa-4" Elevation="2">
-                    <MudText Typo="Typo.h6">
-                        <IssueKey Issue="@issue" /> - @issue.Summary
-                    </MudText>
-                    
-                    <IssueChatThread Issue="@issue" MeEmail="@_me.Email" 
-                                     ProjectUsers="@_projectUsers"
-                                     OnMentionMapped="@MapMention"
-                                     OnEdit="@((c, body) => SaveEditAsync(issue, c, body))" 
-                                     OnDelete="@((c) => DeleteCommentAsync(issue, c))" 
-                                     OnReply="@((c) => ReplyToComment(issue.Key, c))" />
-                    
-                    <MudDivider Class="my-3"/>
-                    
-                    <TeamChips Users="@_projectUsers.Where(u => _teamMemberEmails.Contains(u.EmailAddress, StringComparer.OrdinalIgnoreCase))" 
-                               OnUserSelected="@((user) => AppendMentionToDraft(issue.Key, user))" />
+                            <MudPaper @key="issue.Key" Class="pa-4" Elevation="2">
+                                <MudText Typo="Typo.h6">
+                                    <IssueKey Issue="@issue" /> - @issue.Summary
+                                </MudText>
 
-                    <ChatInput Draft="@(_draftComments.GetValueOrDefault(issue.Key) ?? string.Empty)"
-                               DraftChanged="@((val) => _draftComments[issue.Key] = val)"
-                               ProjectUsers="@_projectUsers"
-                               IsSending="@_sending.Contains(issue.Key)"
-                               OnSend="@(() => SendCommentAsync(issue))"
-                               OnMentionMapped="@(MapMention)" />
-                </MudPaper>
+                                <IssueChatThread Issue="@issue" MeEmail="@_me.Email" 
+                                                 ProjectUsers="@_projectUsers"
+                                                 OnMentionMapped="@MapMention"
+                                                 OnEdit="@((c, body) => SaveEditAsync(issue, c, body))" 
+                                                 OnDelete="@((c) => DeleteCommentAsync(issue, c))" 
+                                                 OnReply="@((c) => ReplyToComment(issue.Key, c))" />
+
+                                <MudDivider Class="my-3"/>
+
+                                <TeamChips Users="@_projectUsers.Where(u => _teamMemberEmails.Contains(u.EmailAddress, StringComparer.OrdinalIgnoreCase))" 
+                                           OnUserSelected="@((user) => AppendMentionToDraft(issue.Key, user))" />
+
+                                <ChatInput Draft="@(_draftComments.GetValueOrDefault(issue.Key) ?? string.Empty)"
+                                           DraftChanged="@((val) => _draftComments[issue.Key] = val)"
+                                           ProjectUsers="@_projectUsers"
+                                           IsSending="@_sending.Contains(issue.Key)"
+                                           OnSend="@(() => SendCommentAsync(issue))"
+                                           OnMentionMapped="@(MapMention)" />
+                            </MudPaper>
             }
-        </MudStack>
+                </MudStack>
     }
 }
 
@@ -88,11 +85,11 @@ else
     private bool _loading = true;
     private List<IssueModel> _issues = [];
     private Filter? _currentFilter;
-    
+
     // Reply & Mention State
     private readonly Dictionary<string, string> _draftComments = new();
     private readonly HashSet<string> _sending = [];
-    
+
     private List<UserModel> _projectUsers = [];
     private readonly Dictionary<string, UserModel> _mappedMentions = new();
 
@@ -127,7 +124,7 @@ else
         }
         catch { /* Fallback */ }
 
-        NotificationService.OnIssuesUpdated += HandleBackgroundUpdate;
+        NotificationService.OnChatIssuesUpdated += HandleBackgroundUpdate;
     }
 
     private void HandleBackgroundUpdate(List<IssueModel> latestIssues)
@@ -137,7 +134,7 @@ else
 
     public void Dispose()
     {
-        NotificationService.OnIssuesUpdated -= HandleBackgroundUpdate;
+        NotificationService.OnChatIssuesUpdated -= HandleBackgroundUpdate;
     }
 
     [Inject] private IDialogService DialogService { get; set; } = null!;
@@ -147,7 +144,7 @@ else
         var currentDraft = _draftComments.GetValueOrDefault(issueKey) ?? string.Empty;
         var alias = $"@{user.DisplayName.Replace(" ", "")} ";
         _mappedMentions[alias.TrimEnd()] = user;
-        
+
         _draftComments[issueKey] = currentDraft + alias;
     }
 
@@ -155,14 +152,14 @@ else
     {
         var currentDraft = _draftComments.GetValueOrDefault(issueKey) ?? string.Empty;
         var alias = $"@{comment.Author.DisplayName.Replace(" ", "")} ";
-        
+
         // Assicurati che se rispondi a qualcuno, venga parsato come Menzionabile
         var user = _projectUsers.FirstOrDefault(u => u.AccountId == comment.Author.AccountId);
         if (user != null)
         {
             _mappedMentions[alias.TrimEnd()] = user;
         }
-        
+
         _draftComments[issueKey] = currentDraft + alias;
     }
 
@@ -186,7 +183,7 @@ else
                 commentToUpdate.Body = newBody;
                 commentToUpdate.Updated = DateTime.Now;
             }
-            
+
             Snackbar.Add("Commento aggiornato", Severity.Success);
         }
         catch (Exception)
@@ -198,13 +195,13 @@ else
             StateHasChanged();
         }
     }
-    
+
     // --- Delete Flow ---
     private async Task DeleteCommentAsync(IssueModel issue, IssueCommentModel comment)
     {
         bool? result = await DialogService.ShowMessageBoxAsync(
-            "Elimina commento", 
-            "Sei sicuro di voler eliminare questo commento?", 
+            "Elimina commento",
+            "Sei sicuro di voler eliminare questo commento?",
             yesText: "Elimina", cancelText: "Annulla");
 
         if (result == true)
@@ -212,11 +209,11 @@ else
             try
             {
                 await WriteClient.DeleteCommentAsync(issue.Key, comment.Id);
-                
+
                 var list = issue.Comments.ToList();
                 list.RemoveAll(c => c.Id == comment.Id);
                 issue.Comments = System.Collections.Immutable.ImmutableList.CreateRange(list);
-                
+
                 Snackbar.Add("Commento eliminato", Severity.Success);
                 StateHasChanged();
             }
@@ -233,9 +230,9 @@ else
     private List<MentionToken> TokenizeMentions(string draft)
     {
         var tokens = new List<MentionToken>();
-        string pattern = @"(@\w+)"; 
+        string pattern = @"(@\w+)";
         var matches = System.Text.RegularExpressions.Regex.Matches(draft, pattern);
-        
+
         int lastIndex = 0;
         foreach (System.Text.RegularExpressions.Match match in matches)
         {
@@ -243,16 +240,16 @@ else
             {
                 tokens.Add(new MentionToken { Text = draft.Substring(lastIndex, match.Index - lastIndex), IsMention = false });
             }
-            
+
             tokens.Add(new MentionToken { Text = match.Value, IsMention = true });
             lastIndex = match.Index + match.Length;
         }
-        
+
         if (lastIndex < draft.Length)
         {
             tokens.Add(new MentionToken { Text = draft.Substring(lastIndex), IsMention = false });
         }
-        
+
         return tokens;
     }
 
@@ -304,7 +301,7 @@ else
             content = new[]
             {
                 new { type = "paragraph", content = contentList.ToArray() }
-            }
+        }
         };
     }
 
@@ -320,14 +317,14 @@ else
 
             var adfBody = BuildAdfFromText(draft);
             var newComment = await WriteClient.AddCommentAsync(issue.Key, adfBody);
-            
+
             if (newComment != null)
             {
                 var list = issue.Comments.ToList();
                 list.Add(newComment);
                 issue.Comments = System.Collections.Immutable.ImmutableList.CreateRange(list);
             }
-            
+
             Snackbar.Add("Commento inviato regolarmente", Severity.Success);
             _draftComments[issue.Key] = string.Empty;
         }
@@ -364,39 +361,39 @@ else
 
             // 1. Build the base query using the selected filters via JqlFilterBuilder
             var baseJqlString = QueryBuilder.BuildDashboardQuery(_currentFilter);
-            
+
             // 2. Build the Jira Chat specific query via JQLBuilder
             var meUser = (JQLBuilder.Types.JqlTypes.JqlHistoricalJqlUser)_me.Email;
             var chatQuery = JQLBuilder.JqlBuilder.Query
                 .Where(f => f.User.Assignee == meUser | f.User.Reporter == meUser | f.Text.Comment.Contains(_meDisplayName!));
-            
+
             var chatJqlString = chatQuery + " ORDER BY updated DESC";
-            
+
             // Combine both - Ensure baseJql is fully wrapped in isolated parentheses, and chatJql is fully wrapped too.
             // Example Base: status IN ("To Do", "In Progress")
             // Example Chat: assignee = a OR reporter = a OR comment ~ a
             // Result: (status IN ("To Do", "In Progress")) AND (assignee = a OR reporter = a OR comment ~ a) ORDER BY updated DESC
-            
+
             var baseJqlCleaned = baseJqlString.Replace(" ORDER BY updated DESC", "");
             var chatJqlCleaned = chatJqlString.Replace(" ORDER BY updated DESC", "");
-            
-            var combinedJql = string.IsNullOrWhiteSpace(baseJqlCleaned) 
-                ? chatJqlString 
+
+            var combinedJql = string.IsNullOrWhiteSpace(baseJqlCleaned)
+                ? chatJqlString
                 : $"({baseJqlCleaned}) AND ({chatJqlCleaned}) ORDER BY updated DESC";
 
             var fetchedIssues = await ReadClient.GetIssuesAsync(combinedJql);
-            
+
             // Local fallback logic to ensure exact matches in Comments Body or Author DisplayName 
             // Also filter out any issue that doesn't actually have any comment.
-            var newlyFetchedFilteredIssues = fetchedIssues.Where(i => 
+            var newlyFetchedFilteredIssues = fetchedIssues.Where(i =>
                 i.Comments.Any() &&
                 ((i.Assignee?.EmailAddress?.Equals(_me.Email, StringComparison.OrdinalIgnoreCase) == true) ||
-                 i.Comments.Any(c => c.Body.Contains(_meDisplayName, StringComparison.OrdinalIgnoreCase) || 
+                 i.Comments.Any(c => c.Body.Contains(_meDisplayName, StringComparison.OrdinalIgnoreCase) ||
                                      c.Author.EmailAddress?.Equals(_me.Email, StringComparison.OrdinalIgnoreCase) == true))
             ).ToList();
 
             _issues = newlyFetchedFilteredIssues;
-            
+
             // Initialize draft states for new issues
             foreach (var i in _issues)
             {

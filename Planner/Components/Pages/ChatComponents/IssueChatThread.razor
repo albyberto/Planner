@@ -1,5 +1,4 @@
 @using Planner.Model
-@using MudBlazor
 
 <MudStack Spacing="3" Class="pa-4" Style="background-color: var(--mud-palette-background-grey); border-radius: 8px;">
     @foreach (var comment in Issue.Comments.OrderBy(c => c.Created))

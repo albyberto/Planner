@@ -1,5 +1,4 @@
 using System.Text.Json.Serialization;
-using Planner.Extensions;
 
 namespace Planner.Domain;
 

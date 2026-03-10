@@ -5,6 +5,7 @@ using Planner.Clients;
 using Planner.Components;
 using Planner.Models;
 using Planner.Options;
+using Planner.Background;
 using Planner.Services;
 
 var builder = WebApplication.CreateBuilder(args);
@@ -49,6 +50,7 @@ builder.Services.AddOptions<JiraFilterOptions>()
 builder.Services.AddSingleton<JqlFilterBuilder>();
 builder.Services.AddSingleton<JiraNotificationService>();
 builder.Services.AddHostedService<JiraChatBackgroundService>();
+builder.Services.AddHostedService<JiraDashboardBackgroundService>();
 
 // HTTP Clients
 builder.Services.AddHttpClient<JiraReadClient>((provider, client) =>

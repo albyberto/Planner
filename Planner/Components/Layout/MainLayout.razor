@@ -1,6 +1,5 @@
 @inherits LayoutComponentBase
-@using Planner.Services
-@using Microsoft.JSInterop
+@using Planner.Background
 @implements IDisposable
 @inject JiraNotificationService NotificationService
 @inject IJSRuntime JS
@@ -13,7 +12,7 @@
 <MudLayout>
     <MudAppBar Elevation="1" Color="Color.Primary">
         <MudIconButton Icon="@Icons.Material.Filled.Menu" Color="Color.Inherit" Edge="Edge.Start"
-                       OnClick="@ToggleDrawer" />
+            OnClick="@ToggleDrawer" />
         <MudText Typo="Typo.h5" Class="ml-3">Planner</MudText>
         <MudSpacer />
     </MudAppBar>
@@ -55,10 +54,10 @@
         {
             try
             {
-                string title = count == 1 
-                    ? $"Nuovo commento da {author} ({issueKey})" 
-                    : $"Hai ricevuto {count} nuovi commenti in Jira Chat";
-                    
+                string title = count == 1
+    ? $"Nuovo commento da {author} ({issueKey})"
+    : $"Hai ricevuto {count} nuovi commenti in Jira Chat";
+
                 await JS.InvokeVoidAsync("window.blazorPushNotifications.showNotification", title, new
                 {
                     body = "Clicca per visualizzare le ultime conversazioni",
