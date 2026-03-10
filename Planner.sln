@@ -2,6 +2,10 @@
 Microsoft Visual Studio Solution File, Format Version 12.00
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Planner", "Planner\Planner.csproj", "{24C6CC76-3AF9-4FB2-9754-2E12CEE0C293}"
 EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Planner.Domain", "Planner.Domain\Planner.Domain.csproj", "{EAD37EEB-3C26-4F43-A206-A98E950A6BA4}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Planner.Infrastructure", "Planner.Infrastructure\Planner.Infrastructure.csproj", "{842AA0F6-77FE-4744-87EB-FBCEE0E97C9F}"
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Any CPU = Debug|Any CPU
@@ -12,5 +16,13 @@ Global
 		{24C6CC76-3AF9-4FB2-9754-2E12CEE0C293}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{24C6CC76-3AF9-4FB2-9754-2E12CEE0C293}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{24C6CC76-3AF9-4FB2-9754-2E12CEE0C293}.Release|Any CPU.Build.0 = Release|Any CPU
+		{EAD37EEB-3C26-4F43-A206-A98E950A6BA4}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{EAD37EEB-3C26-4F43-A206-A98E950A6BA4}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{EAD37EEB-3C26-4F43-A206-A98E950A6BA4}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{EAD37EEB-3C26-4F43-A206-A98E950A6BA4}.Release|Any CPU.Build.0 = Release|Any CPU
+		{842AA0F6-77FE-4744-87EB-FBCEE0E97C9F}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{842AA0F6-77FE-4744-87EB-FBCEE0E97C9F}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{842AA0F6-77FE-4744-87EB-FBCEE0E97C9F}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{842AA0F6-77FE-4744-87EB-FBCEE0E97C9F}.Release|Any CPU.Build.0 = Release|Any CPU
 	EndGlobalSection
 EndGlobal

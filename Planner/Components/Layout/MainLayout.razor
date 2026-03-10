@@ -1,9 +1,3 @@
-@inherits LayoutComponentBase
-@using Planner.Background
-@implements IDisposable
-@inject JiraNotificationService NotificationService
-@inject IJSRuntime JS
-
 <MudThemeProvider />
 <MudPopoverProvider />
 <MudDialogProvider />
@@ -31,50 +25,5 @@
 @code {
     private bool _drawerOpen = true;
 
-    protected override void OnInitialized()
-    {
-        NotificationService.OnNewComments += HandleNewComments;
-    }
-
-    protected override async Task OnAfterRenderAsync(bool firstRender)
-    {
-        if (firstRender)
-        {
-            try
-            {
-                await JS.InvokeAsync<bool>("window.blazorPushNotifications.requestPermission");
-            }
-            catch { /* Ignore errors on first render */ }
-        }
-    }
-
-    private void HandleNewComments(int count, string author, string issueKey)
-    {
-        InvokeAsync(async () =>
-        {
-            try
-            {
-                string title = count == 1
-    ? $"Nuovo commento da {author} ({issueKey})"
-    : $"Hai ricevuto {count} nuovi commenti in Jira Chat";
-
-                await JS.InvokeVoidAsync("window.blazorPushNotifications.showNotification", title, new
-                {
-                    body = "Clicca per visualizzare le ultime conversazioni",
-                    icon = "favicon.png"
-                });
-            }
-            catch { /* Ignore JS errors */ }
-        });
-    }
-
-    private void ToggleDrawer()
-    {
-        _drawerOpen = !_drawerOpen;
-    }
-
-    public void Dispose()
-    {
-        NotificationService.OnNewComments -= HandleNewComments;
-    }
+    private void ToggleDrawer() => _drawerOpen = !_drawerOpen;
 }

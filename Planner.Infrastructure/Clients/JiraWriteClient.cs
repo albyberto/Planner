@@ -1,6 +1,7 @@
-using Planner.Builders;
+using System.Net.Http.Json;
+using Microsoft.Extensions.Logging;
 
-namespace Planner.Clients;
+namespace Planner.Infrastructure.Clients;
 
 public class JiraWriteClient(HttpClient httpClient, ILogger<JiraWriteClient> logger)
 {

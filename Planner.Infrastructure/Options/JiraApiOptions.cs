@@ -1,10 +1,10 @@
 using System.ComponentModel.DataAnnotations;
 
-namespace Planner.Options;
+namespace Planner.Infrastructure.Options;
 
 public class JiraApiOptions
 {
-    public const string SectionName = "JiraApi";
+    public const string SectionName = nameof(JiraApiOptions);
 
     [Required(ErrorMessage = "The Base URL is required.")]
     [Url(ErrorMessage = "The Base URL must be a valid URL.")]

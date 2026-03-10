@@ -238,16 +238,16 @@ else
         {
             if (match.Index > lastIndex)
             {
-                tokens.Add(new MentionToken { Text = draft.Substring(lastIndex, match.Index - lastIndex), IsMention = false });
+                tokens.Add(new() { Text = draft.Substring(lastIndex, match.Index - lastIndex), IsMention = false });
             }
 
-            tokens.Add(new MentionToken { Text = match.Value, IsMention = true });
+            tokens.Add(new() { Text = match.Value, IsMention = true });
             lastIndex = match.Index + match.Length;
         }
 
         if (lastIndex < draft.Length)
         {
-            tokens.Add(new MentionToken { Text = draft.Substring(lastIndex), IsMention = false });
+            tokens.Add(new() { Text = draft.Substring(lastIndex), IsMention = false });
         }
 
         return tokens;

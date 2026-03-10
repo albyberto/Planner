@@ -1,86 +1,26 @@
-using System.Text;
-using Microsoft.Extensions.Options;
-using MudBlazor.Services;
-using Planner.Clients;
+using Planner;
 using Planner.Components;
-using Planner.Models;
-using Planner.Options;
-using Planner.Background;
 using Planner.Services;
 
 var builder = WebApplication.CreateBuilder(args);
 
-// Windows Service
-builder.Host.UseWindowsService();
+AsWindowsService(builder);
 
-// Forza la porta 2306
-var port = builder.Configuration.GetValue<string>("Port");
-port = string.IsNullOrEmpty(port) ? "2306" : port;
-
-builder.WebHost.UseUrls($"http://*:{port}");
-
-// Add services to the container.
 builder.Services
-    .AddRazorComponents()
-    .AddInteractiveServerComponents();
+    .AddMudBlazor()
+    .AddOptions(builder.Configuration)
+    .AddJiraClients(builder.Configuration)
+    .AddBackgroundServices()
+    .AddCache();
 
-// MudBlazor
-builder.Services.AddMudServices();
-
-// Cache
-builder.Services.AddDistributedMemoryCache();
-
-// Configura Jira - API
-builder.Services.AddOptions<JiraApiOptions>()
-    .BindConfiguration(JiraApiOptions.SectionName)
-    .ValidateDataAnnotations()
-    .ValidateOnStart();
-
-// Configura Jira - Query
-builder.Services.AddOptions<JiraQueryOptions>()
-    .BindConfiguration(JiraQueryOptions.SectionName)
-    .ValidateDataAnnotations()
-    .ValidateOnStart();
-
-// Configura Jira - Filtri
-builder.Services.AddOptions<JiraFilterOptions>()
-    .BindConfiguration(JiraFilterOptions.SectionName);
-
-// Services
 builder.Services.AddSingleton<JqlFilterBuilder>();
-builder.Services.AddSingleton<JiraNotificationService>();
-builder.Services.AddHostedService<JiraChatBackgroundService>();
-builder.Services.AddHostedService<JiraDashboardBackgroundService>();
-
-// HTTP Clients
-builder.Services.AddHttpClient<JiraReadClient>((provider, client) =>
-{
-    var settings = provider.GetRequiredService<IOptions<JiraApiOptions>>().Value;
-
-    var credentials = Convert.ToBase64String(Encoding.ASCII.GetBytes($"{settings.Email}:{settings.ApiToken}"));
-
-    client.BaseAddress = new(settings.BaseUrl.TrimEnd('/') + "/");
-    client.DefaultRequestHeaders.Authorization = new("Basic", credentials);
-    client.DefaultRequestHeaders.Accept.Add(new("application/json"));
-});
-
-builder.Services.AddHttpClient<JiraWriteClient>((provider, client) =>
-{
-    var settings = provider.GetRequiredService<IOptions<JiraApiOptions>>().Value;
-
-    var credentials = Convert.ToBase64String(Encoding.ASCII.GetBytes($"{settings.Email}:{settings.ApiToken}"));
-
-    client.BaseAddress = new(settings.BaseUrl.TrimEnd('/') + "/");
-    client.DefaultRequestHeaders.Authorization = new("Basic", credentials);
-    client.DefaultRequestHeaders.Accept.Add(new("application/json"));
-});
 
 var app = builder.Build();
 
 // Configure the HTTP request pipeline.
 if (!app.Environment.IsDevelopment())
 {
-    app.UseExceptionHandler("/Error", createScopeForErrors: true);
+    app.UseExceptionHandler("/Error", true);
     // The default HSTS value is 30 days. You may want to change this for production scenarios, see https://aka.ms/aspnetcore-hsts.
     app.UseHsts();
 }
@@ -93,4 +33,15 @@ app.MapStaticAssets();
 app.MapRazorComponents<App>()
     .AddInteractiveServerRenderMode();
 
-app.Run();
+await app.RunAsync();
+return;
+
+void AsWindowsService(WebApplicationBuilder webApplicationBuilder)
+{
+    webApplicationBuilder.Host.UseWindowsService();
+
+    var port = webApplicationBuilder.Configuration.GetValue<string>("Port");
+    port = string.IsNullOrEmpty(port) ? "2306" : port;
+
+    webApplicationBuilder.WebHost.UseUrls($"http://*:{port}");
+}

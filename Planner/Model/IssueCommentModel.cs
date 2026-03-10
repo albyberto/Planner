@@ -14,7 +14,7 @@ public record IssueCommentModel
     public IssueCommentModel(IssueComment dto)
     {
         Id = dto.Id;
-        Author = new UserModel(dto.Author);
+        Author = new(dto.Author);
         Body = ParseAdfBody(dto.Body?.RootElement);
         Created = dto.Created;
         Updated = dto.Updated;
