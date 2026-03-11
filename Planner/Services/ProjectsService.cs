@@ -34,6 +34,7 @@ public class ProjectsService(JiraFilterClient client)
     /// Metodo privato per centralizzare la logica di mapping da Domain a Model.
     /// I delegati sono incapsulati in Lazy&lt;Task&lt;T&gt;&gt; per garantire la memoization:
     /// ogni delegato viene eseguito al massimo una volta per istanza di ProjectModel.
+    /// lazyStatuses dipende da lazyTypes per evitare una seconda chiamata HTTP.
     /// </summary>
     private ProjectModel CreateProjectModel(Project project, CancellationToken cancellationToken)
     {
@@ -41,6 +42,16 @@ public class ProjectsService(JiraFilterClient client)
         {
             var types = await client.GetTypesAsync(project.Key, cancellationToken);
             return types.Select(type => new TypeModel(type)).ToImmutableList();
+        });
+
+        var lazyStatuses = new Lazy<Task<ImmutableList<StatusModel>>>(async () =>
+        {
+            var types = await lazyTypes.Value;
+            return types
+                .SelectMany(t => t.Statuses)
+                .DistinctBy(s => s.Name)
+                .OrderBy(s => s.Name)
+                .ToImmutableList();
         });
 
         var lazyAssignees = new Lazy<Task<ImmutableList<UserModel>>>(async () =>
@@ -67,7 +78,8 @@ public class ProjectsService(JiraFilterClient client)
             () => lazyTypes.Value,
             () => lazyAssignees.Value,
             () => lazyComponents.Value,
-            () => lazyLabels.Value
+            () => lazyLabels.Value,
+            () => lazyStatuses.Value
         );
     }
 }

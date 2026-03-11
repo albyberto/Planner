@@ -26,7 +26,7 @@
                         SelectedValuesChanged="OnStatusesChanged" Variant="Variant.Outlined"
                         AnchorOrigin="Origin.BottomCenter" Clearable="true" Dense="true"
                         MultiSelectionTextFunc="@(selected => GetSelectedStatusesText(selected))">
-                        @foreach (var status in _statuses)
+                        @foreach (var status in _availableStatuses)
                         {
                             <MudSelectItem T="string" Value="@status.Name">@status.Name</MudSelectItem>
                         }
@@ -108,7 +108,8 @@
 
     private IReadOnlyList<ProjectModel> _projects = [];
 
-    private ImmutableList<StatusModel> _statuses = [];
+    private ImmutableList<StatusModel> _allProjectStatuses = [];
+    private ImmutableList<StatusModel> _availableStatuses = [];
     private ImmutableList<UserModel> _assignees = [];
     private ImmutableList<ComponentModel> _components = [];
     private ImmutableList<LabelModel> _labels = [];
@@ -178,11 +179,38 @@
         var project = _projects.FirstOrDefault(p => p.Key == projectKey);
         if (project is null) return;
 
-        _statuses = (await project.GetStatusesAsync()).OrderBy(x => x.Name).ToImmutableList();
+        _issueTypes = (await project.GetIssueTypesAsync()).OrderBy(x => x.Name).ToImmutableList();
+        _allProjectStatuses = (await project.GetStatusesAsync()).OrderBy(x => x.Name).ToImmutableList();
         _assignees = (await project.GetAssigneesAsync()).OrderBy(x => x.DisplayName).ToImmutableList();
         _components = (await project.GetComponentsAsync()).OrderBy(x => x.Name).ToImmutableList();
         _labels = (await project.GetLabelsAsync()).OrderBy(x => x.Name).ToImmutableList();
-        _issueTypes = (await project.GetIssueTypesAsync()).OrderBy(x => x.Name).ToImmutableList();
+
+        UpdateAvailableStatuses();
+    }
+
+    private void UpdateAvailableStatuses()
+    {
+        if (Filter.IssueTypes.Count == 0)
+        {
+            _availableStatuses = _allProjectStatuses;
+        }
+        else
+        {
+            _availableStatuses = _issueTypes
+                .Where(t => Filter.IssueTypes.Contains(t.Value))
+                .SelectMany(t => t.Statuses)
+                .DistinctBy(s => s.Name)
+                .OrderBy(s => s.Name)
+                .ToImmutableList();
+        }
+
+        // Rimuovi stati selezionati che non sono più disponibili
+        var validNames = _availableStatuses.Select(s => s.Name).ToHashSet();
+        var pruned = Filter.Statuses.Where(s => validNames.Contains(s)).ToHashSet();
+        if (pruned.Count != Filter.Statuses.Count)
+        {
+            Filter = Filter with { Statuses = pruned };
+        }
     }
 
     private async Task OnProjectChanged(string projectKey)
@@ -217,11 +245,12 @@
         values.ToHashSet()
         });
     private Task OnLabelsChanged(IEnumerable<string> values) => UpdateFilter(Filter with { Labels = values.ToHashSet() });
-    private Task OnIssueTypesChanged(IEnumerable<string> values) => UpdateFilter(Filter with
-        {
-            IssueTypes =
-        values.ToHashSet()
-        });
+    private async Task OnIssueTypesChanged(IEnumerable<string> values)
+    {
+        Filter = Filter with { IssueTypes = values.ToHashSet() };
+        UpdateAvailableStatuses();
+        await NotifyFilterChanged();
+    }
     private Task OnUnassignedChanged(bool value) => UpdateFilter(Filter with { IncludeUnassigned = value });
 
     private async Task UpdateFilter(Filter newFilter)
@@ -238,7 +267,7 @@
     private string GetSelectedStatusesText(IReadOnlyCollection<string?>? values)
     {
         if (values is null || values.Count == 0) return string.Empty;
-        var labels = _statuses.Where(x => values.Contains(x.Name)).Select(x => x.Name);
+        var labels = _availableStatuses.Where(x => values.Contains(x.Name)).Select(x => x.Name);
         return string.Join(", ", labels);
     }
 
