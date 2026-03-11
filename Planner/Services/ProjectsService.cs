@@ -33,37 +33,40 @@ public class ProjectsService(JiraFilterClient client)
     /// <summary>
     /// Metodo privato per centralizzare la logica di mapping da Domain a Model.
     /// </summary>
-    private ProjectModel CreateProjectModel(Project project, CancellationToken cancellationToken) =>
-        new(
+    private ProjectModel CreateProjectModel(Project project, CancellationToken cancellationToken)
+    {
+        var lazyTypes = new Lazy<Task<ImmutableList<TypeModel>>>(async () =>
+        {
+            var types = await client.GetTypesAsync(project.Key, cancellationToken);
+            return types.Select(type => new TypeModel(type)).ToImmutableList();
+        });
+
+        var lazyAssignees = new Lazy<Task<ImmutableList<UserModel>>>(async () =>
+        {
+            var assignees = await client.GetAssigneesAsync(project.Key, cancellationToken);
+            return assignees.Select(assignee => new UserModel(assignee)).ToImmutableList();
+        });
+
+        var lazyComponents = new Lazy<Task<ImmutableList<ComponentModel>>>(async () =>
+        {
+            var components = await client.GetComponentsAsync(project.Key, cancellationToken);
+            return components.Select(component => new ComponentModel(component)).ToImmutableList();
+        });
+
+        var lazyLabels = new Lazy<Task<ImmutableList<LabelModel>>>(async () =>
+        {
+            var labels = await client.GetLabelsAsync(cancellationToken);
+            return labels.Select(label => new LabelModel(label)).ToImmutableList();
+        });
+
+        return new(
             project.Key,
             new(project.AvatarUrls),
 
-            // Types Mapping
-            async () =>
-            {
-                var types = await client.GetTypesAsync(project.Key, cancellationToken);
-                return types.Select(type => new TypeModel(type)).ToImmutableList();
-            },
-
-            // Assignees Mapping
-            async () =>
-            {
-                var assignees = await client.GetAssigneesAsync(project.Key, cancellationToken);
-                return assignees.Select(assignee => new UserModel(assignee)).ToImmutableList();
-            },
-
-            // Components Mapping
-            async () =>
-            {
-                var components = await client.GetComponentsAsync(project.Key, cancellationToken);
-                return components.Select(component => new ComponentModel(component)).ToImmutableList();
-            },
-
-            // Labels Mapping
-            async () =>
-            {
-                var labels = await client.GetLabelsAsync(cancellationToken);
-                return labels.Select(label => new LabelModel(label)).ToImmutableList();
-            }
+            () => lazyTypes.Value,
+            () => lazyAssignees.Value,
+            () => lazyComponents.Value,
+            () => lazyLabels.Value
         );
+    }
 }
