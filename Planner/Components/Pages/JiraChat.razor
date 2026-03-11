@@ -1,417 +1,418 @@
-@page "/jira-chat"
-@implements IDisposable
-@using Planner.Clients
-@using Planner.Model
-@using Planner.Options
-@using Planner.Background
-@using Planner.Services
-@using Microsoft.Extensions.Options
-@using JQLBuilder
-@using Planner.Components.Pages.ChatComponents
-
-<PageTitle>Jira Chat</PageTitle>
-
-<MudText Typo="Typo.h4" GutterBottom="true">
-    <MudIcon Icon="@Icons.Material.Filled.Chat" Class="mr-2" />
-    Jira Chat
-</MudText>
-
-@if (string.IsNullOrWhiteSpace(_me.Email))
-{
-    <MudAlert Severity="Severity.Warning">
-        Configura la proprietà Email nell'oggetto "Me" in appsettings.json sotto "JiraFilters" per visualizzare le chat.
-    </MudAlert>
-}
-else
-{
-    @* Add filters to Jira Chat page *@
-    <Filters OnFilterChanged="OnFilterChanged" ShowAssigneeFilter="false" />
-
-    @if (_loading)
-    {
-        <MudProgressLinear Color="Color.Primary" Indeterminate="true" Class="my-4" />
-    }
-    else if (!_issues.Any())
-    {
-        <MudAlert Severity="Severity.Info">Nessuna conversazione trovata per @_meDisplayName con i filtri correnti.</MudAlert>
-    }
-    else
-    {
-        <MudStack Spacing="4">
-            @foreach (var issue in _issues.OrderByDescending(i => i.Comments.Any() ? i.Comments.Max(c => c.Created ??
-           DateTime.MinValue) : DateTime.MinValue))
-            {
-                <MudPaper @key="issue.Key" Class="pa-4" Elevation="2">
-                    <MudText Typo="Typo.h6">
-                        <IssueKey Issue="@issue" /> - @issue.Summary
-                    </MudText>
-
-                    <IssueChatThread Issue="@issue" MeEmail="@_me.Email" ProjectUsers="@_projectUsers" OnMentionMapped="@MapMention"
-                        OnEdit="@((c, body) => SaveEditAsync(issue, c, body))" OnDelete="@((c) => DeleteCommentAsync(issue, c))"
-                        OnReply="@((c) => ReplyToComment(issue.Key, c))" />
-
-                    <MudDivider Class="my-3" />
-
-                    <TeamChips
-                        Users="@_projectUsers.Where(u => _teamMemberEmails.Contains(u.EmailAddress, StringComparer.OrdinalIgnoreCase))"
-                        OnUserSelected="@((user) => AppendMentionToDraft(issue.Key, user))" />
-
-                    <ChatInput Draft="@(_draftComments.GetValueOrDefault(issue.Key) ?? string.Empty)"
-                        DraftChanged="@((val) => _draftComments[issue.Key] = val)" ProjectUsers="@_projectUsers"
-                        IsSending="@_sending.Contains(issue.Key)" OnSend="@(() => SendCommentAsync(issue))"
-                        OnMentionMapped="@(MapMention)" />
-                </MudPaper>
-            }
-        </MudStack>
-    }
-}
-
-@code {
-    [Inject] private JiraReadClient ReadClient { get; set; } = null!;
-    [Inject] private IOptions<JiraFilterOptions> FilterOptions { get; set; } = null!;
-    [Inject] private ISnackbar Snackbar { get; set; } = null!;
-    [Inject] private JqlFilterBuilder QueryBuilder { get; set; } = null!;
-    [Inject] private JiraNotificationService NotificationService { get; set; } = null!;
-
-    [Inject] private JiraWriteClient WriteClient { get; set; } = null!;
-
-    private MeOptions _me = new();
-    private string _meDisplayName = string.Empty;
-    private readonly HashSet<string> _teamMemberEmails = new(StringComparer.OrdinalIgnoreCase);
-
-    private bool _loading = true;
-    private List<IssueModel> _issues = [];
-    private Filter? _currentFilter;
-
-    // Reply & Mention State
-    private readonly Dictionary<string, string> _draftComments = new();
-    private readonly HashSet<string> _sending = [];
-
-    private List<UserModel> _projectUsers = [];
-    private readonly Dictionary<string, UserModel> _mappedMentions = new();
-
-    protected override async Task OnInitializedAsync()
-    {
-        _me = FilterOptions.Value.Me;
-        var teamMembers = FilterOptions.Value.TeamMembers;
-        foreach (var tm in teamMembers)
-        {
-            if (!string.IsNullOrWhiteSpace(tm.Email)) _teamMemberEmails.Add(tm.Email);
-        }
-
-        if (string.IsNullOrWhiteSpace(_me.Email))
-        {
-            _loading = false;
-        }
-
-        try
-        {
-            var users = new List<UserModel>();
-            foreach (var proj in ReadClient.GetProjects())
-            {
-                users.AddRange(await proj.GetAssigneesAsync());
-            }
-            _projectUsers = users
-            .Where(u => !string.IsNullOrWhiteSpace(u.DisplayName) && !string.IsNullOrWhiteSpace(u.AccountId))
-            .DistinctBy(u => u.AccountId)
-            .ToList();
-
-            var meUser = _projectUsers.FirstOrDefault(u => string.Equals(u.EmailAddress, _me.Email,
-            StringComparison.OrdinalIgnoreCase));
-            _meDisplayName = meUser?.DisplayName ?? _me.Email;
-        }
-        catch { /* Fallback */ }
-
-        NotificationService.OnChatIssuesUpdated += HandleBackgroundUpdate;
-    }
-
-    private void HandleBackgroundUpdate(List<IssueModel> latestIssues)
-    {
-        InvokeAsync(() => LoadIssuesAsync(true));
-    }
-
-    public void Dispose()
-    {
-        NotificationService.OnChatIssuesUpdated -= HandleBackgroundUpdate;
-    }
-
-    [Inject] private IDialogService DialogService { get; set; } = null!;
-
-    private void AppendMentionToDraft(string issueKey, UserModel user)
-    {
-        var currentDraft = _draftComments.GetValueOrDefault(issueKey) ?? string.Empty;
-        var alias = $"@{user.DisplayName.Replace(" ", "")} ";
-        _mappedMentions[alias.TrimEnd()] = user;
-
-        _draftComments[issueKey] = currentDraft + alias;
-    }
-
-    private void ReplyToComment(string issueKey, IssueCommentModel comment)
-    {
-        var currentDraft = _draftComments.GetValueOrDefault(issueKey) ?? string.Empty;
-        var alias = $"@{comment.Author.DisplayName.Replace(" ", "")} ";
-
-        // Assicurati che se rispondi a qualcuno, venga parsato come Menzionabile
-        var user = _projectUsers.FirstOrDefault(u => u.AccountId == comment.Author.AccountId);
-        if (user != null)
-        {
-            _mappedMentions[alias.TrimEnd()] = user;
-        }
-
-        _draftComments[issueKey] = currentDraft + alias;
-    }
-
-    private void MapMention(UserModel user)
-    {
-        var alias = $"@{user.DisplayName.Replace(" ", "")} ";
-        _mappedMentions[alias.TrimEnd()] = user;
-    }
-
-    // --- Edit Flow ---
-    private async Task SaveEditAsync(IssueModel issue, IssueCommentModel comment, string newBody)
-    {
-        try
-        {
-            var adfBody = BuildAdfFromText(newBody);
-            await WriteClient.UpdateCommentAsync(issue.Key, comment.Id, adfBody);
-
-            var commentToUpdate = issue.Comments.FirstOrDefault(c => c.Id == comment.Id);
-            if (commentToUpdate != null)
-            {
-                commentToUpdate.Body = newBody;
-                commentToUpdate.Updated = DateTime.Now;
-            }
-
-            Snackbar.Add("Commento aggiornato", Severity.Success);
-        }
-        catch (Exception)
-        {
-            Snackbar.Add("Errore nell'aggiornamento", Severity.Error);
-        }
-        finally
-        {
-            StateHasChanged();
-        }
-    }
-
-    // --- Delete Flow ---
-    private async Task DeleteCommentAsync(IssueModel issue, IssueCommentModel comment)
-    {
-        bool? result = await DialogService.ShowMessageBoxAsync(
-        "Elimina commento",
-        "Sei sicuro di voler eliminare questo commento?",
-        yesText: "Elimina", cancelText: "Annulla");
-
-        if (result == true)
-        {
-            try
-            {
-                await WriteClient.DeleteCommentAsync(issue.Key, comment.Id);
-
-                var list = issue.Comments.ToList();
-                list.RemoveAll(c => c.Id == comment.Id);
-                issue.Comments = System.Collections.Immutable.ImmutableList.CreateRange(list);
-
-                Snackbar.Add("Commento eliminato", Severity.Success);
-                StateHasChanged();
-            }
-            catch (Exception)
-            {
-                Snackbar.Add("Errore nell'eliminazione", Severity.Error);
-            }
-        }
-    }
-
-
-    private class MentionToken { public string Text { get; set; } = ""; public bool IsMention { get; set; } }
-
-    private List<MentionToken> TokenizeMentions(string draft)
-    {
-        var tokens = new List<MentionToken>();
-        string pattern = @"(@\w+)";
-        var matches = System.Text.RegularExpressions.Regex.Matches(draft, pattern);
-
-        int lastIndex = 0;
-        foreach (System.Text.RegularExpressions.Match match in matches)
-        {
-            if (match.Index > lastIndex)
-            {
-                tokens.Add(new() { Text = draft.Substring(lastIndex, match.Index - lastIndex), IsMention = false });
-            }
-
-            tokens.Add(new() { Text = match.Value, IsMention = true });
-            lastIndex = match.Index + match.Length;
-        }
-
-        if (lastIndex < draft.Length)
-        {
-            tokens.Add(new() { Text = draft.Substring(lastIndex), IsMention = false });
-        }
-
-        return tokens;
-    }
-
-    private object BuildAdfFromText(string text)
-    {
-        var contentList = new List<object>();
-        var tokens = TokenizeMentions(text);
-
-        foreach (var token in tokens)
-        {
-            if (token.IsMention)
-            {
-                if (_mappedMentions.TryGetValue(token.Text, out var user))
-                {
-                    contentList.Add(new
-                    {
-                        type = "mention",
-                        attrs = new { id = user.AccountId, text = token.Text }
-                    });
-                }
-                else
-                {
-                    // Fallback to searching the project users in case it was a loaded mention from the API
-                    var fallbackUser = _projectUsers.FirstOrDefault(u => $"@{u.DisplayName.Replace(" ", "")}" == token.Text);
-                    if (fallbackUser != null)
-                    {
-                        contentList.Add(new
-                        {
-                            type = "mention",
-                            attrs = new { id = fallbackUser.AccountId, text = token.Text }
-                        });
-                    }
-                    else
-                    {
-                        contentList.Add(new { type = "text", text = token.Text });
-                    }
-                }
-            }
-            else
-            {
-                contentList.Add(new { type = "text", text = token.Text });
-            }
-        }
-
-        return new
-        {
-            version = 1,
-            type = "doc",
-            content = new[]
-        {
-new { type = "paragraph", content = contentList.ToArray() }
-}
-        };
-    }
-
-    private async Task SendCommentAsync(IssueModel issue)
-    {
-        var draft = _draftComments.GetValueOrDefault(issue.Key);
-        if (string.IsNullOrWhiteSpace(draft)) return;
-
-        try
-        {
-            _sending.Add(issue.Key);
-            StateHasChanged();
-
-            var adfBody = BuildAdfFromText(draft);
-            var newComment = await WriteClient.AddCommentAsync(issue.Key, adfBody);
-
-            if (newComment != null)
-            {
-                var list = issue.Comments.ToList();
-                list.Add(newComment);
-                issue.Comments = System.Collections.Immutable.ImmutableList.CreateRange(list);
-            }
-
-            Snackbar.Add("Commento inviato regolarmente", Severity.Success);
-            _draftComments[issue.Key] = string.Empty;
-        }
-        catch (Exception)
-        {
-            Snackbar.Add("Errore durante l'invio del commento", Severity.Error);
-        }
-        finally
-        {
-            _sending.Remove(issue.Key);
-            StateHasChanged();
-        }
-    }
-
-    private async Task OnFilterChanged(Filter filter)
-    {
-        if (string.IsNullOrWhiteSpace(_me.Email)) return;
-
-        _currentFilter = filter;
-        await LoadIssuesAsync();
-    }
-
-    private async Task LoadIssuesAsync(bool isSilent = false)
-    {
-        if (_currentFilter == null) return;
-
-        try
-        {
-            if (!isSilent)
-            {
-                _loading = true;
-                StateHasChanged();
-            }
-
-            // 1. Build the base query using the selected filters via JqlFilterBuilder
-            var baseJqlString = QueryBuilder.BuildDashboardQuery(_currentFilter);
-
-            // 2. Build the Jira Chat specific query via JQLBuilder
-            var meUser = (JQLBuilder.Types.JqlTypes.JqlHistoricalJqlUser)_me.Email;
-            var chatQuery = JQLBuilder.JqlBuilder.Query
-            .Where(f => f.User.Assignee == meUser | f.User.Reporter == meUser | f.Text.Comment.Contains(_meDisplayName!));
-
-            var chatJqlString = chatQuery + " ORDER BY updated DESC";
-
-            // Combine both - Ensure baseJql is fully wrapped in isolated parentheses, and chatJql is fully wrapped too.
-            // Example Base: status IN ("To Do", "In Progress")
-            // Example Chat: assignee = a OR reporter = a OR comment ~ a
-            // Result: (status IN ("To Do", "In Progress")) AND (assignee = a OR reporter = a OR comment ~ a) ORDER BY updated DESC
-
-            var baseJqlCleaned = baseJqlString.Replace(" ORDER BY updated DESC", "");
-            var chatJqlCleaned = chatJqlString.Replace(" ORDER BY updated DESC", "");
-
-            var combinedJql = string.IsNullOrWhiteSpace(baseJqlCleaned)
-            ? chatJqlString
-            : $"({baseJqlCleaned}) AND ({chatJqlCleaned}) ORDER BY updated DESC";
-
-            var fetchedIssues = await ReadClient.GetIssuesAsync(combinedJql);
-
-            // Local fallback logic to ensure exact matches in Comments Body or Author DisplayName
-            // Also filter out any issue that doesn't actually have any comment.
-            var newlyFetchedFilteredIssues = fetchedIssues.Where(i =>
-            i.Comments.Any() &&
-            ((i.Assignee?.EmailAddress?.Equals(_me.Email, StringComparison.OrdinalIgnoreCase) == true) ||
-            i.Comments.Any(c => c.Body.Contains(_meDisplayName, StringComparison.OrdinalIgnoreCase) ||
-            c.Author.EmailAddress?.Equals(_me.Email, StringComparison.OrdinalIgnoreCase) == true))
-            ).ToList();
-
-            _issues = newlyFetchedFilteredIssues;
-
-            // Initialize draft states for new issues
-            foreach (var i in _issues)
-            {
-                _draftComments.TryAdd(i.Key, string.Empty);
-            }
-        }
-        catch (Exception)
-        {
-            if (!isSilent)
-            {
-                Snackbar.Add("Errore durante il caricamento della Jira Chat", Severity.Error);
-            }
-        }
-        finally
-        {
-            if (!isSilent)
-            {
-                _loading = false;
-            }
-            StateHasChanged();
-        }
-    }
-}
+@* @page "/jira-chat" *@
+@* @implements IDisposable *@
+@* @using Planner.Clients *@
+@* @using Planner.Model *@
+@* @using Planner.Options *@
+@* @using Planner.Background *@
+@* @using Planner.Services *@
+@* @using Microsoft.Extensions.Options *@
+@* @using JQLBuilder *@
+@* @using Planner.Components.Pages.ChatComponents *@
+@* *@
+@* <PageTitle>Jira Chat</PageTitle> *@
+@* *@
+@* <MudText Typo="Typo.h4" GutterBottom="true"> *@
+@*     <MudIcon Icon="@Icons.Material.Filled.Chat" Class="mr-2" /> *@
+@*     Jira Chat *@
+@* </MudText> *@
+@* *@
+@* @if (string.IsNullOrWhiteSpace(_me.Email)) *@
+@* { *@
+@*     <MudAlert Severity="Severity.Warning"> *@
+@*         Configura la proprietà Email nell'oggetto "Me" in appsettings.json sotto "JiraFilters" per visualizzare le chat. *@
+@*     </MudAlert> *@
+@* } *@
+@* else *@
+@* { *@
+@*     $1$ Add filters to Jira Chat page #1# *@
+@*     <Filters OnFilterChanged="OnFilterChanged" ShowAssigneeFilter="false" /> *@
+@* *@
+@*     @if (_loading) *@
+@*     { *@
+@*         <MudProgressLinear Color="Color.Primary" Indeterminate="true" Class="my-4" /> *@
+@*     } *@
+@*     else if (!_issues.Any()) *@
+@*     { *@
+@*         <MudAlert Severity="Severity.Info">Nessuna conversazione trovata per @_meDisplayName con i filtri correnti.</MudAlert> *@
+@*     } *@
+@*     else *@
+@*     { *@
+@*         <MudStack Spacing="4"> *@
+@*             @foreach (var issue in _issues.OrderByDescending(i => i.Comments.Any() ? i.Comments.Max(c => c.Created ?? *@
+@*            DateTime.MinValue) : DateTime.MinValue)) *@
+@*             { *@
+@*                 <MudPaper @key="issue.Key" Class="pa-4" Elevation="2"> *@
+@*                     <MudText Typo="Typo.h6"> *@
+@*                         <IssueKey Issue="@issue" /> - @issue.Summary *@
+@*                     </MudText> *@
+@* *@
+@*                     <IssueChatThread Issue="@issue" MeEmail="@_me.Email" ProjectUsers="@_projectUsers" OnMentionMapped="@MapMention" *@
+@*                         OnEdit="@((c, body) => SaveEditAsync(issue, c, body))" OnDelete="@((c) => DeleteCommentAsync(issue, c))" *@
+@*                         OnReply="@((c) => ReplyToComment(issue.Key, c))" /> *@
+@* *@
+@*                     <MudDivider Class="my-3" /> *@
+@* *@
+@*                     <TeamChips *@
+@*                         Users="@_projectUsers.Where(u => _teamMemberEmails.Contains(u.EmailAddress, StringComparer.OrdinalIgnoreCase))" *@
+@*                         OnUserSelected="@((user) => AppendMentionToDraft(issue.Key, user))" /> *@
+@* *@
+@*                     <ChatInput Draft="@(_draftComments.GetValueOrDefault(issue.Key) ?? string.Empty)" *@
+@*                         DraftChanged="@((val) => _draftComments[issue.Key] = val)" ProjectUsers="@_projectUsers" *@
+@*                         IsSending="@_sending.Contains(issue.Key)" OnSend="@(() => SendCommentAsync(issue))" *@
+@*                         OnMentionMapped="@(MapMention)" /> *@
+@*                 </MudPaper> *@
+@*             } *@
+@*         </MudStack> *@
+@*     } *@
+@* } *@
+@* *@
+@* @code { *@
+@*     [Inject] private JiraReadClient ReadClient { get; set; } = null!; *@
+@*     [Inject] private IOptions<JiraFilterOptions> FilterOptions { get; set; } = null!; *@
+@*     [Inject] private ISnackbar Snackbar { get; set; } = null!; *@
+@*     [Inject] private JqlFilterBuilder QueryBuilder { get; set; } = null!; *@
+@*     [Inject] private JiraNotificationService NotificationService { get; set; } = null!; *@
+@*     [Inject] private ProjectsService ProjectsService { get; set; } = null!; *@
+@* *@
+@*     [Inject] private JiraWriteClient WriteClient { get; set; } = null!; *@
+@* *@
+@*     private MeOptions _me = new(); *@
+@*     private string _meDisplayName = string.Empty; *@
+@*     private readonly HashSet<string> _teamMemberEmails = new(StringComparer.OrdinalIgnoreCase); *@
+@* *@
+@*     private bool _loading = true; *@
+@*     private List<IssueModel> _issues = []; *@
+@*     private Filter? _currentFilter; *@
+@* *@
+@*     // Reply & Mention State *@
+@*     private readonly Dictionary<string, string> _draftComments = new(); *@
+@*     private readonly HashSet<string> _sending = []; *@
+@* *@
+@*     private List<UserModel> _projectUsers = []; *@
+@*     private readonly Dictionary<string, UserModel> _mappedMentions = new(); *@
+@* *@
+@*     protected override async Task OnInitializedAsync() *@
+@*     { *@
+@*         _me = FilterOptions.Value.Me; *@
+@*         var teamMembers = FilterOptions.Value.TeamMembers; *@
+@*         foreach (var tm in teamMembers) *@
+@*         { *@
+@*             if (!string.IsNullOrWhiteSpace(tm.Email)) _teamMemberEmails.Add(tm.Email); *@
+@*         } *@
+@* *@
+@*         if (string.IsNullOrWhiteSpace(_me.Email)) *@
+@*         { *@
+@*             _loading = false; *@
+@*         } *@
+@* *@
+@*         try *@
+@*         { *@
+@*             var users = new List<UserModel>(); *@
+@*             foreach (var proj in await ProjectsService.GetAsync()) *@
+@*             { *@
+@*                 users.AddRange(await proj.GetAssigneesAsync()); *@
+@*             } *@
+@*             _projectUsers = users *@
+@*             .Where(u => !string.IsNullOrWhiteSpace(u.DisplayName) && !string.IsNullOrWhiteSpace(u.AccountId)) *@
+@*             .DistinctBy(u => u.AccountId) *@
+@*             .ToList(); *@
+@* *@
+@*             var meUser = _projectUsers.FirstOrDefault(u => string.Equals(u.EmailAddress, _me.Email, *@
+@*             StringComparison.OrdinalIgnoreCase)); *@
+@*             _meDisplayName = meUser?.DisplayName ?? _me.Email; *@
+@*         } *@
+@*         catch { /* Fallback */ } *@
+@* *@
+@*         NotificationService.OnChatIssuesUpdated += HandleBackgroundUpdate; *@
+@*     } *@
+@* *@
+@*     private void HandleBackgroundUpdate(List<IssueModel> latestIssues) *@
+@*     { *@
+@*         InvokeAsync(() => LoadIssuesAsync(true)); *@
+@*     } *@
+@* *@
+@*     public void Dispose() *@
+@*     { *@
+@*         NotificationService.OnChatIssuesUpdated -= HandleBackgroundUpdate; *@
+@*     } *@
+@* *@
+@*     [Inject] private IDialogService DialogService { get; set; } = null!; *@
+@* *@
+@*     private void AppendMentionToDraft(string issueKey, UserModel user) *@
+@*     { *@
+@*         var currentDraft = _draftComments.GetValueOrDefault(issueKey) ?? string.Empty; *@
+@*         var alias = $"@{user.DisplayName.Replace(" ", "")} "; *@
+@*         _mappedMentions[alias.TrimEnd()] = user; *@
+@* *@
+@*         _draftComments[issueKey] = currentDraft + alias; *@
+@*     } *@
+@* *@
+@*     private void ReplyToComment(string issueKey, IssueCommentModel comment) *@
+@*     { *@
+@*         var currentDraft = _draftComments.GetValueOrDefault(issueKey) ?? string.Empty; *@
+@*         var alias = $"@{comment.Author.DisplayName.Replace(" ", "")} "; *@
+@* *@
+@*         // Assicurati che se rispondi a qualcuno, venga parsato come Menzionabile *@
+@*         var user = _projectUsers.FirstOrDefault(u => u.AccountId == comment.Author.AccountId); *@
+@*         if (user != null) *@
+@*         { *@
+@*             _mappedMentions[alias.TrimEnd()] = user; *@
+@*         } *@
+@* *@
+@*         _draftComments[issueKey] = currentDraft + alias; *@
+@*     } *@
+@* *@
+@*     private void MapMention(UserModel user) *@
+@*     { *@
+@*         var alias = $"@{user.DisplayName.Replace(" ", "")} "; *@
+@*         _mappedMentions[alias.TrimEnd()] = user; *@
+@*     } *@
+@* *@
+@*     // --- Edit Flow --- *@
+@*     private async Task SaveEditAsync(IssueModel issue, IssueCommentModel comment, string newBody) *@
+@*     { *@
+@*         try *@
+@*         { *@
+@*             var adfBody = BuildAdfFromText(newBody); *@
+@*             await WriteClient.UpdateCommentAsync(issue.Key, comment.Id, adfBody); *@
+@* *@
+@*             var commentToUpdate = issue.Comments.FirstOrDefault(c => c.Id == comment.Id); *@
+@*             if (commentToUpdate != null) *@
+@*             { *@
+@*                 commentToUpdate.Body = newBody; *@
+@*                 commentToUpdate.Updated = DateTime.Now; *@
+@*             } *@
+@* *@
+@*             Snackbar.Add("Commento aggiornato", Severity.Success); *@
+@*         } *@
+@*         catch (Exception) *@
+@*         { *@
+@*             Snackbar.Add("Errore nell'aggiornamento", Severity.Error); *@
+@*         } *@
+@*         finally *@
+@*         { *@
+@*             StateHasChanged(); *@
+@*         } *@
+@*     } *@
+@* *@
+@*     // --- Delete Flow --- *@
+@*     private async Task DeleteCommentAsync(IssueModel issue, IssueCommentModel comment) *@
+@*     { *@
+@*         bool? result = await DialogService.ShowMessageBoxAsync( *@
+@*         "Elimina commento", *@
+@*         "Sei sicuro di voler eliminare questo commento?", *@
+@*         yesText: "Elimina", cancelText: "Annulla"); *@
+@* *@
+@*         if (result == true) *@
+@*         { *@
+@*             try *@
+@*             { *@
+@*                 await WriteClient.DeleteCommentAsync(issue.Key, comment.Id); *@
+@* *@
+@*                 var list = issue.Comments.ToList(); *@
+@*                 list.RemoveAll(c => c.Id == comment.Id); *@
+@*                 issue.Comments = System.Collections.Immutable.ImmutableList.CreateRange(list); *@
+@* *@
+@*                 Snackbar.Add("Commento eliminato", Severity.Success); *@
+@*                 StateHasChanged(); *@
+@*             } *@
+@*             catch (Exception) *@
+@*             { *@
+@*                 Snackbar.Add("Errore nell'eliminazione", Severity.Error); *@
+@*             } *@
+@*         } *@
+@*     } *@
+@* *@
+@* *@
+@*     private class MentionToken { public string Text { get; set; } = ""; public bool IsMention { get; set; } } *@
+@* *@
+@*     private List<MentionToken> TokenizeMentions(string draft) *@
+@*     { *@
+@*         var tokens = new List<MentionToken>(); *@
+@*         string pattern = @"(@\w+)"; *@
+@*         var matches = System.Text.RegularExpressions.Regex.Matches(draft, pattern); *@
+@* *@
+@*         int lastIndex = 0; *@
+@*         foreach (System.Text.RegularExpressions.Match match in matches) *@
+@*         { *@
+@*             if (match.Index > lastIndex) *@
+@*             { *@
+@*                 tokens.Add(new() { Text = draft.Substring(lastIndex, match.Index - lastIndex), IsMention = false }); *@
+@*             } *@
+@* *@
+@*             tokens.Add(new() { Text = match.Value, IsMention = true }); *@
+@*             lastIndex = match.Index + match.Length; *@
+@*         } *@
+@* *@
+@*         if (lastIndex < draft.Length) *@
+@*         { *@
+@*             tokens.Add(new() { Text = draft.Substring(lastIndex), IsMention = false }); *@
+@*         } *@
+@* *@
+@*         return tokens; *@
+@*     } *@
+@* *@
+@*     private object BuildAdfFromText(string text) *@
+@*     { *@
+@*         var contentList = new List<object>(); *@
+@*         var tokens = TokenizeMentions(text); *@
+@* *@
+@*         foreach (var token in tokens) *@
+@*         { *@
+@*             if (token.IsMention) *@
+@*             { *@
+@*                 if (_mappedMentions.TryGetValue(token.Text, out var user)) *@
+@*                 { *@
+@*                     contentList.Add(new *@
+@*                     { *@
+@*                         type = "mention", *@
+@*                         attrs = new { id = user.AccountId, text = token.Text } *@
+@*                     }); *@
+@*                 } *@
+@*                 else *@
+@*                 { *@
+@*                     // Fallback to searching the project users in case it was a loaded mention from the API *@
+@*                     var fallbackUser = _projectUsers.FirstOrDefault(u => $"@{u.DisplayName.Replace(" ", "")}" == token.Text); *@
+@*                     if (fallbackUser != null) *@
+@*                     { *@
+@*                         contentList.Add(new *@
+@*                         { *@
+@*                             type = "mention", *@
+@*                             attrs = new { id = fallbackUser.AccountId, text = token.Text } *@
+@*                         }); *@
+@*                     } *@
+@*                     else *@
+@*                     { *@
+@*                         contentList.Add(new { type = "text", text = token.Text }); *@
+@*                     } *@
+@*                 } *@
+@*             } *@
+@*             else *@
+@*             { *@
+@*                 contentList.Add(new { type = "text", text = token.Text }); *@
+@*             } *@
+@*         } *@
+@* *@
+@*         return new *@
+@*         { *@
+@*             version = 1, *@
+@*             type = "doc", *@
+@*             content = new[] *@
+@*         { *@
+@* new { type = "paragraph", content = contentList.ToArray() } *@
+@* } *@
+@*         }; *@
+@*     } *@
+@* *@
+@*     private async Task SendCommentAsync(IssueModel issue) *@
+@*     { *@
+@*         var draft = _draftComments.GetValueOrDefault(issue.Key); *@
+@*         if (string.IsNullOrWhiteSpace(draft)) return; *@
+@* *@
+@*         try *@
+@*         { *@
+@*             _sending.Add(issue.Key); *@
+@*             StateHasChanged(); *@
+@* *@
+@*             var adfBody = BuildAdfFromText(draft); *@
+@*             var newComment = await WriteClient.AddCommentAsync(issue.Key, adfBody); *@
+@* *@
+@*             if (newComment != null) *@
+@*             { *@
+@*                 var list = issue.Comments.ToList(); *@
+@*                 list.Add(newComment); *@
+@*                 issue.Comments = System.Collections.Immutable.ImmutableList.CreateRange(list); *@
+@*             } *@
+@* *@
+@*             Snackbar.Add("Commento inviato regolarmente", Severity.Success); *@
+@*             _draftComments[issue.Key] = string.Empty; *@
+@*         } *@
+@*         catch (Exception) *@
+@*         { *@
+@*             Snackbar.Add("Errore durante l'invio del commento", Severity.Error); *@
+@*         } *@
+@*         finally *@
+@*         { *@
+@*             _sending.Remove(issue.Key); *@
+@*             StateHasChanged(); *@
+@*         } *@
+@*     } *@
+@* *@
+@*     private async Task OnFilterChanged(Filter filter) *@
+@*     { *@
+@*         if (string.IsNullOrWhiteSpace(_me.Email)) return; *@
+@* *@
+@*         _currentFilter = filter; *@
+@*         await LoadIssuesAsync(); *@
+@*     } *@
+@* *@
+@*     private async Task LoadIssuesAsync(bool isSilent = false) *@
+@*     { *@
+@*         if (_currentFilter == null) return; *@
+@* *@
+@*         try *@
+@*         { *@
+@*             if (!isSilent) *@
+@*             { *@
+@*                 _loading = true; *@
+@*                 StateHasChanged(); *@
+@*             } *@
+@* *@
+@*             // 1. Build the base query using the selected filters via JqlFilterBuilder *@
+@*             var baseJqlString = QueryBuilder.BuildDashboardQuery(_currentFilter); *@
+@* *@
+@*             // 2. Build the Jira Chat specific query via JQLBuilder *@
+@*             var meUser = (JQLBuilder.Types.JqlTypes.JqlHistoricalJqlUser)_me.Email; *@
+@*             var chatQuery = JQLBuilder.JqlBuilder.Query *@
+@*             .Where(f => f.User.Assignee == meUser | f.User.Reporter == meUser | f.Text.Comment.Contains(_meDisplayName!)); *@
+@* *@
+@*             var chatJqlString = chatQuery + " ORDER BY updated DESC"; *@
+@* *@
+@*             // Combine both - Ensure baseJql is fully wrapped in isolated parentheses, and chatJql is fully wrapped too. *@
+@*             // Example Base: status IN ("To Do", "In Progress") *@
+@*             // Example Chat: assignee = a OR reporter = a OR comment ~ a *@
+@*             // Result: (status IN ("To Do", "In Progress")) AND (assignee = a OR reporter = a OR comment ~ a) ORDER BY updated DESC *@
+@* *@
+@*             var baseJqlCleaned = baseJqlString.Replace(" ORDER BY updated DESC", ""); *@
+@*             var chatJqlCleaned = chatJqlString.Replace(" ORDER BY updated DESC", ""); *@
+@* *@
+@*             var combinedJql = string.IsNullOrWhiteSpace(baseJqlCleaned) *@
+@*             ? chatJqlString *@
+@*             : $"({baseJqlCleaned}) AND ({chatJqlCleaned}) ORDER BY updated DESC"; *@
+@* *@
+@*             var fetchedIssues = await ReadClient.GetIssuesAsync(combinedJql); *@
+@* *@
+@*             // Local fallback logic to ensure exact matches in Comments Body or Author DisplayName *@
+@*             // Also filter out any issue that doesn't actually have any comment. *@
+@*             var newlyFetchedFilteredIssues = fetchedIssues.Where(i => *@
+@*             i.Comments.Any() && *@
+@*             ((i.Assignee?.EmailAddress?.Equals(_me.Email, StringComparison.OrdinalIgnoreCase) == true) || *@
+@*             i.Comments.Any(c => c.Body.Contains(_meDisplayName, StringComparison.OrdinalIgnoreCase) || *@
+@*             c.Author.EmailAddress?.Equals(_me.Email, StringComparison.OrdinalIgnoreCase) == true)) *@
+@*             ).ToList(); *@
+@* *@
+@*             _issues = newlyFetchedFilteredIssues; *@
+@* *@
+@*             // Initialize draft states for new issues *@
+@*             foreach (var i in _issues) *@
+@*             { *@
+@*                 _draftComments.TryAdd(i.Key, string.Empty); *@
+@*             } *@
+@*         } *@
+@*         catch (Exception) *@
+@*         { *@
+@*             if (!isSilent) *@
+@*             { *@
+@*                 Snackbar.Add("Errore durante il caricamento della Jira Chat", Severity.Error); *@
+@*             } *@
+@*         } *@
+@*         finally *@
+@*         { *@
+@*             if (!isSilent) *@
+@*             { *@
+@*                 _loading = false; *@
+@*             } *@
+@*             StateHasChanged(); *@
+@*         } *@
+@*     } *@
+@* } *@

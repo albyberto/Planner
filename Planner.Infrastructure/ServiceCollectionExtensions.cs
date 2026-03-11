@@ -4,6 +4,7 @@ using Planner.Infrastructure.Handlers;
 using Planner.Infrastructure.Options;
 using Polly;
 using Polly.Extensions.Http;
+using ZiggyCreatures.Caching.Fusion;
 
 // ReSharper disable once CheckNamespace
 namespace Microsoft.Extensions.DependencyInjection;
@@ -19,6 +20,7 @@ public static class Bootstrapper
         {
             services.AddInfrastructureOptions();
             services.AddJiraClients();
+            services.AddCache();
 
             return services;
         }
@@ -51,10 +53,10 @@ public static class Bootstrapper
                 .AddPolicyHandler(GetCircuitBreakerPolicy());
 
             // Register Write Client
-            services.AddHttpClient<JiraWriteClient>(ConfigureJiraClient)
-                .AddHttpMessageHandler<JiraAuthenticationHandler>()
-                .AddPolicyHandler(GetRetryPolicy())
-                .AddPolicyHandler(GetCircuitBreakerPolicy());
+            // services.AddHttpClient<JiraWriteClient>(ConfigureJiraClient)
+            //     .AddHttpMessageHandler<JiraAuthenticationHandler>()
+            //     .AddPolicyHandler(GetRetryPolicy())
+            //     .AddPolicyHandler(GetCircuitBreakerPolicy());
             
             // Register Filter Client
             services.AddHttpClient<JiraFilterClient>(ConfigureJiraClient)
@@ -62,6 +64,16 @@ public static class Bootstrapper
                 .AddPolicyHandler(GetRetryPolicy())
                 .AddPolicyHandler(GetCircuitBreakerPolicy());
         }
+        
+        private void AddCache() =>
+            services.AddFusionCache()
+                .WithOptions(options =>
+                {
+                    options.DefaultEntryOptions = new()
+                    {
+                        Duration = TimeSpan.FromMinutes(30)
+                    };
+                });
     }
     
     /// <summary>

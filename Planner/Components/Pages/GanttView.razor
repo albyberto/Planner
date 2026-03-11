@@ -1,211 +1,211 @@
-@page "/gantt"
-@page "/gantt/{Email}"
-@using Planner.Clients
-@using Planner.Model
-@using Planner.Builders
-
-@inject JiraReadClient ReadClient
-@inject JiraWriteClient WriteClient
-@inject ISnackbar Snackbar
-
-<DashboardLayout Title="Gantt View" Email="@Email">
-    @if (Loading)
-    {
-        <MudProgressCircular Color="Color.Primary" Indeterminate="true" />
-    }
-    else
-    {
-        <MudPaper Elevation="2" Class="gantt-container d-flex flex-column" Style="height: 80vh; overflow: hidden;">
-            @* HEADER (Days) *@
-            <div class="gantt-header d-flex" style="overflow-x: hidden; padding-left: 300px;">
-                @foreach (var day in TimelineDays)
-                {
-                    var isToday = day == DateOnly.FromDateTime(DateTime.Today);
-                    var isWeekend = day.DayOfWeek == DayOfWeek.Saturday || day.DayOfWeek == DayOfWeek.Sunday;
-
-                    <div class="gantt-day-header @(isToday ? "gantt-today" : "") @(isWeekend ? "gantt-weekend" : "")">
-                        <MudText Typo="Typo.caption" Align="Align.Center">@day.ToString("ddd")</MudText>
-                        <MudText Typo="Typo.body2" Align="Align.Center"><b>@day.Day</b></MudText>
-                        <MudText Typo="Typo.caption" Align="Align.Center">@day.ToString("MMM")</MudText>
-                    </div>
-                }
-            </div>
-
-            @* BODY (Issues list + Timeline rows) *@
-            <div class="gantt-body d-flex flex-grow-1" style="overflow-y: auto; overflow-x: auto;">
-                <div class="gantt-sidebar" style="min-width: 300px; max-width: 300px; position: sticky; left: 0; background: var(--mud-palette-surface); z-index: 5;">
-                    @foreach (var issue in Issues)
-                    {
-                        <div class="gantt-row-label pa-2 border-b" style="height: 60px;">
-                            <MudText Typo="Typo.body2" Class="mud-text-secondary">@issue.Key</MudText>
-                            <MudText Typo="Typo.body2" Class="text-truncate" title="@issue.Summary"><b>@issue.Summary</b></MudText>
-                        </div>
-                    }
-                </div>
-
-                <div class="gantt-timeline" style="position: relative;">
-                    @* Background Grid Lines *@
-                    <div class="gantt-grid" style="position: absolute; top: 0; left: 0; right: 0; bottom: 0; display: flex; z-index: 1;">
-                        @foreach (var day in TimelineDays)
-                        {
-                            var isToday = day == DateOnly.FromDateTime(DateTime.Today);
-                            var isWeekend = day.DayOfWeek == DayOfWeek.Saturday || day.DayOfWeek == DayOfWeek.Sunday;
-                            <div class="gantt-grid-col border-r @(isToday ? "gantt-today-bg" : "") @(isWeekend ? "gantt-weekend-bg" : "")"></div>
-                        }
-                    </div>
-
-                    @* Issue Bars *@
-                    <div class="gantt-bars" style="position: relative; z-index: 2;">
-                        @foreach (var issue in Issues)
-                        {
-                            <div class="gantt-row border-b" style="height: 60px; position: relative;">
-                                @if (issue.StartDate.HasValue && issue.EndDate.HasValue)
-                                {
-                                    var startOffset = (issue.StartDate.Value.DayNumber - MinDate.DayNumber);
-                                    var duration = (issue.EndDate.Value.DayNumber - issue.StartDate.Value.DayNumber);
-                                    if (duration < 1) duration = 1;
-
-                                    <div class="gantt-bar mud-theme-primary mud-elevation-2 rounded d-flex align-center px-2 cursor-pointer"
-                                         draggable="true"
-                                         @ondragstart="@((e) => HandleDragStart(issue))"
-                                         style="left: @(startOffset * DayWidth)px; width: @(duration * DayWidth)px; height: 36px; top: 12px; position: absolute;">
-                                        <MudText Typo="Typo.caption" Class="text-truncate text-white">@issue.Key</MudText>
-                                    </div>
-                                }
-                            </div>
-                        }
-                    </div>
-                </div>
-            </div>
-            
-            @* Drag Overlay Dropzones to detect horizontal drop position over dates *@
-            <div class="gantt-dropzones" style="position: absolute; top: 0; bottom: 0; left: 300px; display: flex; z-index: 3; pointer-events: none;">
-                @foreach (var day in TimelineDays)
-                {
-                    <div class="gantt-dropzone" 
-                         style="pointer-events: auto; width: @(DayWidth)px; height: 100%;"
-                         ondragover="event.preventDefault();"
-                         @ondrop="@((e) => HandleDrop(day))">
-                    </div>
-                }
-            </div>
-        </MudPaper>
-    }
-</DashboardLayout>
-
-<style>
-    .gantt-day-header {
-        width: 40px;
-        min-width: 40px;
-        display: flex;
-        flex-direction: column;
-        border-right: 1px solid var(--mud-palette-divider);
-        padding: 4px 0;
-    }
-    .gantt-grid-col {
-        width: 40px;
-        min-width: 40px;
-    }
-    .gantt-today, .gantt-today-bg {
-        background-color: var(--mud-palette-action-default-hover);
-    }
-    .gantt-weekend, .gantt-weekend-bg {
-        background-color: var(--mud-palette-background-grey);
-    }
-</style>
-
-@code {
-    [Parameter] public string? Email { get; set; }
-    
-    private const int DayWidth = 40;
-    private bool Loading = true;
-    private List<IssueModel> Issues = new();
-    
-    private DateOnly MinDate;
-    private DateOnly MaxDate;
-    private List<DateOnly> TimelineDays = new();
-    
-    private IssueModel? _draggedIssue;
-
-    protected override async Task OnInitializedAsync()
-    {
-        try
-        {
-            var userEmail = string.IsNullOrWhiteSpace(Email) ? "diego.viezzi@fagima.com" : Email;
-            var jql = $"assignee = '{userEmail}' AND statusCategory != Done ORDER BY updated DESC";
-            
-            var fetchedIssues = await ReadClient.GetIssuesAsync(jql);
-            Issues = fetchedIssues.ToList();
-
-            GenerateTimeline();
-        }
-        finally
-        {
-            Loading = false;
-        }
-    }
-
-    private void GenerateTimeline()
-    {
-        var dates = Issues.Where(i => i.StartDate.HasValue && i.EndDate.HasValue)
-                          .SelectMany(i => new[] { i.StartDate!.Value, i.EndDate!.Value })
-                          .ToList();
-
-        if (dates.Any())
-        {
-            MinDate = dates.Min().AddDays(-7); // Pad left 1 week
-            MaxDate = dates.Max().AddDays(14); // Pad right 2 weeks
-        }
-        else
-        {
-            MinDate = DateOnly.FromDateTime(DateTime.Today.AddDays(-7));
-            MaxDate = DateOnly.FromDateTime(DateTime.Today.AddDays(30));
-        }
-
-        TimelineDays.Clear();
-        for (var d = MinDate; d <= MaxDate; d = d.AddDays(1))
-        {
-            TimelineDays.Add(d);
-        }
-    }
-
-    private void HandleDragStart(IssueModel issue)
-    {
-        _draggedIssue = issue;
-    }
-
-    private async Task HandleDrop(DateOnly droppedOnDate)
-    {
-        if (_draggedIssue == null || !_draggedIssue.StartDate.HasValue) return;
-
-        var oldStart = _draggedIssue.StartDate.Value;
-        
-        // Calculate days shifted
-        var shiftDays = droppedOnDate.DayNumber - oldStart.DayNumber;
-        if (shiftDays == 0) return;
-
-        // Apply shift to mock boundaries
-        _draggedIssue.StartDate = droppedOnDate;
-        if (_draggedIssue.EndDate.HasValue) 
-            _draggedIssue.EndDate = _draggedIssue.EndDate.Value.AddDays(shiftDays);
-        if (_draggedIssue.DueDate.HasValue) 
-            _draggedIssue.DueDate = _draggedIssue.DueDate.Value.AddDays(shiftDays);
-
-        // Update Jira: Currently we only officially have field 10117 mapped for StartDate.
-        try
-        {
-            var update = new IssueUpdateBuilder()
-                .SetCustomField("customfield_10117", droppedOnDate.ToString("yyyy-MM-dd"));
-                
-            await WriteClient.UpdateIssueAsync(_draggedIssue.Key, update);
-            Snackbar.Add($"Spostata {_draggedIssue.Key} al {droppedOnDate:dd/MM/yyyy}", Severity.Success);
-            
-            GenerateTimeline(); // Re-adjust bounds if needed
-        }
-        catch (Exception ex)
-        {
-            Snackbar.Add($"Errore nel salvataggio: {ex.Message}", Severity.Error);
-            // Rollback visual shift in future if needed
-        }
-    }
-}
+@* @page "/gantt" *@
+@* @page "/gantt/{Email}" *@
+@* @using Planner.Clients *@
+@* @using Planner.Model *@
+@* @using Planner.Builders *@
+@* *@
+@* @inject JiraReadClient ReadClient *@
+@* @inject JiraWriteClient WriteClient *@
+@* @inject ISnackbar Snackbar *@
+@* *@
+@* <DashboardLayout Title="Gantt View" Email="@Email"> *@
+@*     @if (Loading) *@
+@*     { *@
+@*         <MudProgressCircular Color="Color.Primary" Indeterminate="true" /> *@
+@*     } *@
+@*     else *@
+@*     { *@
+@*         <MudPaper Elevation="2" Class="gantt-container d-flex flex-column" Style="height: 80vh; overflow: hidden;"> *@
+@*             $1$ HEADER (Days) #1# *@
+@*             <div class="gantt-header d-flex" style="overflow-x: hidden; padding-left: 300px;"> *@
+@*                 @foreach (var day in TimelineDays) *@
+@*                 { *@
+@*                     var isToday = day == DateOnly.FromDateTime(DateTime.Today); *@
+@*                     var isWeekend = day.DayOfWeek == DayOfWeek.Saturday || day.DayOfWeek == DayOfWeek.Sunday; *@
+@* *@
+@*                     <div class="gantt-day-header @(isToday ? "gantt-today" : "") @(isWeekend ? "gantt-weekend" : "")"> *@
+@*                         <MudText Typo="Typo.caption" Align="Align.Center">@day.ToString("ddd")</MudText> *@
+@*                         <MudText Typo="Typo.body2" Align="Align.Center"><b>@day.Day</b></MudText> *@
+@*                         <MudText Typo="Typo.caption" Align="Align.Center">@day.ToString("MMM")</MudText> *@
+@*                     </div> *@
+@*                 } *@
+@*             </div> *@
+@* *@
+@*             $1$ BODY (Issues list + Timeline rows) #1# *@
+@*             <div class="gantt-body d-flex flex-grow-1" style="overflow-y: auto; overflow-x: auto;"> *@
+@*                 <div class="gantt-sidebar" style="min-width: 300px; max-width: 300px; position: sticky; left: 0; background: var(--mud-palette-surface); z-index: 5;"> *@
+@*                     @foreach (var issue in Issues) *@
+@*                     { *@
+@*                         <div class="gantt-row-label pa-2 border-b" style="height: 60px;"> *@
+@*                             <MudText Typo="Typo.body2" Class="mud-text-secondary">@issue.Key</MudText> *@
+@*                             <MudText Typo="Typo.body2" Class="text-truncate" title="@issue.Summary"><b>@issue.Summary</b></MudText> *@
+@*                         </div> *@
+@*                     } *@
+@*                 </div> *@
+@* *@
+@*                 <div class="gantt-timeline" style="position: relative;"> *@
+@*                     $1$ Background Grid Lines #1# *@
+@*                     <div class="gantt-grid" style="position: absolute; top: 0; left: 0; right: 0; bottom: 0; display: flex; z-index: 1;"> *@
+@*                         @foreach (var day in TimelineDays) *@
+@*                         { *@
+@*                             var isToday = day == DateOnly.FromDateTime(DateTime.Today); *@
+@*                             var isWeekend = day.DayOfWeek == DayOfWeek.Saturday || day.DayOfWeek == DayOfWeek.Sunday; *@
+@*                             <div class="gantt-grid-col border-r @(isToday ? "gantt-today-bg" : "") @(isWeekend ? "gantt-weekend-bg" : "")"></div> *@
+@*                         } *@
+@*                     </div> *@
+@* *@
+@*                     $1$ Issue Bars #1# *@
+@*                     <div class="gantt-bars" style="position: relative; z-index: 2;"> *@
+@*                         @foreach (var issue in Issues) *@
+@*                         { *@
+@*                             <div class="gantt-row border-b" style="height: 60px; position: relative;"> *@
+@*                                 @if (issue.StartDate.HasValue && issue.EndDate.HasValue) *@
+@*                                 { *@
+@*                                     var startOffset = (issue.StartDate.Value.DayNumber - MinDate.DayNumber); *@
+@*                                     var duration = (issue.EndDate.Value.DayNumber - issue.StartDate.Value.DayNumber); *@
+@*                                     if (duration < 1) duration = 1; *@
+@* *@
+@*                                     <div class="gantt-bar mud-theme-primary mud-elevation-2 rounded d-flex align-center px-2 cursor-pointer" *@
+@*                                          draggable="true" *@
+@*                                          @ondragstart="@((e) => HandleDragStart(issue))" *@
+@*                                          style="left: @(startOffset * DayWidth)px; width: @(duration * DayWidth)px; height: 36px; top: 12px; position: absolute;"> *@
+@*                                         <MudText Typo="Typo.caption" Class="text-truncate text-white">@issue.Key</MudText> *@
+@*                                     </div> *@
+@*                                 } *@
+@*                             </div> *@
+@*                         } *@
+@*                     </div> *@
+@*                 </div> *@
+@*             </div> *@
+@*              *@
+@*             $1$ Drag Overlay Dropzones to detect horizontal drop position over dates #1# *@
+@*             <div class="gantt-dropzones" style="position: absolute; top: 0; bottom: 0; left: 300px; display: flex; z-index: 3; pointer-events: none;"> *@
+@*                 @foreach (var day in TimelineDays) *@
+@*                 { *@
+@*                     <div class="gantt-dropzone"  *@
+@*                          style="pointer-events: auto; width: @(DayWidth)px; height: 100%;" *@
+@*                          ondragover="event.preventDefault();" *@
+@*                          @ondrop="@((e) => HandleDrop(day))"> *@
+@*                     </div> *@
+@*                 } *@
+@*             </div> *@
+@*         </MudPaper> *@
+@*     } *@
+@* </DashboardLayout> *@
+@* *@
+@* <style> *@
+@*     .gantt-day-header { *@
+@*         width: 40px; *@
+@*         min-width: 40px; *@
+@*         display: flex; *@
+@*         flex-direction: column; *@
+@*         border-right: 1px solid var(--mud-palette-divider); *@
+@*         padding: 4px 0; *@
+@*     } *@
+@*     .gantt-grid-col { *@
+@*         width: 40px; *@
+@*         min-width: 40px; *@
+@*     } *@
+@*     .gantt-today, .gantt-today-bg { *@
+@*         background-color: var(--mud-palette-action-default-hover); *@
+@*     } *@
+@*     .gantt-weekend, .gantt-weekend-bg { *@
+@*         background-color: var(--mud-palette-background-grey); *@
+@*     } *@
+@* </style> *@
+@* *@
+@* @code { *@
+@*     [Parameter] public string? Email { get; set; } *@
+@*      *@
+@*     private const int DayWidth = 40; *@
+@*     private bool Loading = true; *@
+@*     private List<IssueModel> Issues = new(); *@
+@*      *@
+@*     private DateOnly MinDate; *@
+@*     private DateOnly MaxDate; *@
+@*     private List<DateOnly> TimelineDays = new(); *@
+@*      *@
+@*     private IssueModel? _draggedIssue; *@
+@* *@
+@*     protected override async Task OnInitializedAsync() *@
+@*     { *@
+@*         try *@
+@*         { *@
+@*             var userEmail = string.IsNullOrWhiteSpace(Email) ? "diego.viezzi@fagima.com" : Email; *@
+@*             var jql = $"assignee = '{userEmail}' AND statusCategory != Done ORDER BY updated DESC"; *@
+@*              *@
+@*             var fetchedIssues = await ReadClient.GetIssuesAsync(jql); *@
+@*             Issues = fetchedIssues.ToList(); *@
+@* *@
+@*             GenerateTimeline(); *@
+@*         } *@
+@*         finally *@
+@*         { *@
+@*             Loading = false; *@
+@*         } *@
+@*     } *@
+@* *@
+@*     private void GenerateTimeline() *@
+@*     { *@
+@*         var dates = Issues.Where(i => i.StartDate.HasValue && i.EndDate.HasValue) *@
+@*                           .SelectMany(i => new[] { i.StartDate!.Value, i.EndDate!.Value }) *@
+@*                           .ToList(); *@
+@* *@
+@*         if (dates.Any()) *@
+@*         { *@
+@*             MinDate = dates.Min().AddDays(-7); // Pad left 1 week *@
+@*             MaxDate = dates.Max().AddDays(14); // Pad right 2 weeks *@
+@*         } *@
+@*         else *@
+@*         { *@
+@*             MinDate = DateOnly.FromDateTime(DateTime.Today.AddDays(-7)); *@
+@*             MaxDate = DateOnly.FromDateTime(DateTime.Today.AddDays(30)); *@
+@*         } *@
+@* *@
+@*         TimelineDays.Clear(); *@
+@*         for (var d = MinDate; d <= MaxDate; d = d.AddDays(1)) *@
+@*         { *@
+@*             TimelineDays.Add(d); *@
+@*         } *@
+@*     } *@
+@* *@
+@*     private void HandleDragStart(IssueModel issue) *@
+@*     { *@
+@*         _draggedIssue = issue; *@
+@*     } *@
+@* *@
+@*     private async Task HandleDrop(DateOnly droppedOnDate) *@
+@*     { *@
+@*         if (_draggedIssue == null || !_draggedIssue.StartDate.HasValue) return; *@
+@* *@
+@*         var oldStart = _draggedIssue.StartDate.Value; *@
+@*          *@
+@*         // Calculate days shifted *@
+@*         var shiftDays = droppedOnDate.DayNumber - oldStart.DayNumber; *@
+@*         if (shiftDays == 0) return; *@
+@* *@
+@*         // Apply shift to mock boundaries *@
+@*         _draggedIssue.StartDate = droppedOnDate; *@
+@*         if (_draggedIssue.EndDate.HasValue)  *@
+@*             _draggedIssue.EndDate = _draggedIssue.EndDate.Value.AddDays(shiftDays); *@
+@*         if (_draggedIssue.DueDate.HasValue)  *@
+@*             _draggedIssue.DueDate = _draggedIssue.DueDate.Value.AddDays(shiftDays); *@
+@* *@
+@*         // Update Jira: Currently we only officially have field 10117 mapped for StartDate. *@
+@*         try *@
+@*         { *@
+@*             var update = new IssueUpdateBuilder() *@
+@*                 .SetCustomField("customfield_10117", droppedOnDate.ToString("yyyy-MM-dd")); *@
+@*                  *@
+@*             await WriteClient.UpdateIssueAsync(_draggedIssue.Key, update); *@
+@*             Snackbar.Add($"Spostata {_draggedIssue.Key} al {droppedOnDate:dd/MM/yyyy}", Severity.Success); *@
+@*              *@
+@*             GenerateTimeline(); // Re-adjust bounds if needed *@
+@*         } *@
+@*         catch (Exception ex) *@
+@*         { *@
+@*             Snackbar.Add($"Errore nel salvataggio: {ex.Message}", Severity.Error); *@
+@*             // Rollback visual shift in future if needed *@
+@*         } *@
+@*     } *@
+@* } *@

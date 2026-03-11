@@ -7,10 +7,10 @@ var builder = WebApplication.CreateBuilder(args);
 AsWindowsService(builder);
 
 builder.Services
+    .AddMudBlazor()
     .AddPlannerOptions()
-    .AddJiraClients(builder.Configuration)
     .AddBackgroundServices()
-    .AddCache();
+    .AddInfrastructure();
 
 builder.Services.AddSingleton<JqlFilterBuilder>();
 

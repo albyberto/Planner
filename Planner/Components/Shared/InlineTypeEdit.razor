@@ -1,120 +1,120 @@
-@using Planner.Clients
-@using Planner.Model
-@inject JiraReadClient ReadClient
-@inject JiraWriteClient WriteClient
-@inject ISnackbar Snackbar
-
-@if (_editing)
-{
-    <MudSelect T="TypeModel" Value="@Value" ValueChanged="ChangeType" Open="_editing" OpenChanged="OnOpenChanged"
-        Dense="true" Variant="Variant.Outlined" Margin="Margin.Dense" AnchorOrigin="Origin.BottomLeft" Class="text-nowrap"
-        PopoverClass="text-nowrap" CloseIcon="@Icons.Material.Filled.Close" ToStringFunc="@(t => t?.Name ?? string.Empty)">
-        @if (_loading)
-        {
-            <MudSelectItem T="TypeModel" Value="@null" Disabled="true">
-                <MudProgressCircular Size="Size.Small" Indeterminate="true" Class="mr-2" /> Caricamento...
-            </MudSelectItem>
-        }
-        else
-        {
-            @foreach (var type in _types)
-            {
-                <MudSelectItem T="TypeModel" Value="@type" Class="text-nowrap">
-                    @if (!string.IsNullOrEmpty(type.IconUrl))
-                    {
-                        <MudImage Src="@type.IconUrl" Width="16" Height="16" Alt="@type.Name" Class="mr-2 d-inline-flex" />
-                    }
-                    @type.Name
-                </MudSelectItem>
-            }
-        }
-    </MudSelect>
-}
-else
-{
-    <div class="d-inline-flex cursor-pointer" @onclick="StartEdit" title="@Value.Name">
-        <TypeIcon Type="@Value" />
-    </div>
-}
-
-@code {
-    [Parameter, EditorRequired] public required string IssueKey { get; set; }
-    [Parameter, EditorRequired] public required TypeModel Value { get; set; }
-    [Parameter] public EventCallback<TypeModel> ValueChanged { get; set; }
-    [Parameter] public EventCallback OnChanged { get; set; }
-    [CascadingParameter(Name = "RefreshIssues")] public Func<Task>? RefreshIssues { get; set; }
-
-    private IReadOnlyList<TypeModel> _types = [];
-    private bool _loading;
-    private bool _editing;
-
-    private async Task StartEdit()
-    {
-        if (_types.Count == 0)
-        {
-            await LoadTypesAsync();
-        }
-        _editing = true;
-    }
-
-    private void OnOpenChanged(bool isOpen)
-    {
-        if (!isOpen)
-        {
-            _editing = false;
-        }
-    }
-
-    private async Task LoadTypesAsync()
-    {
-        _loading = true;
-        try
-        {
-            var projectKey = IssueKey.Split('-')[0];
-            var project = ReadClient.GetProjects().FirstOrDefault(p => p.Key.Equals(projectKey,
-            StringComparison.OrdinalIgnoreCase));
-            if (project is not null)
-            {
-                var models = await project.GetIssueTypesAsync();
-                _types = models;
-            }
-        }
-        catch
-        {
-            _types = [];
-        }
-        finally
-        {
-            _loading = false;
-        }
-    }
-
-    private async Task ChangeType(TypeModel? type)
-    {
-        if (type == null || type.Value == Value.Value)
-        {
-            _editing = false;
-            return;
-        }
-
-        try
-        {
-            var update = new Builders.IssueUpdateBuilder().SetIssueType(type.Value);
-            await WriteClient.UpdateIssueAsync(IssueKey, update);
-            Snackbar.Add($"{IssueKey} tipo → {type.Name}", Severity.Success);
-
-            Value = type;
-            await ValueChanged.InvokeAsync(Value);
-
-            if (OnChanged.HasDelegate) await OnChanged.InvokeAsync();
-        }
-        catch (Exception ex)
-        {
-            Snackbar.Add($"Errore: {ex.Message}", Severity.Error);
-        }
-        finally
-        {
-            _editing = false;
-        }
-    }
-}
+@* @using Planner.Clients *@
+@* @using Planner.Model *@
+@* @using Planner.Services *@
+@* @inject JiraWriteClient WriteClient *@
+@* @inject ProjectsService ProjectsService *@
+@* @inject ISnackbar Snackbar *@
+@* *@
+@* @if (_editing) *@
+@* { *@
+@*     <MudSelect T="TypeModel" Value="@Value" ValueChanged="ChangeType" Open="_editing" OpenChanged="OnOpenChanged" *@
+@*         Dense="true" Variant="Variant.Outlined" Margin="Margin.Dense" AnchorOrigin="Origin.BottomLeft" Class="text-nowrap" *@
+@*         PopoverClass="text-nowrap" CloseIcon="@Icons.Material.Filled.Close" ToStringFunc="@(t => t?.Name ?? string.Empty)"> *@
+@*         @if (_loading) *@
+@*         { *@
+@*             <MudSelectItem T="TypeModel" Value="@null" Disabled="true"> *@
+@*                 <MudProgressCircular Size="Size.Small" Indeterminate="true" Class="mr-2" /> Caricamento... *@
+@*             </MudSelectItem> *@
+@*         } *@
+@*         else *@
+@*         { *@
+@*             @foreach (var type in _types) *@
+@*             { *@
+@*                 <MudSelectItem T="TypeModel" Value="@type" Class="text-nowrap"> *@
+@*                     @if (!string.IsNullOrEmpty(type.IconUrl)) *@
+@*                     { *@
+@*                         <MudImage Src="@type.IconUrl" Width="16" Height="16" Alt="@type.Name" Class="mr-2 d-inline-flex" /> *@
+@*                     } *@
+@*                     @type.Name *@
+@*                 </MudSelectItem> *@
+@*             } *@
+@*         } *@
+@*     </MudSelect> *@
+@* } *@
+@* else *@
+@* { *@
+@*     <div class="d-inline-flex cursor-pointer" @onclick="StartEdit" title="@Value.Name"> *@
+@*         <TypeIcon Type="@Value" /> *@
+@*     </div> *@
+@* } *@
+@* *@
+@* @code { *@
+@*     [Parameter, EditorRequired] public required string IssueKey { get; set; } *@
+@*     [Parameter, EditorRequired] public required TypeModel Value { get; set; } *@
+@*     [Parameter] public EventCallback<TypeModel> ValueChanged { get; set; } *@
+@*     [Parameter] public EventCallback OnChanged { get; set; } *@
+@*     [CascadingParameter(Name = "RefreshIssues")] public Func<Task>? RefreshIssues { get; set; } *@
+@* *@
+@*     private IReadOnlyList<TypeModel> _types = []; *@
+@*     private bool _loading; *@
+@*     private bool _editing; *@
+@* *@
+@*     private async Task StartEdit() *@
+@*     { *@
+@*         if (_types.Count == 0) *@
+@*         { *@
+@*             await LoadTypesAsync(); *@
+@*         } *@
+@*         _editing = true; *@
+@*     } *@
+@* *@
+@*     private void OnOpenChanged(bool isOpen) *@
+@*     { *@
+@*         if (!isOpen) *@
+@*         { *@
+@*             _editing = false; *@
+@*         } *@
+@*     } *@
+@* *@
+@*     private async Task LoadTypesAsync() *@
+@*     { *@
+@*         _loading = true; *@
+@*         try *@
+@*         { *@
+@*             var projectKey = IssueKey.Split('-')[0]; *@
+@*             var project = await ProjectsService.GetAsync(projectKey); *@
+@*             if (project is not null) *@
+@*             { *@
+@*                 var models = await project.GetIssueTypesAsync(); *@
+@*                 _types = models; *@
+@*             } *@
+@*         } *@
+@*         catch *@
+@*         { *@
+@*             _types = []; *@
+@*         } *@
+@*         finally *@
+@*         { *@
+@*             _loading = false; *@
+@*         } *@
+@*     } *@
+@* *@
+@*     private async Task ChangeType(TypeModel? type) *@
+@*     { *@
+@*         if (type == null || type.Value == Value.Value) *@
+@*         { *@
+@*             _editing = false; *@
+@*             return; *@
+@*         } *@
+@* *@
+@*         try *@
+@*         { *@
+@*             var update = new Builders.IssueUpdateBuilder().SetIssueType(type.Value); *@
+@*             await WriteClient.UpdateIssueAsync(IssueKey, update); *@
+@*             Snackbar.Add($"{IssueKey} tipo → {type.Name}", Severity.Success); *@
+@* *@
+@*             Value = type; *@
+@*             await ValueChanged.InvokeAsync(Value); *@
+@* *@
+@*             if (OnChanged.HasDelegate) await OnChanged.InvokeAsync(); *@
+@*         } *@
+@*         catch (Exception ex) *@
+@*         { *@
+@*             Snackbar.Add($"Errore: {ex.Message}", Severity.Error); *@
+@*         } *@
+@*         finally *@
+@*         { *@
+@*             _editing = false; *@
+@*         } *@
+@*     } *@
+@* } *@

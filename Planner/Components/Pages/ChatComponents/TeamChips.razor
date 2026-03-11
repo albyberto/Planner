@@ -1,18 +1,18 @@
-@using Planner.Model
-
-<div style="overflow-x: auto; white-space: nowrap; padding-bottom: 8px;" class="mb-2 scrollbar-thin">
-    @foreach (var user in Users)
-    {
-        <MudChip T="UserModel" Size="Size.Small" Variant="Variant.Outlined" Color="Color.Primary" OnClick="@(() => OnUserSelected.InvokeAsync(user))">
-            <MudAvatar Size="Size.Small" Class="mr-1">
-                <MudImage Src="@user._48x48" />
-            </MudAvatar>
-            @user.DisplayName
-        </MudChip>
-    }
-</div>
-
-@code {
-    [Parameter, EditorRequired] public IEnumerable<UserModel> Users { get; set; } = [];
-    [Parameter, EditorRequired] public EventCallback<UserModel> OnUserSelected { get; set; }
-}
+@* @using Planner.Model *@
+@* *@
+@* <div style="overflow-x: auto; white-space: nowrap; padding-bottom: 8px;" class="mb-2 scrollbar-thin"> *@
+@*     @foreach (var user in Users) *@
+@*     { *@
+@*         <MudChip T="UserModel" Size="Size.Small" Variant="Variant.Outlined" Color="Color.Primary" OnClick="@(() => OnUserSelected.InvokeAsync(user))"> *@
+@*             <MudAvatar Size="Size.Small" Class="mr-1"> *@
+@*                 <MudImage Src="@user._48x48" /> *@
+@*             </MudAvatar> *@
+@*             @user.DisplayName *@
+@*         </MudChip> *@
+@*     } *@
+@* </div> *@
+@* *@
+@* @code { *@
+@*     [Parameter, EditorRequired] public IEnumerable<UserModel> Users { get; set; } = []; *@
+@*     [Parameter, EditorRequired] public EventCallback<UserModel> OnUserSelected { get; set; } *@
+@* } *@

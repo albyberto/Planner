@@ -1,135 +1,137 @@
-@using System.Collections.Immutable
-@using Planner.Background
-@using Planner.Clients
-@using Planner.Extensions
-@using Planner.Model
-@using Planner.Services
-@implements IDisposable
-
-<PageTitle>@_displayTitle</PageTitle>
-
-<MudText Typo="Typo.h4" GutterBottom="true">
-    <MudIcon Icon="@Icons.Material.Filled.Dashboard" Class="mr-2" />
-    @_displayTitle
-</MudText>
-
-<Filters OnFilterChanged="OnFilterChanged" ShowAssigneeFilter="@_showAssigneeFilter" ForcedAssignees="@_forcedAssignees"
-    ForcedIncludeUnassigned="@_forcedIncludeUnassigned" />
-
-@if (_loading)
-{
-    <MudProgressLinear Color="Color.Primary" Indeterminate="true" Class="my-4" />
-}
-else
-{
-    <CascadingValue Value="RefreshAsync" Name="RefreshIssues">
-        @ChildContent(_issues)
-    </CascadingValue>
-}
-
-@inject JqlFilterBuilder QueryBuilder
-@inject JiraReadClient ReadClient
-@inject ISnackbar Snackbar
-@inject JiraNotificationService NotificationService
-
-@code {
-    [Parameter, EditorRequired] public required string Title { get; set; } = string.Empty;
-    [Parameter] public string? Email { get; set; }
-    [Parameter, EditorRequired]
-    public required RenderFragment<ImmutableList<IssueModel>> ChildContent { get; set; } =
-    null!;
-
-    private ImmutableList<IssueModel> _issues = [];
-    private bool _loading;
-    private Filter? _lastFilter;
-
-    // Variabili di stato interne pilotate dalla rotta
-    private string _displayTitle = string.Empty;
-    private bool _showAssigneeFilter = true;
-    private HashSet<string>? _forcedAssignees;
-    private bool? _forcedIncludeUnassigned;
-
-    protected override void OnParametersSet()
-    {
-        // Logica composizione titolo e filtri forzati
-        if (string.IsNullOrEmpty(Email))
-        {
-            _displayTitle = $"{Title} — Team";
-            _showAssigneeFilter = true;
-            _forcedAssignees = null;
-            _forcedIncludeUnassigned = null;
-        }
-        else if (Email.Equals(Constants.Unassigned, StringComparison.OrdinalIgnoreCase))
-        {
-            _displayTitle = $"{Title} — Non Assegnate";
-            _showAssigneeFilter = false;
-            _forcedAssignees = []; // Nessuno assegnato
-            _forcedIncludeUnassigned = true;
-        }
-        else
-        {
-            var decoded = Uri.UnescapeDataString(Email);
-            var users = ReadClient.GetProjects().FindAssigneesByEmailsAsync(decoded).Result;
-            var user = users.FirstOrDefault(u => u.EmailAddress.Equals(decoded, StringComparison.OrdinalIgnoreCase));
-            var name = user?.DisplayName ?? decoded;
-
-            _displayTitle = $"{Title} — {name}";
-            _showAssigneeFilter = false;
-            _forcedAssignees = [decoded];
-            _forcedIncludeUnassigned = false;
-        }
-    }
-
-    protected override void OnInitialized()
-    {
-        NotificationService.OnDashboardIssuesUpdated += HandleBackgroundUpdate;
-    }
-
-    private void HandleBackgroundUpdate(List<IssueModel> _)
-    {
-        // Ricarica silenziosamente (senza progress bar) quando il background service notifica
-        if (_lastFilter is not null)
-            InvokeAsync(() => LoadIssuesAsync(_lastFilter, silent: true));
-    }
-
-    public void Dispose()
-    {
-        NotificationService.OnDashboardIssuesUpdated -= HandleBackgroundUpdate;
-    }
-
-    private async Task OnFilterChanged(Filter filter)
-    {
-        _lastFilter = filter;
-        await LoadIssuesAsync(filter);
-    }
-
-    private async Task RefreshAsync()
-    {
-        if (_lastFilter is not null)
-            await LoadIssuesAsync(_lastFilter);
-    }
-
-    private async Task LoadIssuesAsync(Filter filter, bool silent = false)
-    {
-        try
-        {
-            if (!silent)
-            {
-                _loading = true;
-                StateHasChanged();
-            }
-            var jql = QueryBuilder.BuildDashboardQuery(filter);
-            _issues = await ReadClient.GetIssuesAsync(jql);
-        }
-        catch (Exception)
-        {
-            if (!silent)
-                Snackbar.Add("Errore durante il recupero delle issue.", Severity.Error);
-        }
-        finally
-        {
-            _loading = false;
-            StateHasChanged();
-        }
-    }
-}
+@* @using System.Collections.Immutable *@
+@* @using Planner.Background *@
+@* @using Planner.Clients *@
+@* @using Planner.Extensions *@
+@* @using Planner.Model *@
+@* @using Planner.Services *@
+@* @implements IDisposable *@
+@* *@
+@* <PageTitle>@_displayTitle</PageTitle> *@
+@* *@
+@* <MudText Typo="Typo.h4" GutterBottom="true"> *@
+@*     <MudIcon Icon="@Icons.Material.Filled.Dashboard" Class="mr-2" /> *@
+@*     @_displayTitle *@
+@* </MudText> *@
+@* *@
+@* <Filters OnFilterChanged="OnFilterChanged" ShowAssigneeFilter="@_showAssigneeFilter" ForcedAssignees="@_forcedAssignees" *@
+@*     ForcedIncludeUnassigned="@_forcedIncludeUnassigned" /> *@
+@* *@
+@* @if (_loading) *@
+@* { *@
+@*     <MudProgressLinear Color="Color.Primary" Indeterminate="true" Class="my-4" /> *@
+@* } *@
+@* else *@
+@* { *@
+@*     <CascadingValue Value="RefreshAsync" Name="RefreshIssues"> *@
+@*         @ChildContent(_issues) *@
+@*     </CascadingValue> *@
+@* } *@
+@* *@
+@* @inject JqlFilterBuilder QueryBuilder *@
+@* @inject JiraReadClient ReadClient *@
+@* @inject ISnackbar Snackbar *@
+@* @inject JiraNotificationService NotificationService *@
+@* @inject ProjectsService ProjectsService *@
+@* *@
+@* @code { *@
+@*     [Parameter, EditorRequired] public required string Title { get; set; } = string.Empty; *@
+@*     [Parameter] public string? Email { get; set; } *@
+@*     [Parameter, EditorRequired] *@
+@*     public required RenderFragment<ImmutableList<IssueModel>> ChildContent { get; set; } = *@
+@*     null!; *@
+@* *@
+@*     private ImmutableList<IssueModel> _issues = []; *@
+@*     private bool _loading; *@
+@*     private Filter? _lastFilter; *@
+@* *@
+@*     // Variabili di stato interne pilotate dalla rotta *@
+@*     private string _displayTitle = string.Empty; *@
+@*     private bool _showAssigneeFilter = true; *@
+@*     private HashSet<string>? _forcedAssignees; *@
+@*     private bool? _forcedIncludeUnassigned; *@
+@* *@
+@*     protected override async Task OnParametersSetAsync() *@
+@*     { *@
+@*         // Logica composizione titolo e filtri forzati *@
+@*         if (string.IsNullOrEmpty(Email)) *@
+@*         { *@
+@*             _displayTitle = $"{Title} — Team"; *@
+@*             _showAssigneeFilter = true; *@
+@*             _forcedAssignees = null; *@
+@*             _forcedIncludeUnassigned = null; *@
+@*         } *@
+@*         else if (Email.Equals(Constants.Unassigned, StringComparison.OrdinalIgnoreCase)) *@
+@*         { *@
+@*             _displayTitle = $"{Title} — Non Assegnate"; *@
+@*             _showAssigneeFilter = false; *@
+@*             _forcedAssignees = []; // Nessuno assegnato *@
+@*             _forcedIncludeUnassigned = true; *@
+@*         } *@
+@*         else *@
+@*         { *@
+@*             var decoded = Uri.UnescapeDataString(Email); *@
+@*             var projects = await ProjectsService.GetAsync(); *@
+@*             var users = await projects.FindAssigneesByEmailsAsync(decoded); *@
+@*             var user = users.FirstOrDefault(u => u.EmailAddress.Equals(decoded, StringComparison.OrdinalIgnoreCase)); *@
+@*             var name = user?.DisplayName ?? decoded; *@
+@* *@
+@*             _displayTitle = $"{Title} — {name}"; *@
+@*             _showAssigneeFilter = false; *@
+@*             _forcedAssignees = [decoded]; *@
+@*             _forcedIncludeUnassigned = false; *@
+@*         } *@
+@*     } *@
+@* *@
+@*     protected override void OnInitialized() *@
+@*     { *@
+@*         NotificationService.OnDashboardIssuesUpdated += HandleBackgroundUpdate; *@
+@*     } *@
+@* *@
+@*     private void HandleBackgroundUpdate(List<IssueModel> _) *@
+@*     { *@
+@*         // Ricarica silenziosamente (senza progress bar) quando il background service notifica *@
+@*         if (_lastFilter is not null) *@
+@*             InvokeAsync(() => LoadIssuesAsync(_lastFilter, silent: true)); *@
+@*     } *@
+@* *@
+@*     public void Dispose() *@
+@*     { *@
+@*         NotificationService.OnDashboardIssuesUpdated -= HandleBackgroundUpdate; *@
+@*     } *@
+@* *@
+@*     private async Task OnFilterChanged(Filter filter) *@
+@*     { *@
+@*         _lastFilter = filter; *@
+@*         await LoadIssuesAsync(filter); *@
+@*     } *@
+@* *@
+@*     private async Task RefreshAsync() *@
+@*     { *@
+@*         if (_lastFilter is not null) *@
+@*             await LoadIssuesAsync(_lastFilter); *@
+@*     } *@
+@* *@
+@*     private async Task LoadIssuesAsync(Filter filter, bool silent = false) *@
+@*     { *@
+@*         try *@
+@*         { *@
+@*             if (!silent) *@
+@*             { *@
+@*                 _loading = true; *@
+@*                 StateHasChanged(); *@
+@*             } *@
+@*             var jql = QueryBuilder.BuildDashboardQuery(filter); *@
+@*             _issues = await ReadClient.GetIssuesAsync(jql); *@
+@*         } *@
+@*         catch (Exception) *@
+@*         { *@
+@*             if (!silent) *@
+@*                 Snackbar.Add("Errore durante il recupero delle issue.", Severity.Error); *@
+@*         } *@
+@*         finally *@
+@*         { *@
+@*             _loading = false; *@
+@*             StateHasChanged(); *@
+@*         } *@
+@*     } *@
+@* } *@

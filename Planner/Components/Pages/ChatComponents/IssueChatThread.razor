@@ -1,120 +1,120 @@
-@using Planner.Model
-
-<MudStack Spacing="3" Class="pa-4" Style="background-color: var(--mud-palette-background-grey); border-radius: 8px;">
-    @foreach (var comment in Issue.Comments.OrderBy(c => c.Created))
-    {
-        var isMe = comment.Author.EmailAddress?.Equals(MeEmail, StringComparison.OrdinalIgnoreCase) == true;
-        var isEditing = _editingCommentId == comment.Id;
-        
-        var alignClass = isMe ? "justify-end" : "justify-start";
-        var bubbleColor = isMe ? "var(--mud-palette-success-lighten)" : "var(--mud-palette-surface)";
-        var borderRadius = isMe ? "16px 16px 4px 16px" : "16px 16px 16px 4px";
-        var authorColor = isMe ? "var(--mud-palette-success-darken)" : "var(--mud-palette-primary)";
-        
-        <div class="d-flex w-100 @alignClass">
-            @if (isEditing)
-            {
-                <MudPaper Elevation="2" Class="pa-3 flex-grow-1 w-100" Style="border: 2px solid var(--mud-palette-primary);">
-                    <ChatInput Draft="@_editDraft"
-                               DraftChanged="@((val) => _editDraft = val)"
-                               ProjectUsers="ProjectUsers"
-                               IsSending="_savingEdit"
-                               IsEditMode="true"
-                               OnCancel="CancelEdit"
-                               OnSend="@(() => SaveEditAsync(comment))"
-                               OnMentionMapped="OnMentionMapped" />
-                </MudPaper>
-            }
-            else
-            {
-                <MudPaper Elevation="1" 
-                          Style="@($"background-color: {bubbleColor}; border-radius: {borderRadius}; max-width: 80%; padding: 8px 12px; position: relative;")"
-                          @onmouseenter="@(() => _hoveredCommentId = comment.Id)"
-                          @onmouseleave="@(() => _hoveredCommentId = null)">
-                    
-                    @if (!isMe)
-                    {
-                        <div style="@($"color: {authorColor}; font-weight: 600; font-size: 0.8rem; margin-bottom: 4px;")">
-                            @comment.Author.DisplayName
-                        </div>
-                    }
-                    
-                    <div style="font-size: 0.9rem; white-space: pre-wrap; word-break: break-word; line-height: 1.4; color: var(--mud-palette-text-primary);">
-                        @comment.Body
-                    </div>
-                    
-                    <div class="d-flex justify-space-between align-center mt-1">
-                        <div>
-                            @if (_hoveredCommentId == comment.Id)
-                            {
-                                <MudIconButton Icon="@Icons.Material.Filled.Reply" Size="Size.Small" Color="Color.Default" Class="pa-0 mr-2" OnClick="@(() => OnReply.InvokeAsync(comment))" />
-                                
-                                @if (isMe)
-                                {
-                                    <MudIconButton Icon="@Icons.Material.Filled.Edit" Size="Size.Small" Color="Color.Default" Class="pa-0 mr-2" OnClick="@(() => StartEdit(comment))" />
-                                    <MudIconButton Icon="@Icons.Material.Filled.Delete" Size="Size.Small" Color="Color.Error" Class="pa-0" OnClick="@(() => DeleteCommentAsync(comment))" />
-                                }
-                            }
-                        </div>
-                        <span style="font-size: 0.7rem; color: var(--mud-palette-text-secondary); opacity: 0.8;">
-                            @(comment.Created?.ToString("HH:mm") ?? "")
-                            @if (comment.Updated > comment.Created)
-                            {
-                                <span class="ml-1">(Modificato)</span>
-                            }
-                        </span>
-                    </div>
-                </MudPaper>
-            }
-        </div>
-    }
-</MudStack>
-
-@code {
-    [Parameter, EditorRequired] public IEnumerable<UserModel> ProjectUsers { get; set; } = [];
-    [Parameter, EditorRequired] public EventCallback<UserModel> OnMentionMapped { get; set; }
-
-    [Parameter, EditorRequired] public IssueModel Issue { get; set; } = default!;
-    [Parameter, EditorRequired] public string MeEmail { get; set; } = string.Empty;
-    
-    [Parameter, EditorRequired] public Func<IssueCommentModel, string, Task> OnEdit { get; set; } = default!;
-    [Parameter, EditorRequired] public EventCallback<IssueCommentModel> OnDelete { get; set; }
-    [Parameter, EditorRequired] public EventCallback<IssueCommentModel> OnReply { get; set; }
-
-    private string? _hoveredCommentId;
-    private string? _editingCommentId;
-    private string _editDraft = string.Empty;
-    private bool _savingEdit = false;
-
-    private void StartEdit(IssueCommentModel comment)
-    {
-        _editingCommentId = comment.Id;
-        _editDraft = comment.Body;
-    }
-
-    private void CancelEdit()
-    {
-        _editingCommentId = null;
-        _editDraft = string.Empty;
-    }
-
-    private async Task SaveEditAsync(IssueCommentModel comment)
-    {
-        if (string.IsNullOrWhiteSpace(_editDraft) || _editingCommentId == null) return;
-        try
-        {
-            _savingEdit = true;
-            await OnEdit.Invoke(comment, _editDraft);
-            CancelEdit();
-        }
-        finally
-        {
-            _savingEdit = false;
-        }
-    }
-
-    private async Task DeleteCommentAsync(IssueCommentModel comment)
-    {
-        await OnDelete.InvokeAsync(comment);
-    }
-}
+@* @using Planner.Model *@
+@* *@
+@* <MudStack Spacing="3" Class="pa-4" Style="background-color: var(--mud-palette-background-grey); border-radius: 8px;"> *@
+@*     @foreach (var comment in Issue.Comments.OrderBy(c => c.Created)) *@
+@*     { *@
+@*         var isMe = comment.Author.EmailAddress?.Equals(MeEmail, StringComparison.OrdinalIgnoreCase) == true; *@
+@*         var isEditing = _editingCommentId == comment.Id; *@
+@*          *@
+@*         var alignClass = isMe ? "justify-end" : "justify-start"; *@
+@*         var bubbleColor = isMe ? "var(--mud-palette-success-lighten)" : "var(--mud-palette-surface)"; *@
+@*         var borderRadius = isMe ? "16px 16px 4px 16px" : "16px 16px 16px 4px"; *@
+@*         var authorColor = isMe ? "var(--mud-palette-success-darken)" : "var(--mud-palette-primary)"; *@
+@*          *@
+@*         <div class="d-flex w-100 @alignClass"> *@
+@*             @if (isEditing) *@
+@*             { *@
+@*                 <MudPaper Elevation="2" Class="pa-3 flex-grow-1 w-100" Style="border: 2px solid var(--mud-palette-primary);"> *@
+@*                     <ChatInput Draft="@_editDraft" *@
+@*                                DraftChanged="@((val) => _editDraft = val)" *@
+@*                                ProjectUsers="ProjectUsers" *@
+@*                                IsSending="_savingEdit" *@
+@*                                IsEditMode="true" *@
+@*                                OnCancel="CancelEdit" *@
+@*                                OnSend="@(() => SaveEditAsync(comment))" *@
+@*                                OnMentionMapped="OnMentionMapped" /> *@
+@*                 </MudPaper> *@
+@*             } *@
+@*             else *@
+@*             { *@
+@*                 <MudPaper Elevation="1"  *@
+@*                           Style="@($"background-color: {bubbleColor}; border-radius: {borderRadius}; max-width: 80%; padding: 8px 12px; position: relative;")" *@
+@*                           @onmouseenter="@(() => _hoveredCommentId = comment.Id)" *@
+@*                           @onmouseleave="@(() => _hoveredCommentId = null)"> *@
+@*                      *@
+@*                     @if (!isMe) *@
+@*                     { *@
+@*                         <div style="@($"color: {authorColor}; font-weight: 600; font-size: 0.8rem; margin-bottom: 4px;")"> *@
+@*                             @comment.Author.DisplayName *@
+@*                         </div> *@
+@*                     } *@
+@*                      *@
+@*                     <div style="font-size: 0.9rem; white-space: pre-wrap; word-break: break-word; line-height: 1.4; color: var(--mud-palette-text-primary);"> *@
+@*                         @comment.Body *@
+@*                     </div> *@
+@*                      *@
+@*                     <div class="d-flex justify-space-between align-center mt-1"> *@
+@*                         <div> *@
+@*                             @if (_hoveredCommentId == comment.Id) *@
+@*                             { *@
+@*                                 <MudIconButton Icon="@Icons.Material.Filled.Reply" Size="Size.Small" Color="Color.Default" Class="pa-0 mr-2" OnClick="@(() => OnReply.InvokeAsync(comment))" /> *@
+@*                                  *@
+@*                                 @if (isMe) *@
+@*                                 { *@
+@*                                     <MudIconButton Icon="@Icons.Material.Filled.Edit" Size="Size.Small" Color="Color.Default" Class="pa-0 mr-2" OnClick="@(() => StartEdit(comment))" /> *@
+@*                                     <MudIconButton Icon="@Icons.Material.Filled.Delete" Size="Size.Small" Color="Color.Error" Class="pa-0" OnClick="@(() => DeleteCommentAsync(comment))" /> *@
+@*                                 } *@
+@*                             } *@
+@*                         </div> *@
+@*                         <span style="font-size: 0.7rem; color: var(--mud-palette-text-secondary); opacity: 0.8;"> *@
+@*                             @(comment.Created?.ToString("HH:mm") ?? "") *@
+@*                             @if (comment.Updated > comment.Created) *@
+@*                             { *@
+@*                                 <span class="ml-1">(Modificato)</span> *@
+@*                             } *@
+@*                         </span> *@
+@*                     </div> *@
+@*                 </MudPaper> *@
+@*             } *@
+@*         </div> *@
+@*     } *@
+@* </MudStack> *@
+@* *@
+@* @code { *@
+@*     [Parameter, EditorRequired] public IEnumerable<UserModel> ProjectUsers { get; set; } = []; *@
+@*     [Parameter, EditorRequired] public EventCallback<UserModel> OnMentionMapped { get; set; } *@
+@* *@
+@*     [Parameter, EditorRequired] public IssueModel Issue { get; set; } = default!; *@
+@*     [Parameter, EditorRequired] public string MeEmail { get; set; } = string.Empty; *@
+@*      *@
+@*     [Parameter, EditorRequired] public Func<IssueCommentModel, string, Task> OnEdit { get; set; } = default!; *@
+@*     [Parameter, EditorRequired] public EventCallback<IssueCommentModel> OnDelete { get; set; } *@
+@*     [Parameter, EditorRequired] public EventCallback<IssueCommentModel> OnReply { get; set; } *@
+@* *@
+@*     private string? _hoveredCommentId; *@
+@*     private string? _editingCommentId; *@
+@*     private string _editDraft = string.Empty; *@
+@*     private bool _savingEdit = false; *@
+@* *@
+@*     private void StartEdit(IssueCommentModel comment) *@
+@*     { *@
+@*         _editingCommentId = comment.Id; *@
+@*         _editDraft = comment.Body; *@
+@*     } *@
+@* *@
+@*     private void CancelEdit() *@
+@*     { *@
+@*         _editingCommentId = null; *@
+@*         _editDraft = string.Empty; *@
+@*     } *@
+@* *@
+@*     private async Task SaveEditAsync(IssueCommentModel comment) *@
+@*     { *@
+@*         if (string.IsNullOrWhiteSpace(_editDraft) || _editingCommentId == null) return; *@
+@*         try *@
+@*         { *@
+@*             _savingEdit = true; *@
+@*             await OnEdit.Invoke(comment, _editDraft); *@
+@*             CancelEdit(); *@
+@*         } *@
+@*         finally *@
+@*         { *@
+@*             _savingEdit = false; *@
+@*         } *@
+@*     } *@
+@* *@
+@*     private async Task DeleteCommentAsync(IssueCommentModel comment) *@
+@*     { *@
+@*         await OnDelete.InvokeAsync(comment); *@
+@*     } *@
+@* } *@

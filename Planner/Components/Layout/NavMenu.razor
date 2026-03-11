@@ -1,6 +1,4 @@
 @using Microsoft.Extensions.Options
-@using Planner.Clients
-@using Planner.Extensions
 @using Planner.Model
 @using Planner.Options
 @using Planner.Services
@@ -49,11 +47,6 @@
                 .ToArray();
             
             var users = await ProjectsService.GetAsync(options.DefaultProject);
-
-            _members = users
-                .Where(user => emails.Contains(user.EmailAddress))
-                .OrderBy(user => user.DisplayName)
-                .ToList();
         }
         catch
         {

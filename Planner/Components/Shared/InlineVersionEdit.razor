@@ -1,182 +1,182 @@
-@using Planner.Clients
-@using Planner.Model
-@inject JiraWriteClient WriteClient
-@inject ISnackbar Snackbar
-
-@if (Version.Value == null || Version.Value == "-1" || string.IsNullOrEmpty(Version.Value))
-{
-    @* If there is no FixVersion, we just display the fallback text safely without edit capabilities. *@
-    <MudText Typo="Typo.subtitle1" Class="d-inline ml-1 font-weight-bold">
-        @Version.Name
-    </MudText>
-}
-else
-{
-    <MudTooltip Text="Click per modificare nome, descrizione e date (pubblicazione globale su Jira)" Arrow="true">
-        <MudText Typo="Typo.subtitle1" Class="d-inline cursor-pointer ml-1 font-weight-bold" @onclick="ToggleOpen">
-            @Version.Name
-        </MudText>
-    </MudTooltip>
-
-    <MudPopover Open="@_isOpen" Fixed="true" Class="px-4 pt-4 pb-2" AnchorOrigin="Origin.BottomLeft" TransformOrigin="Origin.TopLeft" Elevation="8">
-        <div class="d-flex flex-column" style="min-width: 350px;">
-            <MudText Typo="Typo.h6" Class="mb-4">Modifica Versione</MudText>
-            
-            <MudTextField @bind-Value="_name" Label="Nome" Variant="Variant.Outlined" Margin="Margin.Dense" Class="mb-3" />
-            <MudTextField @bind-Value="_description" Label="Descrizione" Variant="Variant.Outlined" Margin="Margin.Dense" Lines="3" Class="mb-3" />
-            
-            <div class="d-flex gap-2 mb-3 align-center">
-                <MudDatePicker @bind-Date="_startDate" Label="Start Date" Variant="Variant.Outlined" Margin="Margin.Dense" Clearable="true" />
-                <MudDatePicker @bind-Date="_releaseDate" Label="Release Date" Variant="Variant.Outlined" Margin="Margin.Dense" Clearable="true" />
-            </div>
-            
-            <div class="d-flex justify-space-between align-center mt-2">
-                <MudTooltip Text="Sincronizza Date da Issue" Placement="Placement.Right">
-                    <MudIconButton Icon="@Icons.Material.Filled.Sync" Color="Color.Info" Size="Size.Small" OnClick="AutoSyncDates" />
-                </MudTooltip>
-                
-                <div class="d-flex gap-2">
-                    <MudButton OnClick="Cancel" Variant="Variant.Text" Size="Size.Small">Annulla</MudButton>
-                    <MudButton OnClick="SaveAsync" Variant="Variant.Filled" Color="Color.Primary" Size="Size.Small" Disabled="@_saving">
-                        @if (_saving)
-                        {
-                            <MudProgressCircular Class="ms-n1" Size="Size.Small" Indeterminate="true"/>
-                            <MudText Class="ms-2">Salvataggio</MudText>
-                        }
-                        else
-                        {
-                            <MudText>Salva</MudText>
-                        }
-                    </MudButton>
-                </div>
-            </div>
-        </div>
-    </MudPopover>
-}
-
-@code {
-    [Parameter, EditorRequired] public required FixVersionModel Version { get; set; }
-    [Parameter, EditorRequired] public IEnumerable<IssueModel> Issues { get; set; } = [];
-    [Parameter] public EventCallback<FixVersionModel> VersionChanged { get; set; }
-    [Parameter] public EventCallback OnChanged { get; set; }
-    [CascadingParameter(Name = "RefreshIssues")] public Func<Task>? RefreshIssues { get; set; }
-
-    private bool _isOpen;
-    private bool _saving;
-
-    // Temporary form states
-    private string _name = string.Empty;
-    private string? _description;
-    private DateTime? _startDate;
-    private DateTime? _releaseDate;
-
-    private void ToggleOpen()
-    {
-        if (string.IsNullOrEmpty(Version.Value)) return;
-        
-        if (!_isOpen)
-        {
-            // Initialize form on open
-            _name = Version.Name;
-            _description = Version.Description;
-            _startDate = Version.StartDate?.ToDateTime(TimeOnly.MinValue);
-            _releaseDate = Version.ReleaseDate?.ToDateTime(TimeOnly.MinValue);
-        }
-        _isOpen = !_isOpen;
-    }
-
-    private void Cancel()
-    {
-        _isOpen = false;
-    }
-
-    private void AutoSyncDates()
-    {
-        if (!Issues.Any())
-        {
-            Snackbar.Add("Nessuna issue presente per calcolare le date.", Severity.Warning);
-            return;
-        }
-
-        bool hasMissingDates = false;
-        DateOnly? minStart = null;
-        DateOnly? maxEnd = null;
-
-        foreach (var issue in Issues)
-        {
-            if (issue.StartDate.HasValue)
-            {
-                if (!minStart.HasValue || issue.StartDate.Value < minStart.Value)
-                    minStart = issue.StartDate.Value;
-            }
-            else
-            {
-                hasMissingDates = true;
-            }
-
-            if (issue.EndDate.HasValue)
-            {
-                if (!maxEnd.HasValue || issue.EndDate.Value > maxEnd.Value)
-                    maxEnd = issue.EndDate.Value;
-            }
-            else
-            {
-                hasMissingDates = true;
-            }
-        }
-
-        if (minStart.HasValue) _startDate = minStart.Value.ToDateTime(TimeOnly.MinValue);
-        if (maxEnd.HasValue) _releaseDate = maxEnd.Value.ToDateTime(TimeOnly.MinValue);
-
-        if (hasMissingDates)
-        {
-            Snackbar.Add("Attenzione: Una o più issue non possiedono una data di inizio o fine configurata.", Severity.Warning);
-        }
-        else
-        {
-            Snackbar.Add("Date calcolate con successo.", Severity.Info);
-        }
-    }
-
-    private async Task SaveAsync()
-    {
-        if (string.IsNullOrWhiteSpace(_name))
-        {
-            Snackbar.Add("Il nome della versione non può essere vuoto.", Severity.Error);
-            return;
-        }
-
-        _saving = true;
-        try
-        {
-            var newStart = _startDate.HasValue ? DateOnly.FromDateTime(_startDate.Value) : (DateOnly?)null;
-            var newRelease = _releaseDate.HasValue ? DateOnly.FromDateTime(_releaseDate.Value) : (DateOnly?)null;
-
-            await WriteClient.UpdateVersionAsync(Version.Value, _name, _description, newStart, newRelease);
-            
-            Snackbar.Add($"Release {_name} aggiornata con successo su Jira", Severity.Success);
-            
-            // Update local model
-            Version = Version with 
-            { 
-                Name = _name, 
-                Description = _description ?? string.Empty,
-                StartDate = newStart,
-                ReleaseDate = newRelease
-            };
-            
-            await VersionChanged.InvokeAsync(Version);
-            
-            if (OnChanged.HasDelegate) await OnChanged.InvokeAsync();
-            _isOpen = false;
-        }
-        catch (Exception ex)
-        {
-            Snackbar.Add($"Errore nell'aggiornamento della release: {ex.Message}", Severity.Error);
-        }
-        finally
-        {
-            _saving = false;
-        }
-    }
-}
+@* @using Planner.Clients *@
+@* @using Planner.Model *@
+@* @inject JiraWriteClient WriteClient *@
+@* @inject ISnackbar Snackbar *@
+@* *@
+@* @if (Version.Value == null || Version.Value == "-1" || string.IsNullOrEmpty(Version.Value)) *@
+@* { *@
+@*     $1$ If there is no FixVersion, we just display the fallback text safely without edit capabilities. #1# *@
+@*     <MudText Typo="Typo.subtitle1" Class="d-inline ml-1 font-weight-bold"> *@
+@*         @Version.Name *@
+@*     </MudText> *@
+@* } *@
+@* else *@
+@* { *@
+@*     <MudTooltip Text="Click per modificare nome, descrizione e date (pubblicazione globale su Jira)" Arrow="true"> *@
+@*         <MudText Typo="Typo.subtitle1" Class="d-inline cursor-pointer ml-1 font-weight-bold" @onclick="ToggleOpen"> *@
+@*             @Version.Name *@
+@*         </MudText> *@
+@*     </MudTooltip> *@
+@* *@
+@*     <MudPopover Open="@_isOpen" Fixed="true" Class="px-4 pt-4 pb-2" AnchorOrigin="Origin.BottomLeft" TransformOrigin="Origin.TopLeft" Elevation="8"> *@
+@*         <div class="d-flex flex-column" style="min-width: 350px;"> *@
+@*             <MudText Typo="Typo.h6" Class="mb-4">Modifica Versione</MudText> *@
+@*              *@
+@*             <MudTextField @bind-Value="_name" Label="Nome" Variant="Variant.Outlined" Margin="Margin.Dense" Class="mb-3" /> *@
+@*             <MudTextField @bind-Value="_description" Label="Descrizione" Variant="Variant.Outlined" Margin="Margin.Dense" Lines="3" Class="mb-3" /> *@
+@*              *@
+@*             <div class="d-flex gap-2 mb-3 align-center"> *@
+@*                 <MudDatePicker @bind-Date="_startDate" Label="Start Date" Variant="Variant.Outlined" Margin="Margin.Dense" Clearable="true" /> *@
+@*                 <MudDatePicker @bind-Date="_releaseDate" Label="Release Date" Variant="Variant.Outlined" Margin="Margin.Dense" Clearable="true" /> *@
+@*             </div> *@
+@*              *@
+@*             <div class="d-flex justify-space-between align-center mt-2"> *@
+@*                 <MudTooltip Text="Sincronizza Date da Issue" Placement="Placement.Right"> *@
+@*                     <MudIconButton Icon="@Icons.Material.Filled.Sync" Color="Color.Info" Size="Size.Small" OnClick="AutoSyncDates" /> *@
+@*                 </MudTooltip> *@
+@*                  *@
+@*                 <div class="d-flex gap-2"> *@
+@*                     <MudButton OnClick="Cancel" Variant="Variant.Text" Size="Size.Small">Annulla</MudButton> *@
+@*                     <MudButton OnClick="SaveAsync" Variant="Variant.Filled" Color="Color.Primary" Size="Size.Small" Disabled="@_saving"> *@
+@*                         @if (_saving) *@
+@*                         { *@
+@*                             <MudProgressCircular Class="ms-n1" Size="Size.Small" Indeterminate="true"/> *@
+@*                             <MudText Class="ms-2">Salvataggio</MudText> *@
+@*                         } *@
+@*                         else *@
+@*                         { *@
+@*                             <MudText>Salva</MudText> *@
+@*                         } *@
+@*                     </MudButton> *@
+@*                 </div> *@
+@*             </div> *@
+@*         </div> *@
+@*     </MudPopover> *@
+@* } *@
+@* *@
+@* @code { *@
+@*     [Parameter, EditorRequired] public required FixVersionModel Version { get; set; } *@
+@*     [Parameter, EditorRequired] public IEnumerable<IssueModel> Issues { get; set; } = []; *@
+@*     [Parameter] public EventCallback<FixVersionModel> VersionChanged { get; set; } *@
+@*     [Parameter] public EventCallback OnChanged { get; set; } *@
+@*     [CascadingParameter(Name = "RefreshIssues")] public Func<Task>? RefreshIssues { get; set; } *@
+@* *@
+@*     private bool _isOpen; *@
+@*     private bool _saving; *@
+@* *@
+@*     // Temporary form states *@
+@*     private string _name = string.Empty; *@
+@*     private string? _description; *@
+@*     private DateTime? _startDate; *@
+@*     private DateTime? _releaseDate; *@
+@* *@
+@*     private void ToggleOpen() *@
+@*     { *@
+@*         if (string.IsNullOrEmpty(Version.Value)) return; *@
+@*          *@
+@*         if (!_isOpen) *@
+@*         { *@
+@*             // Initialize form on open *@
+@*             _name = Version.Name; *@
+@*             _description = Version.Description; *@
+@*             _startDate = Version.StartDate?.ToDateTime(TimeOnly.MinValue); *@
+@*             _releaseDate = Version.ReleaseDate?.ToDateTime(TimeOnly.MinValue); *@
+@*         } *@
+@*         _isOpen = !_isOpen; *@
+@*     } *@
+@* *@
+@*     private void Cancel() *@
+@*     { *@
+@*         _isOpen = false; *@
+@*     } *@
+@* *@
+@*     private void AutoSyncDates() *@
+@*     { *@
+@*         if (!Issues.Any()) *@
+@*         { *@
+@*             Snackbar.Add("Nessuna issue presente per calcolare le date.", Severity.Warning); *@
+@*             return; *@
+@*         } *@
+@* *@
+@*         bool hasMissingDates = false; *@
+@*         DateOnly? minStart = null; *@
+@*         DateOnly? maxEnd = null; *@
+@* *@
+@*         foreach (var issue in Issues) *@
+@*         { *@
+@*             if (issue.StartDate.HasValue) *@
+@*             { *@
+@*                 if (!minStart.HasValue || issue.StartDate.Value < minStart.Value) *@
+@*                     minStart = issue.StartDate.Value; *@
+@*             } *@
+@*             else *@
+@*             { *@
+@*                 hasMissingDates = true; *@
+@*             } *@
+@* *@
+@*             if (issue.EndDate.HasValue) *@
+@*             { *@
+@*                 if (!maxEnd.HasValue || issue.EndDate.Value > maxEnd.Value) *@
+@*                     maxEnd = issue.EndDate.Value; *@
+@*             } *@
+@*             else *@
+@*             { *@
+@*                 hasMissingDates = true; *@
+@*             } *@
+@*         } *@
+@* *@
+@*         if (minStart.HasValue) _startDate = minStart.Value.ToDateTime(TimeOnly.MinValue); *@
+@*         if (maxEnd.HasValue) _releaseDate = maxEnd.Value.ToDateTime(TimeOnly.MinValue); *@
+@* *@
+@*         if (hasMissingDates) *@
+@*         { *@
+@*             Snackbar.Add("Attenzione: Una o più issue non possiedono una data di inizio o fine configurata.", Severity.Warning); *@
+@*         } *@
+@*         else *@
+@*         { *@
+@*             Snackbar.Add("Date calcolate con successo.", Severity.Info); *@
+@*         } *@
+@*     } *@
+@* *@
+@*     private async Task SaveAsync() *@
+@*     { *@
+@*         if (string.IsNullOrWhiteSpace(_name)) *@
+@*         { *@
+@*             Snackbar.Add("Il nome della versione non può essere vuoto.", Severity.Error); *@
+@*             return; *@
+@*         } *@
+@* *@
+@*         _saving = true; *@
+@*         try *@
+@*         { *@
+@*             var newStart = _startDate.HasValue ? DateOnly.FromDateTime(_startDate.Value) : (DateOnly?)null; *@
+@*             var newRelease = _releaseDate.HasValue ? DateOnly.FromDateTime(_releaseDate.Value) : (DateOnly?)null; *@
+@* *@
+@*             await WriteClient.UpdateVersionAsync(Version.Value, _name, _description, newStart, newRelease); *@
+@*              *@
+@*             Snackbar.Add($"Release {_name} aggiornata con successo su Jira", Severity.Success); *@
+@*              *@
+@*             // Update local model *@
+@*             Version = Version with  *@
+@*             {  *@
+@*                 Name = _name,  *@
+@*                 Description = _description ?? string.Empty, *@
+@*                 StartDate = newStart, *@
+@*                 ReleaseDate = newRelease *@
+@*             }; *@
+@*              *@
+@*             await VersionChanged.InvokeAsync(Version); *@
+@*              *@
+@*             if (OnChanged.HasDelegate) await OnChanged.InvokeAsync(); *@
+@*             _isOpen = false; *@
+@*         } *@
+@*         catch (Exception ex) *@
+@*         { *@
+@*             Snackbar.Add($"Errore nell'aggiornamento della release: {ex.Message}", Severity.Error); *@
+@*         } *@
+@*         finally *@
+@*         { *@
+@*             _saving = false; *@
+@*         } *@
+@*     } *@
+@* } *@

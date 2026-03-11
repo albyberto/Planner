@@ -1,149 +1,149 @@
-@using Planner.Model
-
-<div class="@(IsEditMode ? "d-flex flex-column gap-2 w-100" : "d-flex align-center gap-2 mt-2 w-100")" style="position: relative;">
-    <!-- Autocomplete Popover per Menzioni -->
-    <MudPopover Open="@_showMentionPopover" AnchorOrigin="Origin.TopLeft" TransformOrigin="Origin.BottomLeft" MaxHeight="300" Class="pa-0">
-        @if (_filteredUsers.Any())
-        {
-            <MudList T="UserModel" Clickable="true" Dense="true" Class="py-0">
-                @foreach (var u in _filteredUsers)
-                {
-                    <MudListItem T="UserModel" OnClick="@(() => HandleMentionSelected(u))">
-                        <div class="d-flex align-center">
-                            <MudAvatar Size="Size.Small" Class="mr-2">
-                                <MudImage Src="@u._48x48" />
-                            </MudAvatar>
-                            @u.DisplayName
-                        </div>
-                    </MudListItem>
-                }
-            </MudList>
-        }
-        else
-        {
-            <MudText Typo="Typo.body2" Class="pa-2">Nessun utente trovato</MudText>
-        }
-    </MudPopover>
-
-    <MudTextField T="string"
-                  Value="@Draft" 
-                  ValueChanged="OnDraftValueChanged"
-                  Immediate="true"
-                  Label="Scrivi un commento..." 
-                  Variant="Variant.Outlined" 
-                  Margin="Margin.Dense" 
-                  Lines="@(IsEditMode ? 3 : 1)" 
-                  MaxLines="@(IsEditMode ? 10 : 5)"
-                  Class="flex-grow-1"
-                  OnKeyDown="HandleKeyDown" />
-                  
-    @if (IsEditMode)
-    {
-        <div class="d-flex justify-end gap-2 w-100">
-            <MudButton Size="Size.Small" OnClick="OnCancel">Annulla</MudButton>
-            <MudButton Size="Size.Small" Color="Color.Primary" Variant="Variant.Filled" OnClick="OnSend" Disabled="@(string.IsNullOrWhiteSpace(Draft) || IsSending)">
-                @if (IsSending) { <MudProgressCircular Size="Size.Small" Indeterminate="true" Class="mr-2"/> }
-                Salva
-            </MudButton>
-        </div>
-    }
-    else
-    {
-        <MudIconButton Icon="@Icons.Material.Filled.Send" 
-                       Color="Color.Primary" 
-                       Variant="Variant.Filled"
-                       Size="Size.Medium" 
-                       OnClick="OnSend" 
-                       Disabled="@(string.IsNullOrWhiteSpace(Draft) || IsSending)" />
-    }
-</div>
-
-@code {
-    [Parameter, EditorRequired] public string Draft { get; set; } = string.Empty;
-    [Parameter, EditorRequired] public EventCallback<string> DraftChanged { get; set; }
-
-    [Parameter, EditorRequired] public IEnumerable<UserModel> ProjectUsers { get; set; } = [];
-    [Parameter, EditorRequired] public EventCallback OnSend { get; set; }
-    [Parameter] public bool IsSending { get; set; }
-    
-    [Parameter] public bool IsEditMode { get; set; }
-    [Parameter] public EventCallback OnCancel { get; set; }
-    
-    // Callback to pass up the resolved mention so the parent can map the ADF Alias
-    [Parameter] public EventCallback<UserModel> OnMentionMapped { get; set; }
-
-    private bool _showMentionPopover = false;
-    private string _mentionSearch = string.Empty;
-    private IEnumerable<UserModel> _filteredUsers = [];
-
-    private async Task OnDraftValueChanged(string value)
-    {
-        await DraftChanged.InvokeAsync(value);
-        CheckForMention(value);
-    }
-
-    private void CheckForMention(string text)
-    {
-        var lastAtPos = text.LastIndexOf('@');
-        if (lastAtPos >= 0)
-        {
-            var substring = text.Substring(lastAtPos + 1);
-            if (!substring.Contains(' '))
-            {
-                _mentionSearch = substring;
-                _showMentionPopover = true;
-
-                _filteredUsers = string.IsNullOrWhiteSpace(_mentionSearch)
-                    ? ProjectUsers.Take(10)
-                    : ProjectUsers.Where(u => u.DisplayName.Contains(_mentionSearch, StringComparison.OrdinalIgnoreCase)
-                                            || u.EmailAddress.Contains(_mentionSearch, StringComparison.OrdinalIgnoreCase))
-                                   .Take(10);
-                return;
-            }
-        }
-
-        _showMentionPopover = false;
-    }
-
-    private async Task HandleMentionSelected(UserModel user)
-    {
-        var currentDraft = Draft ?? string.Empty;
-        var lastAtPos = currentDraft.LastIndexOf('@');
-        
-        if (lastAtPos >= 0)
-        {
-            var alias = $"@{user.DisplayName.Replace(" ", "")} ";
-            
-            // Notify parent to map this alias
-            await OnMentionMapped.InvokeAsync(user);
-            
-            var newDraft = currentDraft.Substring(0, lastAtPos) + alias;
-            await DraftChanged.InvokeAsync(newDraft);
-        }
-
-        _showMentionPopover = false;
-    }
-
-    private async Task HandleKeyDown(KeyboardEventArgs e)
-    {
-        if (e.Key == "Enter" && !e.ShiftKey)
-        {
-            // If the mention popover is open, use Enter to select the first user in the filtered list
-            if (_showMentionPopover)
-            {
-                var firstUser = _filteredUsers.FirstOrDefault();
-                if (firstUser != null)
-                {
-                    await HandleMentionSelected(firstUser);
-                }
-                return; // Consume the Enter key, do not send the message
-            }
-
-            // Otherwise, trigger the send
-            if (!string.IsNullOrWhiteSpace(Draft) && !IsSending)
-            {
-                await OnSend.InvokeAsync();
-            }
-        }
-    }
-}
+@* @using Planner.Model *@
+@* *@
+@* <div class="@(IsEditMode ? "d-flex flex-column gap-2 w-100" : "d-flex align-center gap-2 mt-2 w-100")" style="position: relative;"> *@
+@*     <!-- Autocomplete Popover per Menzioni --> *@
+@*     <MudPopover Open="@_showMentionPopover" AnchorOrigin="Origin.TopLeft" TransformOrigin="Origin.BottomLeft" MaxHeight="300" Class="pa-0"> *@
+@*         @if (_filteredUsers.Any()) *@
+@*         { *@
+@*             <MudList T="UserModel" Clickable="true" Dense="true" Class="py-0"> *@
+@*                 @foreach (var u in _filteredUsers) *@
+@*                 { *@
+@*                     <MudListItem T="UserModel" OnClick="@(() => HandleMentionSelected(u))"> *@
+@*                         <div class="d-flex align-center"> *@
+@*                             <MudAvatar Size="Size.Small" Class="mr-2"> *@
+@*                                 <MudImage Src="@u._48x48" /> *@
+@*                             </MudAvatar> *@
+@*                             @u.DisplayName *@
+@*                         </div> *@
+@*                     </MudListItem> *@
+@*                 } *@
+@*             </MudList> *@
+@*         } *@
+@*         else *@
+@*         { *@
+@*             <MudText Typo="Typo.body2" Class="pa-2">Nessun utente trovato</MudText> *@
+@*         } *@
+@*     </MudPopover> *@
+@* *@
+@*     <MudTextField T="string" *@
+@*                   Value="@Draft"  *@
+@*                   ValueChanged="OnDraftValueChanged" *@
+@*                   Immediate="true" *@
+@*                   Label="Scrivi un commento..."  *@
+@*                   Variant="Variant.Outlined"  *@
+@*                   Margin="Margin.Dense"  *@
+@*                   Lines="@(IsEditMode ? 3 : 1)"  *@
+@*                   MaxLines="@(IsEditMode ? 10 : 5)" *@
+@*                   Class="flex-grow-1" *@
+@*                   OnKeyDown="HandleKeyDown" /> *@
+@*                    *@
+@*     @if (IsEditMode) *@
+@*     { *@
+@*         <div class="d-flex justify-end gap-2 w-100"> *@
+@*             <MudButton Size="Size.Small" OnClick="OnCancel">Annulla</MudButton> *@
+@*             <MudButton Size="Size.Small" Color="Color.Primary" Variant="Variant.Filled" OnClick="OnSend" Disabled="@(string.IsNullOrWhiteSpace(Draft) || IsSending)"> *@
+@*                 @if (IsSending) { <MudProgressCircular Size="Size.Small" Indeterminate="true" Class="mr-2"/> } *@
+@*                 Salva *@
+@*             </MudButton> *@
+@*         </div> *@
+@*     } *@
+@*     else *@
+@*     { *@
+@*         <MudIconButton Icon="@Icons.Material.Filled.Send"  *@
+@*                        Color="Color.Primary"  *@
+@*                        Variant="Variant.Filled" *@
+@*                        Size="Size.Medium"  *@
+@*                        OnClick="OnSend"  *@
+@*                        Disabled="@(string.IsNullOrWhiteSpace(Draft) || IsSending)" /> *@
+@*     } *@
+@* </div> *@
+@* *@
+@* @code { *@
+@*     [Parameter, EditorRequired] public string Draft { get; set; } = string.Empty; *@
+@*     [Parameter, EditorRequired] public EventCallback<string> DraftChanged { get; set; } *@
+@* *@
+@*     [Parameter, EditorRequired] public IEnumerable<UserModel> ProjectUsers { get; set; } = []; *@
+@*     [Parameter, EditorRequired] public EventCallback OnSend { get; set; } *@
+@*     [Parameter] public bool IsSending { get; set; } *@
+@*      *@
+@*     [Parameter] public bool IsEditMode { get; set; } *@
+@*     [Parameter] public EventCallback OnCancel { get; set; } *@
+@*      *@
+@*     // Callback to pass up the resolved mention so the parent can map the ADF Alias *@
+@*     [Parameter] public EventCallback<UserModel> OnMentionMapped { get; set; } *@
+@* *@
+@*     private bool _showMentionPopover = false; *@
+@*     private string _mentionSearch = string.Empty; *@
+@*     private IEnumerable<UserModel> _filteredUsers = []; *@
+@* *@
+@*     private async Task OnDraftValueChanged(string value) *@
+@*     { *@
+@*         await DraftChanged.InvokeAsync(value); *@
+@*         CheckForMention(value); *@
+@*     } *@
+@* *@
+@*     private void CheckForMention(string text) *@
+@*     { *@
+@*         var lastAtPos = text.LastIndexOf('@'); *@
+@*         if (lastAtPos >= 0) *@
+@*         { *@
+@*             var substring = text.Substring(lastAtPos + 1); *@
+@*             if (!substring.Contains(' ')) *@
+@*             { *@
+@*                 _mentionSearch = substring; *@
+@*                 _showMentionPopover = true; *@
+@* *@
+@*                 _filteredUsers = string.IsNullOrWhiteSpace(_mentionSearch) *@
+@*                     ? ProjectUsers.Take(10) *@
+@*                     : ProjectUsers.Where(u => u.DisplayName.Contains(_mentionSearch, StringComparison.OrdinalIgnoreCase) *@
+@*                                             || u.EmailAddress.Contains(_mentionSearch, StringComparison.OrdinalIgnoreCase)) *@
+@*                                    .Take(10); *@
+@*                 return; *@
+@*             } *@
+@*         } *@
+@* *@
+@*         _showMentionPopover = false; *@
+@*     } *@
+@* *@
+@*     private async Task HandleMentionSelected(UserModel user) *@
+@*     { *@
+@*         var currentDraft = Draft ?? string.Empty; *@
+@*         var lastAtPos = currentDraft.LastIndexOf('@'); *@
+@*          *@
+@*         if (lastAtPos >= 0) *@
+@*         { *@
+@*             var alias = $"@{user.DisplayName.Replace(" ", "")} "; *@
+@*              *@
+@*             // Notify parent to map this alias *@
+@*             await OnMentionMapped.InvokeAsync(user); *@
+@*              *@
+@*             var newDraft = currentDraft.Substring(0, lastAtPos) + alias; *@
+@*             await DraftChanged.InvokeAsync(newDraft); *@
+@*         } *@
+@* *@
+@*         _showMentionPopover = false; *@
+@*     } *@
+@* *@
+@*     private async Task HandleKeyDown(KeyboardEventArgs e) *@
+@*     { *@
+@*         if (e.Key == "Enter" && !e.ShiftKey) *@
+@*         { *@
+@*             // If the mention popover is open, use Enter to select the first user in the filtered list *@
+@*             if (_showMentionPopover) *@
+@*             { *@
+@*                 var firstUser = _filteredUsers.FirstOrDefault(); *@
+@*                 if (firstUser != null) *@
+@*                 { *@
+@*                     await HandleMentionSelected(firstUser); *@
+@*                 } *@
+@*                 return; // Consume the Enter key, do not send the message *@
+@*             } *@
+@* *@
+@*             // Otherwise, trigger the send *@
+@*             if (!string.IsNullOrWhiteSpace(Draft) && !IsSending) *@
+@*             { *@
+@*                 await OnSend.InvokeAsync(); *@
+@*             } *@
+@*         } *@
+@*     } *@
+@* } *@
