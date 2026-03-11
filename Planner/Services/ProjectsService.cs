@@ -33,9 +33,8 @@ public class ProjectsService(JiraFilterClient client)
     /// <summary>
     /// Metodo privato per centralizzare la logica di mapping da Domain a Model.
     /// </summary>
-    private ProjectModel CreateProjectModel(Project project, CancellationToken cancellationToken)
-    {
-        return new(
+    private ProjectModel CreateProjectModel(Project project, CancellationToken cancellationToken) =>
+        new(
             project.Key,
             new(project.AvatarUrls),
             
@@ -43,29 +42,28 @@ public class ProjectsService(JiraFilterClient client)
             async () => 
             {
                 var types = await client.GetTypesAsync(project.Key, cancellationToken);
-                return types.Select(t => new TypeModel(t)).ToImmutableList();
+                return types.Select(type => new TypeModel(type)).ToImmutableList();
             },
             
             // Assignees Mapping
             async () => 
             {
                 var assignees = await client.GetAssigneesAsync(project.Key, cancellationToken);
-                return assignees.Select(a => new UserModel(a)).ToImmutableList();
+                return assignees.Select(assignee => new UserModel(assignee)).ToImmutableList();
             },
             
             // Components Mapping
             async () => 
             {
                 var components = await client.GetComponentsAsync(project.Key, cancellationToken);
-                return components.Select(c => new ComponentModel(c)).ToImmutableList();
+                return components.Select(component => new ComponentModel(component)).ToImmutableList();
             },
             
             // Labels Mapping
             async () => 
             {
                 var labels = await client.GetLabelsAsync(project.Key, cancellationToken);
-                return labels.Select(l => new LabelModel(l)).ToImmutableList();
+                return labels.Select(label => new LabelModel(label)).ToImmutableList();
             }
         );
-    }
 }
