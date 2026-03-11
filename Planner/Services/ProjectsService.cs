@@ -24,7 +24,7 @@ public class ProjectsService(JiraFilterClient client)
     public async Task<ProjectModel?> GetAsync(string projectKey, CancellationToken cancellationToken = default)
     {
         var projects = await client.GetProjectsAsync(cancellationToken);
-        
+
         var project = projects.FirstOrDefault(p => p.Key.Equals(projectKey, StringComparison.OrdinalIgnoreCase));
 
         return project is not null ? CreateProjectModel(project, cancellationToken) : null;
@@ -37,32 +37,32 @@ public class ProjectsService(JiraFilterClient client)
         new(
             project.Key,
             new(project.AvatarUrls),
-            
+
             // Types Mapping
-            async () => 
+            async () =>
             {
                 var types = await client.GetTypesAsync(project.Key, cancellationToken);
                 return types.Select(type => new TypeModel(type)).ToImmutableList();
             },
-            
+
             // Assignees Mapping
-            async () => 
+            async () =>
             {
                 var assignees = await client.GetAssigneesAsync(project.Key, cancellationToken);
                 return assignees.Select(assignee => new UserModel(assignee)).ToImmutableList();
             },
-            
+
             // Components Mapping
-            async () => 
+            async () =>
             {
                 var components = await client.GetComponentsAsync(project.Key, cancellationToken);
                 return components.Select(component => new ComponentModel(component)).ToImmutableList();
             },
-            
+
             // Labels Mapping
-            async () => 
+            async () =>
             {
-                var labels = await client.GetLabelsAsync(project.Key, cancellationToken);
+                var labels = await client.GetLabelsAsync(cancellationToken);
                 return labels.Select(label => new LabelModel(label)).ToImmutableList();
             }
         );

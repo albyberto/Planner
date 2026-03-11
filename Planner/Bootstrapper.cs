@@ -2,9 +2,11 @@ using System.Text;
 using Microsoft.Extensions.Options;
 using MudBlazor.Services;
 using Planner.Background;
-using Planner.Clients;
+using Planner.Infrastructure.Clients;
+using Planner.Infrastructure.Options;
 using Planner.Models;
 using Planner.Options;
+using ZiggyCreatures.Caching.Fusion;
 
 namespace Planner;
 
@@ -25,7 +27,7 @@ public static class Bootstrapper
             return services;
         }
 
-        public IServiceCollection AddOptions(IConfiguration configuration)
+        public IServiceCollection AddPlannerOptions()
         {
             services.AddOptions<JiraApiOptions>()
                 .BindConfiguration(JiraApiOptions.SectionName)
@@ -82,7 +84,14 @@ public static class Bootstrapper
 
         public IServiceCollection AddCache()
         {
-            services.AddDistributedMemoryCache();
+            services.AddFusionCache()
+                .WithOptions(options =>
+                {
+                    options.DefaultEntryOptions = new()
+                    {
+                        Duration = TimeSpan.FromMinutes(30)
+                    };
+                });
 
             return services;
         }

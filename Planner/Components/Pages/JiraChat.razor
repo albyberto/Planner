@@ -18,54 +18,51 @@
 
 @if (string.IsNullOrWhiteSpace(_me.Email))
 {
-        <MudAlert Severity="Severity.Warning">
-            Configura la proprietà Email nell'oggetto "Me" in appsettings.json sotto "JiraFilters" per visualizzare le chat.
-        </MudAlert>
+    <MudAlert Severity="Severity.Warning">
+        Configura la proprietà Email nell'oggetto "Me" in appsettings.json sotto "JiraFilters" per visualizzare le chat.
+    </MudAlert>
 }
 else
 {
     @* Add filters to Jira Chat page *@
-        <Filters OnFilterChanged="OnFilterChanged" ShowAssigneeFilter="false" />
+    <Filters OnFilterChanged="OnFilterChanged" ShowAssigneeFilter="false" />
 
     @if (_loading)
     {
-                <MudProgressLinear Color="Color.Primary" Indeterminate="true" Class="my-4" />
+        <MudProgressLinear Color="Color.Primary" Indeterminate="true" Class="my-4" />
     }
     else if (!_issues.Any())
     {
-                <MudAlert Severity="Severity.Info">Nessuna conversazione trovata per @_meDisplayName con i filtri correnti.</MudAlert>
+        <MudAlert Severity="Severity.Info">Nessuna conversazione trovata per @_meDisplayName con i filtri correnti.</MudAlert>
     }
     else
     {
-                <MudStack Spacing="4">
-            @foreach (var issue in _issues.OrderByDescending(i => i.Comments.Any() ? i.Comments.Max(c => c.Created ?? DateTime.MinValue) : DateTime.MinValue))
+        <MudStack Spacing="4">
+            @foreach (var issue in _issues.OrderByDescending(i => i.Comments.Any() ? i.Comments.Max(c => c.Created ??
+           DateTime.MinValue) : DateTime.MinValue))
             {
-                            <MudPaper @key="issue.Key" Class="pa-4" Elevation="2">
-                                <MudText Typo="Typo.h6">
-                                    <IssueKey Issue="@issue" /> - @issue.Summary
-                                </MudText>
+                <MudPaper @key="issue.Key" Class="pa-4" Elevation="2">
+                    <MudText Typo="Typo.h6">
+                        <IssueKey Issue="@issue" /> - @issue.Summary
+                    </MudText>
 
-                                <IssueChatThread Issue="@issue" MeEmail="@_me.Email" 
-                                                 ProjectUsers="@_projectUsers"
-                                                 OnMentionMapped="@MapMention"
-                                                 OnEdit="@((c, body) => SaveEditAsync(issue, c, body))" 
-                                                 OnDelete="@((c) => DeleteCommentAsync(issue, c))" 
-                                                 OnReply="@((c) => ReplyToComment(issue.Key, c))" />
+                    <IssueChatThread Issue="@issue" MeEmail="@_me.Email" ProjectUsers="@_projectUsers" OnMentionMapped="@MapMention"
+                        OnEdit="@((c, body) => SaveEditAsync(issue, c, body))" OnDelete="@((c) => DeleteCommentAsync(issue, c))"
+                        OnReply="@((c) => ReplyToComment(issue.Key, c))" />
 
-                                <MudDivider Class="my-3"/>
+                    <MudDivider Class="my-3" />
 
-                                <TeamChips Users="@_projectUsers.Where(u => _teamMemberEmails.Contains(u.EmailAddress, StringComparer.OrdinalIgnoreCase))" 
-                                           OnUserSelected="@((user) => AppendMentionToDraft(issue.Key, user))" />
+                    <TeamChips
+                        Users="@_projectUsers.Where(u => _teamMemberEmails.Contains(u.EmailAddress, StringComparer.OrdinalIgnoreCase))"
+                        OnUserSelected="@((user) => AppendMentionToDraft(issue.Key, user))" />
 
-                                <ChatInput Draft="@(_draftComments.GetValueOrDefault(issue.Key) ?? string.Empty)"
-                                           DraftChanged="@((val) => _draftComments[issue.Key] = val)"
-                                           ProjectUsers="@_projectUsers"
-                                           IsSending="@_sending.Contains(issue.Key)"
-                                           OnSend="@(() => SendCommentAsync(issue))"
-                                           OnMentionMapped="@(MapMention)" />
-                            </MudPaper>
+                    <ChatInput Draft="@(_draftComments.GetValueOrDefault(issue.Key) ?? string.Empty)"
+                        DraftChanged="@((val) => _draftComments[issue.Key] = val)" ProjectUsers="@_projectUsers"
+                        IsSending="@_sending.Contains(issue.Key)" OnSend="@(() => SendCommentAsync(issue))"
+                        OnMentionMapped="@(MapMention)" />
+                </MudPaper>
             }
-                </MudStack>
+        </MudStack>
     }
 }
 
@@ -75,6 +72,7 @@ else
     [Inject] private ISnackbar Snackbar { get; set; } = null!;
     [Inject] private JqlFilterBuilder QueryBuilder { get; set; } = null!;
     [Inject] private JiraNotificationService NotificationService { get; set; } = null!;
+    [Inject] private ProjectsService ProjectsService { get; set; } = null!;
 
     [Inject] private JiraWriteClient WriteClient { get; set; } = null!;
 
@@ -110,16 +108,17 @@ else
         try
         {
             var users = new List<UserModel>();
-            foreach (var proj in ReadClient.GetProjects())
+            foreach (var proj in await ProjectsService.GetAsync())
             {
                 users.AddRange(await proj.GetAssigneesAsync());
             }
             _projectUsers = users
-                .Where(u => !string.IsNullOrWhiteSpace(u.DisplayName) && !string.IsNullOrWhiteSpace(u.AccountId))
-                .DistinctBy(u => u.AccountId)
-                .ToList();
+            .Where(u => !string.IsNullOrWhiteSpace(u.DisplayName) && !string.IsNullOrWhiteSpace(u.AccountId))
+            .DistinctBy(u => u.AccountId)
+            .ToList();
 
-            var meUser = _projectUsers.FirstOrDefault(u => string.Equals(u.EmailAddress, _me.Email, StringComparison.OrdinalIgnoreCase));
+            var meUser = _projectUsers.FirstOrDefault(u => string.Equals(u.EmailAddress, _me.Email,
+            StringComparison.OrdinalIgnoreCase));
             _meDisplayName = meUser?.DisplayName ?? _me.Email;
         }
         catch { /* Fallback */ }
@@ -200,9 +199,9 @@ else
     private async Task DeleteCommentAsync(IssueModel issue, IssueCommentModel comment)
     {
         bool? result = await DialogService.ShowMessageBoxAsync(
-            "Elimina commento",
-            "Sei sicuro di voler eliminare questo commento?",
-            yesText: "Elimina", cancelText: "Annulla");
+        "Elimina commento",
+        "Sei sicuro di voler eliminare questo commento?",
+        yesText: "Elimina", cancelText: "Annulla");
 
         if (result == true)
         {
@@ -299,9 +298,9 @@ else
             version = 1,
             type = "doc",
             content = new[]
-            {
-                new { type = "paragraph", content = contentList.ToArray() }
-        }
+        {
+new { type = "paragraph", content = contentList.ToArray() }
+}
         };
     }
 
@@ -365,7 +364,7 @@ else
             // 2. Build the Jira Chat specific query via JQLBuilder
             var meUser = (JQLBuilder.Types.JqlTypes.JqlHistoricalJqlUser)_me.Email;
             var chatQuery = JQLBuilder.JqlBuilder.Query
-                .Where(f => f.User.Assignee == meUser | f.User.Reporter == meUser | f.Text.Comment.Contains(_meDisplayName!));
+            .Where(f => f.User.Assignee == meUser | f.User.Reporter == meUser | f.Text.Comment.Contains(_meDisplayName!));
 
             var chatJqlString = chatQuery + " ORDER BY updated DESC";
 
@@ -378,18 +377,18 @@ else
             var chatJqlCleaned = chatJqlString.Replace(" ORDER BY updated DESC", "");
 
             var combinedJql = string.IsNullOrWhiteSpace(baseJqlCleaned)
-                ? chatJqlString
-                : $"({baseJqlCleaned}) AND ({chatJqlCleaned}) ORDER BY updated DESC";
+            ? chatJqlString
+            : $"({baseJqlCleaned}) AND ({chatJqlCleaned}) ORDER BY updated DESC";
 
             var fetchedIssues = await ReadClient.GetIssuesAsync(combinedJql);
 
-            // Local fallback logic to ensure exact matches in Comments Body or Author DisplayName 
+            // Local fallback logic to ensure exact matches in Comments Body or Author DisplayName
             // Also filter out any issue that doesn't actually have any comment.
             var newlyFetchedFilteredIssues = fetchedIssues.Where(i =>
-                i.Comments.Any() &&
-                ((i.Assignee?.EmailAddress?.Equals(_me.Email, StringComparison.OrdinalIgnoreCase) == true) ||
-                 i.Comments.Any(c => c.Body.Contains(_meDisplayName, StringComparison.OrdinalIgnoreCase) ||
-                                     c.Author.EmailAddress?.Equals(_me.Email, StringComparison.OrdinalIgnoreCase) == true))
+            i.Comments.Any() &&
+            ((i.Assignee?.EmailAddress?.Equals(_me.Email, StringComparison.OrdinalIgnoreCase) == true) ||
+            i.Comments.Any(c => c.Body.Contains(_meDisplayName, StringComparison.OrdinalIgnoreCase) ||
+            c.Author.EmailAddress?.Equals(_me.Email, StringComparison.OrdinalIgnoreCase) == true))
             ).ToList();
 
             _issues = newlyFetchedFilteredIssues;

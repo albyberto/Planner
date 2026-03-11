@@ -1,14 +1,15 @@
 @using System.Collections.Immutable
 @using Planner.Model
 @using Planner.Clients
-@inject JiraReadClient ReadClient
+@using Planner.Services
+@inject ProjectsService ProjectsService
 
 <InlineMultiSelect TItem="ComponentModel"
                    Issue="@Issue"
                    Items="@Issue.Components"
                    ItemsChanged="@((IReadOnlyCollection<ComponentModel> components) => Issue.Components = ImmutableList.CreateRange(components))"
                    LoadItemsAsync="@(async projectKey => {
-                       var project = ReadClient.GetProjects().FirstOrDefault(project => project.Key.Equals(projectKey, StringComparison.OrdinalIgnoreCase));
+                       var project = (await ProjectsService.GetAsync()).FirstOrDefault(project => project.Key.Equals(projectKey, StringComparison.OrdinalIgnoreCase));
                        return project != null ? (IReadOnlyList<ComponentModel>)await project.GetComponentsAsync() : Array.Empty<ComponentModel>();
                    })"
                    UpdateBuilderAction="@((builder, components) => builder.SetComponents(components))"

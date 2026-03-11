@@ -1,7 +1,8 @@
 @using System.Collections.Immutable
 @using Planner.Clients
 @using Planner.Model
-@inject JiraReadClient ReadClient
+@using Planner.Services
+@inject ProjectsService ProjectsService
 
 <InlineMultiSelect TItem="LabelModel"
                    Issue="@Issue"
@@ -9,7 +10,7 @@
                    ItemsChanged="@((IReadOnlyCollection<LabelModel> labels) => Issue.Labels = ImmutableList.CreateRange(labels))"
                    LoadItemsAsync="@(async projectKey =>
                                    {
-                                       var project = ReadClient.GetProjects().FirstOrDefault(project => project.Key.Equals(projectKey, StringComparison.OrdinalIgnoreCase));
+                                       var project = (await ProjectsService.GetAsync()).FirstOrDefault(project => project.Key.Equals(projectKey, StringComparison.OrdinalIgnoreCase));
                                        return project != null ? (IReadOnlyList<LabelModel>)await project.GetLabelsAsync() : Array.Empty<LabelModel>();
                                    })"
                    UpdateBuilderAction="@((builder, labels) => builder.SetLabels(labels))"

@@ -1,6 +1,5 @@
 @using System.Collections.Immutable
 @using Planner.Background
-@using Planner.Clients
 @using Planner.Extensions
 @using Planner.Model
 @using Planner.Services
@@ -13,10 +12,8 @@
     @_displayTitle
 </MudText>
 
-<Filters OnFilterChanged="OnFilterChanged"
-         ShowAssigneeFilter="@_showAssigneeFilter"
-         ForcedAssignees="@_forcedAssignees"
-         ForcedIncludeUnassigned="@_forcedIncludeUnassigned" />
+<Filters OnFilterChanged="OnFilterChanged" ShowAssigneeFilter="@_showAssigneeFilter" ForcedAssignees="@_forcedAssignees"
+    ForcedIncludeUnassigned="@_forcedIncludeUnassigned" />
 
 @if (_loading)
 {
@@ -30,14 +27,16 @@ else
 }
 
 @inject JqlFilterBuilder QueryBuilder
-@inject JiraReadClient ReadClient
 @inject ISnackbar Snackbar
 @inject JiraNotificationService NotificationService
+@inject ProjectsService ProjectsService
 
 @code {
     [Parameter, EditorRequired] public required string Title { get; set; } = string.Empty;
     [Parameter] public string? Email { get; set; }
-    [Parameter, EditorRequired] public required RenderFragment<ImmutableList<IssueModel>> ChildContent { get; set; } = null!;
+    [Parameter, EditorRequired]
+    public required RenderFragment<ImmutableList<IssueModel>> ChildContent { get; set; } =
+    null!;
 
     private ImmutableList<IssueModel> _issues = [];
     private bool _loading;
@@ -49,7 +48,7 @@ else
     private HashSet<string>? _forcedAssignees;
     private bool? _forcedIncludeUnassigned;
 
-    protected override void OnParametersSet()
+    protected override async Task OnParametersSetAsync()
     {
         // Logica composizione titolo e filtri forzati
         if (string.IsNullOrEmpty(Email))
@@ -69,7 +68,8 @@ else
         else
         {
             var decoded = Uri.UnescapeDataString(Email);
-            var users = ReadClient.GetProjects().FindAssigneesByEmailsAsync(decoded).Result;
+            var projects = await ProjectsService.GetAsync();
+            var users = await projects.FindAssigneesByEmailsAsync(decoded);
             var user = users.FirstOrDefault(u => u.EmailAddress.Equals(decoded, StringComparison.OrdinalIgnoreCase));
             var name = user?.DisplayName ?? decoded;
 

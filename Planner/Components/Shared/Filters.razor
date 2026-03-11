@@ -16,117 +16,117 @@
                                Dense="true"
                                Required="true"
                                RequiredError="Il progetto è obbligatorio">
-                        @foreach (var project in _projects)
-                        {
-                            <MudSelectItem T="string" Value="@project.Key">
-                                @project.Key
-                            </MudSelectItem>
-                        }
+                    @foreach (var project in _projects)
+                    {
+                                <MudSelectItem T="string" Value="@project.Key">
+                            @project.Key
+                                </MudSelectItem>
+                    }
                     </MudSelect>
             </MudItem>
 
             @if (!string.IsNullOrEmpty(Filter.ProjectKey))
             {
-                <MudItem xs="12" sm="6" md="4">
-                    <MudSelect T="string"
-                               Label="Statuses"
-                               MultiSelection="true"
-                               SelectedValues="Filter.Statuses"
-                               SelectedValuesChanged="OnStatusesChanged"
-                               Variant="Variant.Outlined"
-                               AnchorOrigin="Origin.BottomCenter"
-                               Clearable="true"
-                               Dense="true"
-                               MultiSelectionTextFunc="@(selected => GetSelectedStatusesText(selected))">
-                        @foreach (var status in _statuses)
-                        {
-                            <MudSelectItem T="string" Value="@status.Name">@status.Name</MudSelectItem>
-                        }
-                    </MudSelect>
-                </MudItem>
-
-                <MudItem xs="12" sm="6" md="4">
-                    <MudSelect T="string"
-                               Label="Types"
-                               MultiSelection="true"
-                               SelectedValues="Filter.IssueTypes"
-                               SelectedValuesChanged="OnIssueTypesChanged"
-                               Variant="Variant.Outlined"
-                               AnchorOrigin="Origin.BottomCenter"
-                               Clearable="true"
-                               Dense="true"
-                               MultiSelectionTextFunc="@(selected => GetSelectedIssueTypesText(selected))">
-                        @foreach (var type in _issueTypes)
-                        {
-                            <MudSelectItem T="string" Value="@type.Value">@type.Name</MudSelectItem>
-                        }
-                    </MudSelect>
-                </MudItem>
-
-                <MudItem xs="12" sm="6" md="4">
-                    <MudSelect T="string"
-                               Label="Components"
-                               MultiSelection="true"
-                               SelectedValues="Filter.Components"
-                               SelectedValuesChanged="OnComponentsChanged"
-                               Variant="Variant.Outlined"
-                               AnchorOrigin="Origin.BottomCenter"
-                               Clearable="true"
-                               Dense="true"
-                               MultiSelectionTextFunc="@(selected => GetSelectedComponentsText(selected))">
-                        @foreach (var component in _components)
-                        {
-                            <MudSelectItem T="string" Value="@component.Value">@component.Name</MudSelectItem>
-                        }
-                    </MudSelect>
-                </MudItem>
-
-                <MudItem xs="12" sm="6" md="4">
-                    <MudSelect T="string"
-                               Label="Labels"
-                               MultiSelection="true"
-                               SelectedValues="Filter.Labels"
-                               SelectedValuesChanged="OnLabelsChanged"
-                               Variant="Variant.Outlined"
-                               AnchorOrigin="Origin.BottomCenter"
-                               Clearable="true"
-                               Dense="true"
-                               MultiSelectionTextFunc="@(selected => GetSelectedLabelsText(selected))">
-                        @foreach (var label in _labels)
-                        {
-                            <MudSelectItem T="string" Value="@label.Value">@label.Name</MudSelectItem>
-                        }
-                    </MudSelect>
-                </MudItem>
-
-                @if (ShowAssigneeFilter)
-                {
                     <MudItem xs="12" sm="6" md="4">
                         <MudSelect T="string"
-                                   Label="Assignees"
+                                   Label="Statuses"
                                    MultiSelection="true"
-                                   SelectedValues="Filter.Assignees"
-                                   SelectedValuesChanged="OnAssigneesChanged"
+                                   SelectedValues="Filter.Statuses"
+                                   SelectedValuesChanged="OnStatusesChanged"
                                    Variant="Variant.Outlined"
                                    AnchorOrigin="Origin.BottomCenter"
                                    Clearable="true"
                                    Dense="true"
-                                   MultiSelectionTextFunc="@(selected => GetSelectedAssigneesText(selected))">
-                            @foreach (var assignee in _assignees)
-                            {
-                                <MudSelectItem T="string"
-                                               Value="@assignee.EmailAddress">@assignee.DisplayName</MudSelectItem>
-                            }
+                                   MultiSelectionTextFunc="@(selected => GetSelectedStatusesText(selected))">
+                        @foreach (var status in _statuses)
+                        {
+                                    <MudSelectItem T="string" Value="@status.Name">@status.Name</MudSelectItem>
+                        }
                         </MudSelect>
                     </MudItem>
 
-                    <MudItem xs="12" sm="6" md="4" Class="d-flex align-center">
-                        <MudSwitch T="bool"
-                                   Label="Includi non assegnate"
-                                   Color="Color.Primary"
-                                   Value="Filter.IncludeUnassigned"
-                                   ValueChanged="OnUnassignedChanged"/>
+                    <MudItem xs="12" sm="6" md="4">
+                        <MudSelect T="string"
+                                   Label="Types"
+                                   MultiSelection="true"
+                                   SelectedValues="Filter.IssueTypes"
+                                   SelectedValuesChanged="OnIssueTypesChanged"
+                                   Variant="Variant.Outlined"
+                                   AnchorOrigin="Origin.BottomCenter"
+                                   Clearable="true"
+                                   Dense="true"
+                                   MultiSelectionTextFunc="@(selected => GetSelectedIssueTypesText(selected))">
+                        @foreach (var type in _issueTypes)
+                        {
+                                    <MudSelectItem T="string" Value="@type.Value">@type.Name</MudSelectItem>
+                        }
+                        </MudSelect>
                     </MudItem>
+
+                    <MudItem xs="12" sm="6" md="4">
+                        <MudSelect T="string"
+                                   Label="Components"
+                                   MultiSelection="true"
+                                   SelectedValues="Filter.Components"
+                                   SelectedValuesChanged="OnComponentsChanged"
+                                   Variant="Variant.Outlined"
+                                   AnchorOrigin="Origin.BottomCenter"
+                                   Clearable="true"
+                                   Dense="true"
+                                   MultiSelectionTextFunc="@(selected => GetSelectedComponentsText(selected))">
+                        @foreach (var component in _components)
+                        {
+                                    <MudSelectItem T="string" Value="@component.Value">@component.Name</MudSelectItem>
+                        }
+                        </MudSelect>
+                    </MudItem>
+
+                    <MudItem xs="12" sm="6" md="4">
+                        <MudSelect T="string"
+                                   Label="Labels"
+                                   MultiSelection="true"
+                                   SelectedValues="Filter.Labels"
+                                   SelectedValuesChanged="OnLabelsChanged"
+                                   Variant="Variant.Outlined"
+                                   AnchorOrigin="Origin.BottomCenter"
+                                   Clearable="true"
+                                   Dense="true"
+                                   MultiSelectionTextFunc="@(selected => GetSelectedLabelsText(selected))">
+                        @foreach (var label in _labels)
+                        {
+                                    <MudSelectItem T="string" Value="@label.Value">@label.Name</MudSelectItem>
+                        }
+                        </MudSelect>
+                    </MudItem>
+
+                @if (ShowAssigneeFilter)
+                {
+                            <MudItem xs="12" sm="6" md="4">
+                                <MudSelect T="string"
+                                           Label="Assignees"
+                                           MultiSelection="true"
+                                           SelectedValues="Filter.Assignees"
+                                           SelectedValuesChanged="OnAssigneesChanged"
+                                           Variant="Variant.Outlined"
+                                           AnchorOrigin="Origin.BottomCenter"
+                                           Clearable="true"
+                                           Dense="true"
+                                           MultiSelectionTextFunc="@(selected => GetSelectedAssigneesText(selected))">
+                            @foreach (var assignee in _assignees)
+                            {
+                                            <MudSelectItem T="string"
+                                                           Value="@assignee.EmailAddress">@assignee.DisplayName</MudSelectItem>
+                            }
+                                </MudSelect>
+                            </MudItem>
+
+                            <MudItem xs="12" sm="6" md="4" Class="d-flex align-center">
+                                <MudSwitch T="bool"
+                                           Label="Includi non assegnate"
+                                           Color="Color.Primary"
+                                           Value="Filter.IncludeUnassigned"
+                                           ValueChanged="OnUnassignedChanged"/>
+                            </MudItem>
                 }
             }
         </MudGrid>
@@ -134,7 +134,7 @@
 </MudExpansionPanels>
 
 @inject IOptions<JiraFilterOptions> Options
-@inject JiraReadClient ReadClient
+@inject ProjectsService ProjectsService
 @inject ISnackbar Snackbar
 
 @code {
@@ -156,13 +156,13 @@
 
     public Filter Filter = new();
 
-    protected override void OnInitialized()
+    protected override async Task OnInitializedAsync()
     {
         try
         {
             Filter = Filter with { ProjectKey = Options.Value.DefaultProject };
 
-            _projects = ReadClient.GetProjects().ToList();
+            _projects = (await ProjectsService.GetAsync()).ToList();
             _isLoaded = true;
         }
         catch
@@ -230,15 +230,15 @@
         await LoadProjectDataAsync(projectKey);
 
         var newFilter = Filter with
-        {
-            ProjectKey = projectKey,
-            Statuses = [],
-            Components = [],
-            Labels = [],
-            IssueTypes = [],
-            Assignees = [],
-            IncludeUnassigned = false
-        };
+            {
+                ProjectKey = projectKey,
+                Statuses = [],
+                Components = [],
+                Labels = [],
+                IssueTypes = [],
+                Assignees = [],
+                IncludeUnassigned = false
+            };
 
         await UpdateFilter(newFilter);
     }

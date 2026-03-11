@@ -7,8 +7,7 @@ var builder = WebApplication.CreateBuilder(args);
 AsWindowsService(builder);
 
 builder.Services
-    .AddMudBlazor()
-    .AddOptions(builder.Configuration)
+    .AddPlannerOptions()
     .AddJiraClients(builder.Configuration)
     .AddBackgroundServices()
     .AddCache();

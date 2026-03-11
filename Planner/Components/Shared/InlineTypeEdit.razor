@@ -1,24 +1,16 @@
 @using Planner.Clients
 @using Planner.Model
+@using Planner.Services
 @inject JiraReadClient ReadClient
 @inject JiraWriteClient WriteClient
+@inject ProjectsService ProjectsService
 @inject ISnackbar Snackbar
 
 @if (_editing)
 {
-    <MudSelect T="TypeModel"
-               Value="@Value"
-               ValueChanged="ChangeType"
-               Open="_editing"
-               OpenChanged="OnOpenChanged"
-               Dense="true"
-               Variant="Variant.Outlined"
-               Margin="Margin.Dense"
-               AnchorOrigin="Origin.BottomLeft"
-               Class="text-nowrap"
-               PopoverClass="text-nowrap"
-               CloseIcon="@Icons.Material.Filled.Close"
-               ToStringFunc="@(t => t?.Name ?? string.Empty)">
+    <MudSelect T="TypeModel" Value="@Value" ValueChanged="ChangeType" Open="_editing" OpenChanged="OnOpenChanged"
+        Dense="true" Variant="Variant.Outlined" Margin="Margin.Dense" AnchorOrigin="Origin.BottomLeft" Class="text-nowrap"
+        PopoverClass="text-nowrap" CloseIcon="@Icons.Material.Filled.Close" ToStringFunc="@(t => t?.Name ?? string.Empty)">
         @if (_loading)
         {
             <MudSelectItem T="TypeModel" Value="@null" Disabled="true">
@@ -81,7 +73,8 @@ else
         try
         {
             var projectKey = IssueKey.Split('-')[0];
-            var project = ReadClient.GetProjects().FirstOrDefault(p => p.Key.Equals(projectKey, StringComparison.OrdinalIgnoreCase));
+            var project = (await ProjectsService.GetAsync()).FirstOrDefault(p => p.Key.Equals(projectKey,
+            StringComparison.OrdinalIgnoreCase));
             if (project is not null)
             {
                 var models = await project.GetIssueTypesAsync();
@@ -100,7 +93,7 @@ else
 
     private async Task ChangeType(TypeModel? type)
     {
-        if (type == null || type.Value == Value.Value) 
+        if (type == null || type.Value == Value.Value)
         {
             _editing = false;
             return;
@@ -111,7 +104,7 @@ else
             var update = new Builders.IssueUpdateBuilder().SetIssueType(type.Value);
             await WriteClient.UpdateIssueAsync(IssueKey, update);
             Snackbar.Add($"{IssueKey} tipo → {type.Name}", Severity.Success);
-            
+
             Value = type;
             await ValueChanged.InvokeAsync(Value);
 
