@@ -1,5 +1,6 @@
 @using System.Collections.Immutable
 @using Planner.Background
+@using Planner.Clients
 @using Planner.Extensions
 @using Planner.Model
 @using Planner.Services
@@ -27,9 +28,9 @@ else
 }
 
 @inject JqlFilterBuilder QueryBuilder
+@inject JiraReadClient ReadClient
 @inject ISnackbar Snackbar
 @inject JiraNotificationService NotificationService
-@inject ProjectsService ProjectsService
 
 @code {
     [Parameter, EditorRequired] public required string Title { get; set; } = string.Empty;
@@ -48,7 +49,7 @@ else
     private HashSet<string>? _forcedAssignees;
     private bool? _forcedIncludeUnassigned;
 
-    protected override async Task OnParametersSetAsync()
+    protected override void OnParametersSet()
     {
         // Logica composizione titolo e filtri forzati
         if (string.IsNullOrEmpty(Email))
@@ -68,8 +69,7 @@ else
         else
         {
             var decoded = Uri.UnescapeDataString(Email);
-            var projects = await ProjectsService.GetAsync();
-            var users = await projects.FindAssigneesByEmailsAsync(decoded);
+            var users = ReadClient.GetProjects().FindAssigneesByEmailsAsync(decoded).Result;
             var user = users.FirstOrDefault(u => u.EmailAddress.Equals(decoded, StringComparison.OrdinalIgnoreCase));
             var name = user?.DisplayName ?? decoded;
 

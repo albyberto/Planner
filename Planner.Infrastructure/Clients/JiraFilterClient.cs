@@ -17,7 +17,7 @@ public class JiraFilterClient(HttpClient httpClient, IFusionCache cache, IOption
     private readonly CacheOptions _cacheOptions = cacheOptions.Value;
 
     public async Task<ImmutableHashSet<Project>> GetProjectsAsync(CancellationToken cancellationToken = default) =>
-        await cache.GetOrSetAsync<ImmutableHashSet<Project>>(
+        await cache.GetOrSetAsync(
             "jira:projects:global",
             async ct =>
             {
@@ -34,12 +34,12 @@ public class JiraFilterClient(HttpClient httpClient, IFusionCache cache, IOption
                     throw;
                 }
             },
-            new FusionCacheEntryOptions { Duration = _cacheOptions.Projects },
+            new FusionCacheEntryOptions { Duration = _cacheOptions.Projects.AbsoluteExpirationRelativeToNow ?? TimeSpan.FromMinutes(30) },
             cancellationToken
         );
 
     public async Task<ImmutableHashSet<IssueType>> GetTypesAsync(string projectKey, CancellationToken cancellationToken = default) =>
-        await cache.GetOrSetAsync<ImmutableHashSet<IssueType>>(
+        await cache.GetOrSetAsync(
             $"jira:types:{projectKey}",
             async ct =>
             {
@@ -56,12 +56,12 @@ public class JiraFilterClient(HttpClient httpClient, IFusionCache cache, IOption
                     throw;
                 }
             },
-            new FusionCacheEntryOptions { Duration = _cacheOptions.Types },
+            new FusionCacheEntryOptions { Duration = _cacheOptions.Types.AbsoluteExpirationRelativeToNow ?? TimeSpan.FromMinutes(30) },
             cancellationToken
         );
 
     public async Task<ImmutableHashSet<User>> GetAssigneesAsync(string projectKey, CancellationToken cancellationToken = default) =>
-        await cache.GetOrSetAsync<ImmutableHashSet<User>>(
+        await cache.GetOrSetAsync(
             $"jira:assignees:{projectKey}",
             async ct =>
             {
@@ -79,12 +79,12 @@ public class JiraFilterClient(HttpClient httpClient, IFusionCache cache, IOption
                     throw;
                 }
             },
-            new FusionCacheEntryOptions { Duration = _cacheOptions.Assignees },
+            new FusionCacheEntryOptions { Duration = _cacheOptions.Assignees.AbsoluteExpirationRelativeToNow ?? TimeSpan.FromMinutes(30) },
             cancellationToken
         );
 
     public async Task<ImmutableHashSet<Component>> GetComponentsAsync(string projectKey, CancellationToken cancellationToken = default) =>
-        await cache.GetOrSetAsync<ImmutableHashSet<Component>>(
+        await cache.GetOrSetAsync(
             $"jira:components:{projectKey}",
             async ct =>
             {
@@ -101,12 +101,12 @@ public class JiraFilterClient(HttpClient httpClient, IFusionCache cache, IOption
                     throw;
                 }
             },
-            new FusionCacheEntryOptions { Duration = _cacheOptions.Components },
+            new FusionCacheEntryOptions { Duration = _cacheOptions.Components.AbsoluteExpirationRelativeToNow ?? TimeSpan.FromMinutes(30) },
             cancellationToken
         );
 
     public async Task<ImmutableHashSet<string>> GetLabelsAsync(CancellationToken cancellationToken = default) =>
-        await cache.GetOrSetAsync<ImmutableHashSet<string>>(
+        await cache.GetOrSetAsync(
             "jira:labels:global",
             async ct =>
             {
@@ -138,7 +138,7 @@ public class JiraFilterClient(HttpClient httpClient, IFusionCache cache, IOption
                     throw;
                 }
             },
-            new FusionCacheEntryOptions { Duration = _cacheOptions.Labels },
+            new FusionCacheEntryOptions { Duration = _cacheOptions.Labels.AbsoluteExpirationRelativeToNow ?? TimeSpan.FromMinutes(60) },
             cancellationToken
         );
 }

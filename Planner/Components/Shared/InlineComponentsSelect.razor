@@ -1,23 +1,18 @@
 @using System.Collections.Immutable
 @using Planner.Model
 @using Planner.Clients
-@using Planner.Services
-@inject ProjectsService ProjectsService
+@inject JiraReadClient ReadClient
 
-<InlineMultiSelect TItem="ComponentModel"
-                   Issue="@Issue"
-                   Items="@Issue.Components"
-                   ItemsChanged="@((IReadOnlyCollection<ComponentModel> components) => Issue.Components = ImmutableList.CreateRange(components))"
-                   LoadItemsAsync="@(async projectKey => {
-                       var project = (await ProjectsService.GetAsync()).FirstOrDefault(project => project.Key.Equals(projectKey, StringComparison.OrdinalIgnoreCase));
+<InlineMultiSelect TItem="ComponentModel" Issue="@Issue" Items="@Issue.Components"
+    ItemsChanged="@((IReadOnlyCollection<ComponentModel> components) => Issue.Components = ImmutableList.CreateRange(components))"
+    LoadItemsAsync="@(async projectKey => {
+                       var project = ReadClient.GetProjects().FirstOrDefault(project => project.Key.Equals(projectKey, StringComparison.OrdinalIgnoreCase));
                        return project != null ? (IReadOnlyList<ComponentModel>)await project.GetComponentsAsync() : Array.Empty<ComponentModel>();
-                   })"
-                   UpdateBuilderAction="@((builder, components) => builder.SetComponents(components))"
-                   Label="Components"
-                   ChipColor="Color.Primary"
-                   EmptyTooltip="Aggiungi Component" />
+                   })" UpdateBuilderAction="@((builder, components) => builder.SetComponents(components))"
+    Label="Components" ChipColor="Color.Primary" EmptyTooltip="Aggiungi Component" />
 
 @code {
     [Parameter, EditorRequired]
+
     public IssueModel Issue { get; set; } = null!;
 }

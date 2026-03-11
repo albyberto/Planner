@@ -72,7 +72,6 @@ else
     [Inject] private ISnackbar Snackbar { get; set; } = null!;
     [Inject] private JqlFilterBuilder QueryBuilder { get; set; } = null!;
     [Inject] private JiraNotificationService NotificationService { get; set; } = null!;
-    [Inject] private ProjectsService ProjectsService { get; set; } = null!;
 
     [Inject] private JiraWriteClient WriteClient { get; set; } = null!;
 
@@ -108,7 +107,7 @@ else
         try
         {
             var users = new List<UserModel>();
-            foreach (var proj in await ProjectsService.GetAsync())
+            foreach (var proj in ReadClient.GetProjects())
             {
                 users.AddRange(await proj.GetAssigneesAsync());
             }

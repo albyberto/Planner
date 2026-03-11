@@ -32,6 +32,8 @@ public class ProjectsService(JiraFilterClient client)
 
     /// <summary>
     /// Metodo privato per centralizzare la logica di mapping da Domain a Model.
+    /// I delegati sono incapsulati in Lazy&lt;Task&lt;T&gt;&gt; per garantire la memoization:
+    /// ogni delegato viene eseguito al massimo una volta per istanza di ProjectModel.
     /// </summary>
     private ProjectModel CreateProjectModel(Project project, CancellationToken cancellationToken)
     {
@@ -62,7 +64,6 @@ public class ProjectsService(JiraFilterClient client)
         return new(
             project.Key,
             new(project.AvatarUrls),
-
             () => lazyTypes.Value,
             () => lazyAssignees.Value,
             () => lazyComponents.Value,

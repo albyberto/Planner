@@ -1,22 +1,16 @@
 @using System.Collections.Immutable
 @using Planner.Clients
 @using Planner.Model
-@using Planner.Services
-@inject ProjectsService ProjectsService
+@inject JiraReadClient ReadClient
 
-<InlineMultiSelect TItem="LabelModel"
-                   Issue="@Issue"
-                   Items="@Issue.Labels"
-                   ItemsChanged="@((IReadOnlyCollection<LabelModel> labels) => Issue.Labels = ImmutableList.CreateRange(labels))"
-                   LoadItemsAsync="@(async projectKey =>
+<InlineMultiSelect TItem="LabelModel" Issue="@Issue" Items="@Issue.Labels"
+    ItemsChanged="@((IReadOnlyCollection<LabelModel> labels) => Issue.Labels = ImmutableList.CreateRange(labels))"
+    LoadItemsAsync="@(async projectKey =>
                                    {
-                                       var project = (await ProjectsService.GetAsync()).FirstOrDefault(project => project.Key.Equals(projectKey, StringComparison.OrdinalIgnoreCase));
+                                       var project = ReadClient.GetProjects().FirstOrDefault(project => project.Key.Equals(projectKey, StringComparison.OrdinalIgnoreCase));
                                        return project != null ? (IReadOnlyList<LabelModel>)await project.GetLabelsAsync() : Array.Empty<LabelModel>();
-                                   })"
-                   UpdateBuilderAction="@((builder, labels) => builder.SetLabels(labels))"
-                   Label="Labels"
-                   ChipColor="Color.Secondary"
-                   EmptyTooltip="Aggiungi Label"/>
+                                   })" UpdateBuilderAction="@((builder, labels) => builder.SetLabels(labels))"
+    Label="Labels" ChipColor="Color.Secondary" EmptyTooltip="Aggiungi Label" />
 
 @code {
     [Parameter][EditorRequired] public IssueModel Issue { get; set; } = null!;

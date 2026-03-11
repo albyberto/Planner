@@ -1,9 +1,7 @@
 @using Planner.Clients
 @using Planner.Model
-@using Planner.Services
 @inject JiraReadClient ReadClient
 @inject JiraWriteClient WriteClient
-@inject ProjectsService ProjectsService
 @inject ISnackbar Snackbar
 
 @if (_editing)
@@ -73,7 +71,7 @@ else
         try
         {
             var projectKey = IssueKey.Split('-')[0];
-            var project = (await ProjectsService.GetAsync()).FirstOrDefault(p => p.Key.Equals(projectKey,
+            var project = ReadClient.GetProjects().FirstOrDefault(p => p.Key.Equals(projectKey,
             StringComparison.OrdinalIgnoreCase));
             if (project is not null)
             {
