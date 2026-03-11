@@ -1,12 +1,6 @@
-using System;
-using System.Collections.Generic;
 using System.Collections.Immutable;
-using System.Linq;
-using System.Net.Http;
 using System.Net.Http.Json;
 using System.Text.Json;
-using System.Threading;
-using System.Threading.Tasks;
 using Microsoft.Extensions.Caching.Distributed;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
@@ -21,6 +15,33 @@ namespace Planner.Infrastructure.Clients;
 public class JiraFilterClient(HttpClient httpClient, IDistributedCache cache, IOptions<CacheOptions> cacheOptions, ILogger<JiraFilterClient> logger)
 {
     private readonly CacheOptions _cacheOptions = cacheOptions.Value;
+    
+    public async Task<ImmutableHashSet<Project>> GetProjectsAsync(CancellationToken cancellationToken = default)
+    {
+        const string cacheKey = "jira:projects:global";
+        var cachedBytes = await cache.GetAsync(cacheKey, cancellationToken);
+
+        if (cachedBytes is not null) 
+            return JsonSerializer.Deserialize<ImmutableHashSet<Project>>(cachedBytes) ?? [];
+
+        try
+        {
+            var response = await httpClient.GetFromJsonAsync<List<Project>>("project", cancellationToken);
+
+            var projects = (response ?? [])
+                .DistinctBy(project => project.Id)
+                .ToImmutableHashSet();
+
+            await cache.SetAsync(cacheKey, JsonSerializer.SerializeToUtf8Bytes(projects), _cacheOptions.Projects, cancellationToken);
+
+            return projects;
+        }
+        catch (Exception exception)
+        {
+            logger.LogError(exception, "Error fetching global projects");
+            throw;
+        }
+    }
 
     public async Task<ImmutableHashSet<IssueType>> GetTypesAsync(string projectKey, CancellationToken cancellationToken = default)
     {

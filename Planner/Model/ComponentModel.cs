@@ -5,8 +5,8 @@ namespace Planner.Model;
 
 public record ComponentModel : IMultiSelect
 {
-    public string Value { get; set; }
-    public string Name { get; set; }
+    public string Value { get; init; }
+    public string Name { get; init; }
 
     public ComponentModel(Component component)
     {

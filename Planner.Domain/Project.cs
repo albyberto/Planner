@@ -7,5 +7,6 @@ public record Project(
     [property: JsonPropertyName("key")] string Key,
     [property: JsonPropertyName("name")] string Name,
     [property: JsonPropertyName("description")] string Description,
-    [property: JsonPropertyName("lead")] User? Lead
+    [property: JsonPropertyName("lead")] User? Lead,
+    [property: JsonPropertyName("avatarUrls")] AvatarUrls AvatarUrls
 );

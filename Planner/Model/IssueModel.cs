@@ -12,7 +12,7 @@ public record IssueModel
     public string Summary { get; set; }
     public StatusModel Status { get; set; }
     public UserModel Assignee { get; set; }
-    public IssueTypeModel Type { get; set; }
+    public TypeModel Type { get; set; }
     public ImmutableList<ComponentModel> Components { get; set; }
     public ImmutableList<LabelModel> Labels { get; set; }
     public ImmutableList<FixVersionModel> FixVersions { get; set; }

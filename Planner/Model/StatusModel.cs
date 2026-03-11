@@ -5,14 +5,14 @@ namespace Planner.Model;
 
 public record StatusModel
 {
-    public string Icon { get; set; }
-    public string Name { get; set; }
-    public string Category { get; set; }
+    public string Name { get; init; }
+    public string Icon { get; init; }
+    public string Category { get; init; }
 
     public StatusModel(Status status)
     {
-        Icon = status.IconUrl; 
         Name = status.Name.ToTitleCase();
+        Icon = status.IconUrl; 
         Category = status.StatusCategory?.Name ?? string.Empty;
     }
 }

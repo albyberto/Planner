@@ -3,6 +3,7 @@
 @using Planner.Extensions
 @using Planner.Model
 @using Planner.Options
+@using Planner.Services
 
 <MudNavMenu>
     <MudNavLink Href="/gantt" Match="NavLinkMatch.All" Icon="@Icons.Material.Filled.ViewTimeline">
@@ -30,7 +31,7 @@
     </MudNavGroup>
 </MudNavMenu>
 
-@inject JiraReadClient ReadClient
+@inject ProjectsService ProjectsService
 @inject IOptions<JiraFilterOptions> FilterOptions
 
 @code {
@@ -41,11 +42,13 @@
     {
         try
         {
-            var emails = FilterOptions.Value.TeamMembers
+            var options = FilterOptions.Value;
+            
+            var emails = options.TeamMembers
                 .Select(m => m.Email)
                 .ToArray();
             
-            var users = await ReadClient.GetProjects().FindAssigneesByEmailsAsync(emails);
+            var users = await ProjectsService.GetAsync(options.DefaultProject);
 
             _members = users
                 .Where(user => emails.Contains(user.EmailAddress))
