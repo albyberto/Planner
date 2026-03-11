@@ -4,35 +4,52 @@ namespace Planner.Model;
 
 public record ProjectModel
 {
-    private readonly Lazy<Task<ImmutableList<UserModel>>> _assigneesLoader;
-    private readonly Lazy<Task<ImmutableList<ComponentModel>>> _componentsLoader;
-    private readonly Lazy<Task<ImmutableList<LabelModel>>> _labelsLoader;
-    private readonly Lazy<Task<ImmutableList<TypeModel>>> _typesLoader;
-    private readonly Lazy<Task<ImmutableList<StatusModel>>> _statusesLoader;
+    private readonly Func<Task<ImmutableHashSet<TypeModel>>> _typesLoader;
+    private readonly Func<Task<ImmutableHashSet<StatusModel>>> _statusesLoader;
+    private readonly Func<Task<ImmutableHashSet<UserModel>>> _assigneesLoader;
+    private readonly Func<Task<ImmutableHashSet<ComponentModel>>> _componentsLoader;
+    private readonly Func<Task<ImmutableHashSet<LabelModel>>> _labelsLoader;
 
-    public ProjectModel(string key, AvatarsModel avatars,
-        Func<Task<ImmutableList<TypeModel>>> typesLoader,
-        Func<Task<ImmutableList<UserModel>>> assigneesLoader,
-        Func<Task<ImmutableList<ComponentModel>>> componentsLoader,
-        Func<Task<ImmutableList<LabelModel>>> labelsLoader,
-        Func<Task<ImmutableList<StatusModel>>> statusesLoader)
+    // Campi di cache per i Task
+    private Task<ImmutableHashSet<TypeModel>>? _typesTask;
+    private Task<ImmutableHashSet<StatusModel>>? _statusesTask;
+    private Task<ImmutableHashSet<UserModel>>? _assigneesTask;
+    private Task<ImmutableHashSet<ComponentModel>>? _componentsTask;
+    private Task<ImmutableHashSet<LabelModel>>? _labelsTask;
+
+    public ProjectModel(
+        string key, 
+        AvatarsModel avatars,
+        Func<Task<ImmutableHashSet<TypeModel>>> typesLoader,
+        Func<Task<ImmutableHashSet<StatusModel>>> statusesLoader,
+        Func<Task<ImmutableHashSet<UserModel>>> assigneesLoader,
+        Func<Task<ImmutableHashSet<ComponentModel>>> componentsLoader,
+        Func<Task<ImmutableHashSet<LabelModel>>> labelsLoader)
     {
         Key = key;
         Avatars = avatars;
-
-        _typesLoader = new(typesLoader);
-        _assigneesLoader = new(assigneesLoader);
-        _componentsLoader = new(componentsLoader);
-        _labelsLoader = new(labelsLoader);
-        _statusesLoader = new(statusesLoader);
+        _typesLoader = typesLoader;
+        _statusesLoader = statusesLoader;
+        _assigneesLoader = assigneesLoader;
+        _componentsLoader = componentsLoader;
+        _labelsLoader = labelsLoader;
     }
 
     public string Key { get; }
     public AvatarsModel Avatars { get; }
 
-    public Task<ImmutableList<UserModel>> GetAssigneesAsync() => _assigneesLoader.Value;
-    public Task<ImmutableList<ComponentModel>> GetComponentsAsync() => _componentsLoader.Value;
-    public Task<ImmutableList<LabelModel>> GetLabelsAsync() => _labelsLoader.Value;
-    public Task<ImmutableList<TypeModel>> GetIssueTypesAsync() => _typesLoader.Value;
-    public Task<ImmutableList<StatusModel>> GetStatusesAsync() => _statusesLoader.Value;
+    public Task<ImmutableHashSet<TypeModel>> GetIssueTypesAsync() => 
+        _typesTask ??= _typesLoader();
+
+    public Task<ImmutableHashSet<StatusModel>> GetStatusesAsync() => 
+        _statusesTask ??= _statusesLoader();
+
+    public Task<ImmutableHashSet<UserModel>> GetAssigneesAsync() => 
+        _assigneesTask ??= _assigneesLoader();
+
+    public Task<ImmutableHashSet<ComponentModel>> GetComponentsAsync() => 
+        _componentsTask ??= _componentsLoader();
+
+    public Task<ImmutableHashSet<LabelModel>> GetLabelsAsync() => 
+        _labelsTask ??= _labelsLoader();
 }

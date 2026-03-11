@@ -1,16 +1,11 @@
-﻿@using System.Collections.Immutable
-@using Microsoft.Extensions.Options
-@using Planner.Model
-@using Planner.Options
-@using Planner.Services
 <MudExpansionPanels Class="mb-4 mud-width-full" Elevation="2">
     <MudExpansionPanel Text="Filtri di Ricerca" Icon="@Icons.Material.Outlined.Flip" Expanded="true">
         <MudGrid>
             <MudItem xs="12" md="4">
                 <MudSelect T="string"
                            Label="Projects"
-                           Value="Filter.ProjectKey"
-                           ValueChanged="OnProjectChanged"
+                           Value="FilterModel.ProjectKey"
+                           ValueChanged="OnProjectChangedAsync"
                            Variant="Variant.Outlined"
                            Dense="true"
                            Required="true"
@@ -28,14 +23,14 @@
                 <MudSelect T="string"
                            Label="Statuses"
                            MultiSelection="true"
-                           SelectedValues="Filter.Statuses"
+                           SelectedValues="FilterModel.Statuses"
                            SelectedValuesChanged="OnStatusesChanged"
                            Variant="Variant.Outlined"
                            AnchorOrigin="Origin.BottomCenter"
                            Clearable="true"
                            Dense="true"
                            MultiSelectionTextFunc="@(selected => GetSelectedStatusesText(selected))">
-                    @foreach (var status in _availableStatuses)
+                    @foreach (var status in _statuses)
                     {
                         <MudSelectItem T="string" Value="@status.Name">@status.Name</MudSelectItem>
                     }
@@ -46,14 +41,14 @@
                 <MudSelect T="string"
                            Label="Types"
                            MultiSelection="true"
-                           SelectedValues="Filter.IssueTypes"
-                           SelectedValuesChanged="OnIssueTypesChanged"
+                           SelectedValues="FilterModel.Types"
+                           SelectedValuesChanged="OnTypesChanged"
                            Variant="Variant.Outlined"
                            AnchorOrigin="Origin.BottomCenter"
                            Clearable="true"
                            Dense="true"
-                           MultiSelectionTextFunc="@(selected => GetSelectedIssueTypesText(selected))">
-                    @foreach (var type in _issueTypes)
+                           MultiSelectionTextFunc="@(selected => GetSelectedTypesText(selected))">
+                    @foreach (var type in _types)
                     {
                         <MudSelectItem T="string" Value="@type.Value">@type.Name</MudSelectItem>
                     }
@@ -64,7 +59,7 @@
                 <MudSelect T="string"
                            Label="Components"
                            MultiSelection="true"
-                           SelectedValues="Filter.Components"
+                           SelectedValues="FilterModel.Components"
                            SelectedValuesChanged="OnComponentsChanged"
                            Variant="Variant.Outlined"
                            AnchorOrigin="Origin.BottomCenter"
@@ -82,7 +77,7 @@
                 <MudSelect T="string"
                            Label="Labels"
                            MultiSelection="true"
-                           SelectedValues="Filter.Labels"
+                           SelectedValues="FilterModel.Labels"
                            SelectedValuesChanged="OnLabelsChanged"
                            Variant="Variant.Outlined"
                            AnchorOrigin="Origin.BottomCenter"
@@ -102,7 +97,7 @@
                     <MudSelect T="string"
                                Label="Assignees"
                                MultiSelection="true"
-                               SelectedValues="Filter.Assignees"
+                               SelectedValues="FilterModel.Assignees"
                                SelectedValuesChanged="OnAssigneesChanged"
                                Variant="Variant.Outlined"
                                AnchorOrigin="Origin.BottomCenter"
@@ -121,224 +116,10 @@
                     <MudSwitch T="bool"
                                Label="Includi non assegnate"
                                Color="Color.Primary"
-                               Value="Filter.IncludeUnassigned"
+                               Value="FilterModel.IncludeUnassigned"
                                ValueChanged="OnUnassignedChanged"/>
                 </MudItem>
-            }
             }
         </MudGrid>
     </MudExpansionPanel>
 </MudExpansionPanels>
-
-@inject IOptions<JiraFilterOptions> Options
-@inject ProjectsService ProjectsService
-@inject ISnackbar Snackbar
-
-@code {
-    [Parameter] public EventCallback<Filter> OnFilterChanged { get; set; }
-    [Parameter] public HashSet<string>? ForcedAssignees { get; set; }
-    [Parameter] public bool? ForcedIncludeUnassigned { get; set; }
-    [Parameter] public bool ShowAssigneeFilter { get; set; } = true;
-
-    private bool _isLoaded;
-    private bool _firstRender = true;
-
-    private IReadOnlyList<ProjectModel> _projects = [];
-
-    private ImmutableList<StatusModel> _allProjectStatuses = [];
-    private ImmutableList<StatusModel> _availableStatuses = [];
-    private ImmutableList<UserModel> _assignees = [];
-    private ImmutableList<ComponentModel> _components = [];
-    private ImmutableList<LabelModel> _labels = [];
-    private ImmutableList<TypeModel> _issueTypes = [];
-
-    public Filter Filter = new();
-
-    protected override async Task OnInitializedAsync()
-    {
-        try
-        {
-            Filter = Filter with { ProjectKey = Options.Value.DefaultProject };
-
-            _projects = (await ProjectsService.GetAsync()).ToList();
-            _isLoaded = true;
-        }
-        catch
-        {
-            Snackbar.Add("Errore durante il recupero dei progetti.", Severity.Error);
-        }
-    }
-
-    protected override async Task OnParametersSetAsync()
-    {
-        if (!_isLoaded) return;
-
-        var settings = Options.Value;
-
-        var expectedProjectKey = Filter.ProjectKey ?? _projects.FirstOrDefault()?.Key;
-        var expectedAssignees = ForcedAssignees ?? settings.TeamMembers.Select(m => m.Email).ToHashSet();
-        var expectedUnassigned = ForcedIncludeUnassigned ?? settings.IncludeUnassignedByDefault;
-
-        var expectedStatuses = Filter.Statuses.Count > 0 ? Filter.Statuses : settings.DefaultStatuses.ToHashSet();
-        var expectedComponents = Filter.Components;
-        var expectedLabels = Filter.Labels;
-        var expectedIssueTypes = Filter.IssueTypes;
-
-        var hasAssigneesChanged = !Filter.Assignees.SetEquals(expectedAssignees);
-        var hasUnassignedChanged = Filter.IncludeUnassigned != expectedUnassigned;
-        var hasProjectChanged = Filter.ProjectKey != expectedProjectKey;
-
-        if (!hasAssigneesChanged && !hasUnassignedChanged && !hasProjectChanged && !_firstRender) return;
-
-        Filter = new(
-            expectedProjectKey,
-            expectedAssignees,
-            expectedStatuses,
-            expectedComponents,
-            expectedLabels,
-            expectedIssueTypes,
-            expectedUnassigned);
-
-        if (_firstRender || hasProjectChanged)
-        {
-            await LoadProjectDataAsync(expectedProjectKey);
-        }
-
-        _firstRender = false;
-
-        await NotifyFilterChanged();
-    }
-
-    private async Task LoadProjectDataAsync(string? projectKey)
-    {
-        if (string.IsNullOrEmpty(projectKey)) return;
-
-        var project = _projects.FirstOrDefault(p => p.Key == projectKey);
-        if (project is null) return;
-
-        _issueTypes = (await project.GetIssueTypesAsync()).OrderBy(x => x.Name).ToImmutableList();
-        _allProjectStatuses = (await project.GetStatusesAsync()).OrderBy(x => x.Name).ToImmutableList();
-        _assignees = (await project.GetAssigneesAsync()).OrderBy(x => x.DisplayName).ToImmutableList();
-        _components = (await project.GetComponentsAsync()).OrderBy(x => x.Name).ToImmutableList();
-        _labels = (await project.GetLabelsAsync()).OrderBy(x => x.Name).ToImmutableList();
-
-        UpdateAvailableStatuses();
-    }
-
-    private void UpdateAvailableStatuses()
-    {
-        if (Filter.IssueTypes.Count == 0)
-        {
-            _availableStatuses = _allProjectStatuses;
-        }
-        else
-        {
-            _availableStatuses = _issueTypes
-                .Where(t => Filter.IssueTypes.Contains(t.Value))
-                .SelectMany(t => t.Statuses)
-                .DistinctBy(s => s.Name)
-                .OrderBy(s => s.Name)
-                .ToImmutableList();
-        }
-
-        // Rimuovi stati selezionati che non sono più disponibili
-        var validNames = _availableStatuses.Select(s => s.Name).ToHashSet();
-        var pruned = Filter.Statuses.Where(s => validNames.Contains(s)).ToHashSet();
-        if (pruned.Count != Filter.Statuses.Count)
-        {
-            Filter = Filter with { Statuses = pruned };
-        }
-    }
-
-    private async Task OnProjectChanged(string projectKey)
-    {
-        await LoadProjectDataAsync(projectKey);
-
-        var newFilter = Filter with
-        {
-            ProjectKey = projectKey,
-            Statuses = [],
-            Components = [],
-            Labels = [],
-            IssueTypes = [],
-            Assignees = [],
-            IncludeUnassigned = false
-        };
-
-        await UpdateFilter(newFilter);
-    }
-
-    private Task OnStatusesChanged(IEnumerable<string> values) => UpdateFilter(Filter with
-    {
-        Statuses = values.ToHashSet()
-    });
-
-    private Task OnAssigneesChanged(IEnumerable<string> values) => UpdateFilter(Filter with
-    {
-        Assignees = values.ToHashSet()
-    });
-
-    private Task OnComponentsChanged(IEnumerable<string> values) => UpdateFilter(Filter with
-    {
-        Components =
-        values.ToHashSet()
-    });
-
-    private Task OnLabelsChanged(IEnumerable<string> values) => UpdateFilter(Filter with { Labels = values.ToHashSet() });
-
-    private async Task OnIssueTypesChanged(IEnumerable<string> values)
-    {
-        Filter = Filter with { IssueTypes = values.ToHashSet() };
-        UpdateAvailableStatuses();
-        await NotifyFilterChanged();
-    }
-
-    private Task OnUnassignedChanged(bool value) => UpdateFilter(Filter with { IncludeUnassigned = value });
-
-    private async Task UpdateFilter(Filter newFilter)
-    {
-        Filter = newFilter;
-        await NotifyFilterChanged();
-    }
-
-    private Task NotifyFilterChanged() => OnFilterChanged.HasDelegate
-        ? OnFilterChanged.InvokeAsync(Filter)
-        : Task.CompletedTask;
-
-
-    private string GetSelectedStatusesText(IReadOnlyCollection<string?>? values)
-    {
-        if (values is null || values.Count == 0) return string.Empty;
-        var labels = _availableStatuses.Where(x => values.Contains(x.Name)).Select(x => x.Name);
-        return string.Join(", ", labels);
-    }
-
-    private string GetSelectedAssigneesText(IReadOnlyCollection<string?>? values)
-    {
-        if (values is null || values.Count == 0) return string.Empty;
-        var labels = _assignees.Where(x => values.Contains(x.EmailAddress)).Select(x => x.DisplayName);
-        return string.Join(", ", labels);
-    }
-
-    private string GetSelectedComponentsText(IReadOnlyCollection<string?>? values)
-    {
-        if (values is null || values.Count == 0) return string.Empty;
-        var labels = _components.Where(x => values.Contains(x.Value)).Select(x => x.Name);
-        return string.Join(", ", labels);
-    }
-
-    private string GetSelectedLabelsText(IReadOnlyCollection<string?>? values)
-    {
-        if (values is null || values.Count == 0) return string.Empty;
-        var labels = _labels.Where(x => values.Contains(x.Value)).Select(x => x.Name);
-        return string.Join(", ", labels);
-    }
-
-    private string GetSelectedIssueTypesText(IReadOnlyCollection<string?>? values)
-    {
-        if (values is null || values.Count == 0) return string.Empty;
-        var labels = _issueTypes.Where(x => values.Contains(x.Value)).Select(x => x.Name);
-        return string.Join(", ", labels);
-    }
-
-}

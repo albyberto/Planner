@@ -1,0 +1,69 @@
+@page "/test"
+@using System.Collections.Immutable
+@using Planner.Model
+@using Planner.Stores
+@implements IDisposable
+
+<PageTitle>Test — Reactive Dashboard</PageTitle>
+
+<MudText Typo="Typo.h4" GutterBottom="true">
+    <MudIcon Icon="@Icons.Material.Filled.Science" Class="mr-2" />
+    Test — Reactive Dashboard
+</MudText>
+
+<Filters PageKey="test" ShowAssigneeFilter="false" />
+
+@if (!_issues.Any())
+{
+    <MudAlert Severity="Severity.Info" Class="mt-4">
+        Seleziona un progetto per visualizzare le issue tramite il flusso reattivo.
+    </MudAlert>
+}
+else
+{
+    <MudText Typo="Typo.subtitle1" Class="mt-4 mb-2">
+        <strong>@_issues.Count</strong> issue trovate
+    </MudText>
+
+    <MudTable Items="_issues" Dense="true" Hover="true" Elevation="2" Class="mt-2">
+        <HeaderContent>
+            <MudTh>Key</MudTh>
+            <MudTh>Summary</MudTh>
+            <MudTh>Status</MudTh>
+            <MudTh>Assignee</MudTh>
+            <MudTh>Type</MudTh>
+        </HeaderContent>
+        <RowTemplate>
+            <MudTd>@context.Key</MudTd>
+            <MudTd>@context.Summary</MudTd>
+            <MudTd>@context.Status.Name</MudTd>
+            <MudTd>@context.Assignee.DisplayName</MudTd>
+            <MudTd>@context.Type.Name</MudTd>
+        </RowTemplate>
+    </MudTable>
+}
+
+@inject IssueStore IssueStore
+
+@code {
+    private const string PageKey = "test";
+    private ImmutableList<IssueModel> _issues = [];
+    private IDisposable? _subscription;
+
+    protected override void OnInitialized()
+    {
+        // Subscribe to the IssueStore for this page's key
+        _subscription = IssueStore.Observe(PageKey)
+        .Subscribe(issues =>
+        {
+            _issues = issues;
+            InvokeAsync(StateHasChanged);
+        });
+    }
+
+    public void Dispose()
+    {
+        _subscription?.Dispose();
+        IssueStore.Release(PageKey);
+    }
+}

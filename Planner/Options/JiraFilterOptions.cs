@@ -8,19 +8,20 @@ public class JiraFilterOptions
 
     [Required, MinLength(2)]
     public string DefaultProject { get; init; } = string.Empty;
-    
-    public MeOptions Me { get; init; } = new();
-    
+    public HashSet<string> DefaultTypes { get; init; } = [];
     public HashSet<string> DefaultStatuses { get; init; } = [];
-    public HashSet<TeamMember> TeamMembers { get; init; } = [];
+    public HashSet<string> DefaultAssignees { get; init; } = [];
+    public HashSet<string> DefaultComponents { get; init; } = [];
+    public HashSet<string> DefaultLabels { get; init; } = [];
+    
     public bool IncludeUnassignedByDefault { get; init; }
-    public List<JiraPreset> Presets { get; init; } = [];
+    
+    public string Me { get; init; } = "";
 }
 
 public class TeamMember
 {
     public string Email { get; init; } = string.Empty;
-    public bool IsDefault { get; init; } = true;
 }
 
 public class JiraPreset

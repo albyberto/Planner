@@ -9,10 +9,11 @@ AsWindowsService(builder);
 builder.Services
     .AddMudBlazor()
     .AddPlannerOptions()
+    .AddStores()
+    .AddPlannerServices()
     .AddBackgroundServices()
     .AddInfrastructure();
 
-builder.Services.AddSingleton<JqlFilterBuilder>();
 
 var app = builder.Build();
 
