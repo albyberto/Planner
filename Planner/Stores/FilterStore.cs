@@ -7,21 +7,23 @@ namespace Planner.Stores;
 
 public class FilterStore
 {
-    private readonly ConcurrentDictionary<Guid, Subject<FilterModel>> _subjects = new();
+    private readonly ConcurrentDictionary<Guid, BehaviorSubject<IssueSearchCriteria>> _subjects = new();
+    private readonly Subject<Emit<IssueSearchCriteria>> _stream = new();
 
-    public IObservable<FilterModel> Observe(Guid key) => _subjects.TryGetValue(key, out var subject) 
+    public IObservable<IssueSearchCriteria> Observe(Guid key) => _subjects.TryGetValue(key, out var subject) 
         ? subject.AsObservable() 
-        : Observable.Empty<FilterModel>();
+        : Observable.Empty<IssueSearchCriteria>();
+
+    public IObservable<Emit<IssueSearchCriteria>> ObserveGlobal() => _stream.AsObservable();
     
-    public void Emit(Guid key, FilterModel filterModel)
+    public void Emit(Guid key, IssueSearchCriteria issueSearchCriteria)
     {
-        if (_subjects.TryGetValue(key, out var subject))
-        {
-            subject.OnNext(filterModel);
-        }
+        if (_subjects.TryGetValue(key, out var subject)) subject.OnNext(issueSearchCriteria);
+        
+        _stream.OnNext(new(key, issueSearchCriteria));
     }
     
-    public void Register(Guid key) => _subjects.TryAdd(key, new());
+    public void Register(Guid key) => _subjects.TryAdd(key, new(IssueSearchCriteria.Empty));
     
     public void UnRegister(Guid key)
     {

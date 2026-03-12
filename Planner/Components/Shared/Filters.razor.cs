@@ -22,12 +22,11 @@ public partial class Filters : ComponentBase, IDisposable
     private ImmutableArray<UserModel> _assignees = [];
     private ImmutableArray<ComponentModel> _components = [];
     private ImmutableArray<LabelModel> _labels = [];
-
     private ImmutableArray<ProjectModel> _projects = [];
     private ImmutableArray<StatusModel> _statuses = [];
     private ImmutableArray<TypeModel> _types = [];
 
-    public FilterModel FilterModel = new();
+    public IssueSearchCriteria SearchCriteria = IssueSearchCriteria.Empty;
 
     protected override async Task OnInitializedAsync()
     {
@@ -37,7 +36,7 @@ public partial class Filters : ComponentBase, IDisposable
         {
             var options = Options.Value;
 
-            FilterModel = FilterModel with
+            SearchCriteria = SearchCriteria with
             {
                 ProjectKey = options.DefaultProject,
                 Types = options.DefaultTypes,
@@ -47,6 +46,8 @@ public partial class Filters : ComponentBase, IDisposable
                 Labels = options.DefaultLabels,
                 IncludeUnassigned = options.IncludeUnassignedByDefault
             };
+
+            Emit(SearchCriteria);
 
             var projects = await ProjectsService.GetAsync();
             _projects = [..projects.OrderBy(project => project.Key)];
@@ -61,112 +62,79 @@ public partial class Filters : ComponentBase, IDisposable
 
     private async Task OnProjectChangedAsync(string projectKey)
     {
-        FilterModel.Clear(projectKey);
+        SearchCriteria = IssueSearchCriteria.Create(projectKey);
+        Emit(SearchCriteria);
+        
         await BuildAsync(projectKey);
     }
 
     private void OnTypesChanged(IEnumerable<string> values)
     {
-        FilterModel = FilterModel with
-        {
-            Types = values.ToHashSet()
-        };
+        SearchCriteria = SearchCriteria with { Types = values.ToImmutableHashSet() };
+        Emit(SearchCriteria);
     }
 
     private string GetSelectedTypesText(IReadOnlyCollection<string?>? values)
     {
         if (values is null || values.Count == 0) return string.Empty;
-
-        var types = _types
-            .Where(x => values.Contains(x.Value))
-            .Select(x => x.Name);
-
-        return string.Join(", ", types);
+        return string.Join(", ", _types.Where(x => values.Contains(x.Value)).Select(x => x.Name));
     }
 
     private void OnStatusesChanged(IEnumerable<string> values)
     {
-        FilterModel = FilterModel with
-        {
-            Statuses = values.ToHashSet()
-        };
+        SearchCriteria = SearchCriteria with { Statuses = values.ToImmutableHashSet() };
+        Emit(SearchCriteria);
     }
 
     private string GetSelectedStatusesText(IReadOnlyCollection<string?>? values)
     {
         if (values is null || values.Count == 0) return string.Empty;
-
-        var statuses = _statuses
-            .Where(x => values.Contains(x.Name))
-            .Select(x => x.Name);
-
-        return string.Join(", ", statuses);
+        return string.Join(", ", _statuses.Where(x => values.Contains(x.Name)).Select(x => x.Name));
     }
 
     private void OnAssigneesChanged(IEnumerable<string> values)
     {
-        FilterModel = FilterModel with
-        {
-            Assignees = values.ToHashSet()
-        };
+        SearchCriteria = SearchCriteria with { Assignees = values.ToImmutableHashSet() };
+        Emit(SearchCriteria);
     }
 
     private string GetSelectedAssigneesText(IReadOnlyCollection<string?>? values)
     {
         if (values is null || values.Count == 0) return string.Empty;
-
-        var assignees = _assignees
-            .Where(x => values.Contains(x.EmailAddress))
-            .Select(x => x.DisplayName);
-
-        return string.Join(", ", assignees);
+        return string.Join(", ", _assignees.Where(x => values.Contains(x.EmailAddress)).Select(x => x.DisplayName));
     }
 
     private void OnComponentsChanged(IEnumerable<string> values)
     {
-        FilterModel = FilterModel with
-        {
-            Components = values.ToHashSet()
-        };
+        SearchCriteria = SearchCriteria with { Components = values.ToImmutableHashSet() };
+        Emit(SearchCriteria);
     }
 
     private string GetSelectedComponentsText(IReadOnlyCollection<string?>? values)
     {
         if (values is null || values.Count == 0) return string.Empty;
-
-        var components = _components
-            .Where(x => values.Contains(x.Value))
-            .Select(x => x.Name);
-
-        return string.Join(", ", components);
+        return string.Join(", ", _components.Where(x => values.Contains(x.Value)).Select(x => x.Name));
     }
 
     private void OnLabelsChanged(IEnumerable<string> values)
     {
-        FilterModel = FilterModel with
-        {
-            Labels = values.ToHashSet()
-        };
+        SearchCriteria = SearchCriteria with { Labels = values.ToImmutableHashSet() };
+        Emit(SearchCriteria);
     }
 
     private string GetSelectedLabelsText(IReadOnlyCollection<string?>? values)
     {
         if (values is null || values.Count == 0) return string.Empty;
-
-        var labels = _labels
-            .Where(x => values.Contains(x.Value))
-            .Select(x => x.Name);
-
-        return string.Join(", ", labels);
+        return string.Join(", ", _labels.Where(x => values.Contains(x.Value)).Select(x => x.Name));
     }
 
     private void OnUnassignedChanged(bool value)
     {
-        FilterModel = FilterModel with
-        {
-            IncludeUnassigned = value
-        };
+        SearchCriteria = SearchCriteria with { IncludeUnassigned = value };
+        Emit(SearchCriteria);
     }
+
+    private void Emit(IssueSearchCriteria criteria) => FilterStore.Emit(PageKey, criteria);
 
     private async Task BuildAsync(string projectKey)
     {
@@ -190,9 +158,5 @@ public partial class Filters : ComponentBase, IDisposable
         _labels = [..labels.OrderBy(l => l.Name)];
     }
 
-    public void Dispose()
-    {
-        FilterStore.UnRegister(PageKey);
-        Snackbar.Dispose();
-    }
+    public void Dispose() => FilterStore.UnRegister(PageKey);
 }

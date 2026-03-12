@@ -1,3 +1,4 @@
+using System.Collections.Immutable;
 using System.ComponentModel.DataAnnotations;
 
 namespace Planner.Options;
@@ -8,11 +9,11 @@ public class JiraFilterOptions
 
     [Required, MinLength(2)]
     public string DefaultProject { get; init; } = string.Empty;
-    public HashSet<string> DefaultTypes { get; init; } = [];
-    public HashSet<string> DefaultStatuses { get; init; } = [];
-    public HashSet<string> DefaultAssignees { get; init; } = [];
-    public HashSet<string> DefaultComponents { get; init; } = [];
-    public HashSet<string> DefaultLabels { get; init; } = [];
+    public ImmutableHashSet<string> DefaultTypes { get; init; } = [];
+    public ImmutableHashSet<string> DefaultStatuses { get; init; } = [];
+    public ImmutableHashSet<string> DefaultAssignees { get; init; } = [];
+    public ImmutableHashSet<string> DefaultComponents { get; init; } = [];
+    public ImmutableHashSet<string> DefaultLabels { get; init; } = [];
     
     public bool IncludeUnassignedByDefault { get; init; }
     

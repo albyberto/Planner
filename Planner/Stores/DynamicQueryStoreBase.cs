@@ -1,84 +1,113 @@
-using System.Collections.Concurrent;
 using System.Reactive.Linq;
 using System.Reactive.Subjects;
 
 namespace Planner.Stores;
 
-/// <summary>
-/// Base class for managing dynamic reactive state streams based on query keys (like JQL).
-/// Automatically handles reference counting to clean up unused streams.
-/// </summary>
-/// <typeparam name="TData">The type of data emitted by the store.</typeparam>
 public class DynamicQueryStoreBase<TData>(TData initialValue) : IDisposable
 {
-    private readonly ConcurrentDictionary<string, BehaviorSubject<TData>> _subjects = new();
-    private readonly ConcurrentDictionary<string, int> _refCounts = new();
+    // Usiamo un lock esplicito e dizionari standard. 
+    // Mantenere sincronizzati due ConcurrentDictionary senza lock è quasi impossibile senza incorrere in race conditions.
+    private readonly Dictionary<string, BehaviorSubject<TData>> _subjects = new();
+    private readonly Dictionary<string, int> _refCounts = new();
+    private readonly object _syncRoot = new();
 
-    /// <summary>
-    /// Subscribes to a specific query stream. Creates it if it doesn't exist.
-    /// </summary>
     public IObservable<TData> Observe(string query)
     {
         if (string.IsNullOrWhiteSpace(query)) return Observable.Empty<TData>();
 
-        // Increment reference count for this query
-        _refCounts.AddOrUpdate(query, 1, (_, count) => count + 1);
+        // Observable.Create ci permette di iniettare logica quando qualcuno fa .Subscribe() e .Dispose()
+        return Observable.Create<TData>(observer =>
+        {
+            BehaviorSubject<TData> subject;
 
-        // Get existing subject or create a new one with the initial value
-        return _subjects.GetOrAdd(query, _ => new BehaviorSubject<TData>(initialValue))
-                        .AsObservable();
+            // 1. Inizio Sottoscrizione: Incrementiamo in modo sicuro
+            lock (_syncRoot)
+            {
+                if (!_refCounts.TryGetValue(query, out var count))
+                {
+                    // Primo iscritto: creiamo il subject
+                    count = 0;
+                    _subjects[query] = new BehaviorSubject<TData>(initialValue);
+                }
+                
+                _refCounts[query] = count + 1;
+                subject = _subjects[query];
+            }
+
+            // 2. Passiamo i dati al chiamante
+            var subscription = subject.Subscribe(observer);
+
+            // 3. Fine Sottoscrizione (Return Action): Eseguita AUTOMATICAMENTE quando la UI fa .Dispose()
+            return () =>
+            {
+                subscription.Dispose();
+                ReleaseInternal(query);
+            };
+        });
     }
 
-    /// <summary>
-    /// Releases a subscription to a query. Cleans up memory if no one is listening anymore.
-    /// </summary>
-    public void Release(string query)
+    private void ReleaseInternal(string query)
     {
-        if (string.IsNullOrWhiteSpace(query)) return;
-
-        if (_refCounts.TryGetValue(query, out int count))
+        lock (_syncRoot)
         {
-            if (count <= 1)
+            if (_refCounts.TryGetValue(query, out var count))
             {
-                // No more subscribers: clean up completely
-                _refCounts.TryRemove(query, out _);
-                if (_subjects.TryRemove(query, out var subject))
+                count--;
+                if (count <= 0)
                 {
-                    subject.Dispose();
+                    // Nessun iscritto rimasto: facciamo pulizia completa
+                    _refCounts.Remove(query);
+                    if (_subjects.TryGetValue(query, out var subject))
+                    {
+                        _subjects.Remove(query);
+                        subject.Dispose();
+                    }
                 }
-            }
-            else
-            {
-                // Still other subscribers: just decrement the counter
-                _refCounts[query] = count - 1;
+                else
+                {
+                    // Ci sono ancora iscritti, aggiorniamo solo il counter
+                    _refCounts[query] = count;
+                }
             }
         }
     }
 
-    /// <summary>
-    /// Gets all currently active queries that have at least one subscriber.
-    /// </summary>
-    public IEnumerable<string> GetActiveQueries() => _refCounts.Keys;
-
-    /// <summary>
-    /// Emits new data to a specific query stream (called by the Background Service).
-    /// </summary>
     public void Emit(string query, TData data)
     {
-        if (_subjects.TryGetValue(query, out var subject))
+        BehaviorSubject<TData>? subject = null;
+        
+        // Prendiamo il subject in modo sicuro
+        lock (_syncRoot)
         {
-            subject.OnNext(data);
+            if (_subjects.TryGetValue(query, out var s))
+            {
+                subject = s;
+            }
+        }
+
+        // Emettiamo fuori dal lock per evitare potenziali deadlocks se gli observer sono lenti
+        subject?.OnNext(data);
+    }
+
+    public IEnumerable<string> GetActiveQueries()
+    {
+        lock (_syncRoot)
+        {
+            return _refCounts.Keys.ToList();
         }
     }
 
     public void Dispose()
     {
-        foreach (var subject in _subjects.Values)
+        lock (_syncRoot)
         {
-            subject.Dispose();
+            foreach (var subject in _subjects.Values)
+            {
+                subject.Dispose();
+            }
+            _subjects.Clear();
+            _refCounts.Clear();
         }
-        _subjects.Clear();
-        _refCounts.Clear();
         GC.SuppressFinalize(this);
     }
 }
