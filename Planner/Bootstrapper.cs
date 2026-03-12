@@ -43,7 +43,6 @@ public static class Bootstrapper
 
     public IServiceCollection AddPlannerServices()
     {
-        services.AddSingleton<JqlFilterBuilder>();
         services.AddScoped<ProjectsService>();
 
         return services;
