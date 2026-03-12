@@ -34,7 +34,7 @@ public class JiraFilterClient(HttpClient httpClient, IFusionCache cache, IOption
                     throw;
                 }
             },
-            new FusionCacheEntryOptions { Duration = _cacheOptions.Projects.AbsoluteExpirationRelativeToNow ?? TimeSpan.FromMinutes(30) },
+            new FusionCacheEntryOptions { Duration = _cacheOptions.Projects },
             cancellationToken
         );
 
@@ -56,7 +56,7 @@ public class JiraFilterClient(HttpClient httpClient, IFusionCache cache, IOption
                     throw;
                 }
             },
-            new FusionCacheEntryOptions { Duration = _cacheOptions.Types.AbsoluteExpirationRelativeToNow ?? TimeSpan.FromMinutes(30) },
+            new FusionCacheEntryOptions { Duration = _cacheOptions.Types },
             cancellationToken
         );
 
@@ -79,7 +79,7 @@ public class JiraFilterClient(HttpClient httpClient, IFusionCache cache, IOption
                     throw;
                 }
             },
-            new FusionCacheEntryOptions { Duration = _cacheOptions.Assignees.AbsoluteExpirationRelativeToNow ?? TimeSpan.FromMinutes(30) },
+            new FusionCacheEntryOptions { Duration = _cacheOptions.Assignees },
             cancellationToken
         );
 
@@ -101,7 +101,7 @@ public class JiraFilterClient(HttpClient httpClient, IFusionCache cache, IOption
                     throw;
                 }
             },
-            new FusionCacheEntryOptions { Duration = _cacheOptions.Components.AbsoluteExpirationRelativeToNow ?? TimeSpan.FromMinutes(30) },
+            new FusionCacheEntryOptions { Duration = _cacheOptions.Components },
             cancellationToken
         );
 
@@ -138,7 +138,7 @@ public class JiraFilterClient(HttpClient httpClient, IFusionCache cache, IOption
                     throw;
                 }
             },
-            new FusionCacheEntryOptions { Duration = _cacheOptions.Labels.AbsoluteExpirationRelativeToNow ?? TimeSpan.FromMinutes(60) },
+            new FusionCacheEntryOptions { Duration = _cacheOptions.Labels },
             cancellationToken
         );
 }
