@@ -5,7 +5,7 @@ namespace Planner.Options;
 
 public class JiraFilterOptions
 {
-    public const string SectionName = "JiraFilters";
+    public const string SectionName = nameof(JiraFilterOptions);
 
     [Required, MinLength(2)]
     public string DefaultProject { get; init; } = string.Empty;
