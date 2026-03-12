@@ -46,6 +46,12 @@ public static class Bootstrapper
             // Register the DelegatingHandler as a Transient service
             services.AddTransient<JiraAuthenticationHandler>();
             
+            // Register Filter Client
+            services.AddHttpClient<JiraFilterClient>(ConfigureJiraClient)
+                .AddHttpMessageHandler<JiraAuthenticationHandler>()
+                .AddPolicyHandler(GetRetryPolicy())
+                .AddPolicyHandler(GetCircuitBreakerPolicy());
+            
             // Register Read Client
             services.AddHttpClient<JiraReadClient>(ConfigureJiraClient)
                 .AddHttpMessageHandler<JiraAuthenticationHandler>()
@@ -57,12 +63,6 @@ public static class Bootstrapper
             //     .AddHttpMessageHandler<JiraAuthenticationHandler>()
             //     .AddPolicyHandler(GetRetryPolicy())
             //     .AddPolicyHandler(GetCircuitBreakerPolicy());
-            
-            // Register Filter Client
-            services.AddHttpClient<JiraFilterClient>(ConfigureJiraClient)
-                .AddHttpMessageHandler<JiraAuthenticationHandler>()
-                .AddPolicyHandler(GetRetryPolicy())
-                .AddPolicyHandler(GetCircuitBreakerPolicy());
         }
         
         private void AddCache() =>
