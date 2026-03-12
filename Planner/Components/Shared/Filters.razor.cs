@@ -70,7 +70,7 @@ public partial class Filters : ComponentBase, IDisposable
 
     private void OnTypesChanged(IEnumerable<string> values)
     {
-        SearchCriteria = SearchCriteria with { Types = values.ToImmutableHashSet() };
+        SearchCriteria = SearchCriteria with { Types = values.ToHashSet() };
         Emit(SearchCriteria);
     }
 
@@ -82,7 +82,7 @@ public partial class Filters : ComponentBase, IDisposable
 
     private void OnStatusesChanged(IEnumerable<string> values)
     {
-        SearchCriteria = SearchCriteria with { Statuses = values.ToImmutableHashSet() };
+        SearchCriteria = SearchCriteria with { Statuses = values.ToHashSet() };
         Emit(SearchCriteria);
     }
 
@@ -94,7 +94,7 @@ public partial class Filters : ComponentBase, IDisposable
 
     private void OnAssigneesChanged(IEnumerable<string> values)
     {
-        SearchCriteria = SearchCriteria with { Assignees = values.ToImmutableHashSet() };
+        SearchCriteria = SearchCriteria with { Assignees = values.ToHashSet() };
         Emit(SearchCriteria);
     }
 
@@ -106,7 +106,7 @@ public partial class Filters : ComponentBase, IDisposable
 
     private void OnComponentsChanged(IEnumerable<string> values)
     {
-        SearchCriteria = SearchCriteria with { Components = values.ToImmutableHashSet() };
+        SearchCriteria = SearchCriteria with { Components = values.ToHashSet() };
         Emit(SearchCriteria);
     }
 
@@ -118,7 +118,7 @@ public partial class Filters : ComponentBase, IDisposable
 
     private void OnLabelsChanged(IEnumerable<string> values)
     {
-        SearchCriteria = SearchCriteria with { Labels = values.ToImmutableHashSet() };
+        SearchCriteria = SearchCriteria with { Labels = values.ToHashSet() };
         Emit(SearchCriteria);
     }
 

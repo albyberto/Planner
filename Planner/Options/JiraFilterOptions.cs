@@ -9,11 +9,11 @@ public class JiraFilterOptions
 
     [Required, MinLength(2)]
     public string DefaultProject { get; init; } = string.Empty;
-    public ImmutableHashSet<string> DefaultTypes { get; init; } = [];
-    public ImmutableHashSet<string> DefaultStatuses { get; init; } = [];
-    public ImmutableHashSet<string> DefaultAssignees { get; init; } = [];
-    public ImmutableHashSet<string> DefaultComponents { get; init; } = [];
-    public ImmutableHashSet<string> DefaultLabels { get; init; } = [];
+    public HashSet<string> DefaultTypes { get; init; } = [];
+    public HashSet<string> DefaultStatuses { get; init; } = [];
+    public HashSet<string> DefaultAssignees { get; init; } = [];
+    public HashSet<string> DefaultComponents { get; init; } = [];
+    public HashSet<string> DefaultLabels { get; init; } = [];
     
     public bool IncludeUnassignedByDefault { get; init; }
     
