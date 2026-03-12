@@ -8,7 +8,7 @@ namespace Planner.Infrastructure.Clients;
 /// <summary>
 ///     Client responsible for reading issues and their available transitions from Jira.
 /// </summary>
-public class JiraReadClient(HttpClient httpClient, ILogger<JiraReadClient> logger)
+public class JiraReadClient(HttpClient client, ILogger<JiraReadClient> logger)
 {
     // A default fallback list of fields to fetch if none are provided
     private static readonly string[] DefaultFields =
@@ -50,7 +50,7 @@ public class JiraReadClient(HttpClient httpClient, ILogger<JiraReadClient> logge
                 if (!string.IsNullOrEmpty(nextPageToken)) 
                     request["nextPageToken"] = nextPageToken;
 
-                var response = await httpClient.PostAsJsonAsync("search/jql", request, cancellationToken);
+                var response = await client.PostAsJsonAsync("search/jql", request, cancellationToken);
 
                 if (!response.IsSuccessStatusCode)
                 {
@@ -64,7 +64,9 @@ public class JiraReadClient(HttpClient httpClient, ILogger<JiraReadClient> logge
                 if (result is null || result.List.Count == 0) break;
 
                 accumulator.AddRange(result.List);
+                
                 nextPageToken = result.NextPageToken;
+                
             } while (!string.IsNullOrEmpty(nextPageToken));
 
             return accumulator.ToImmutableHashSet();
@@ -73,6 +75,21 @@ public class JiraReadClient(HttpClient httpClient, ILogger<JiraReadClient> logge
         {
             logger.LogError(exception, "Error fetching issues for JQL: {Jql}", jql);
             throw;
+        }
+    }
+    
+    public async Task<IReadOnlyList<Transition>> GetAvailableTransitionsAsync(string issueKey, CancellationToken cancellationToken = default)
+    {
+        try
+        {
+            var response = await client.GetFromJsonAsync<TransitionsResponse>($"issue/{issueKey}/transitions", cancellationToken);
+
+            return response?.Transitions ?? [];
+        }
+        catch (HttpRequestException ex)
+        {
+            logger.LogError(ex, "Error fetching transitions for issue {IssueKey}", issueKey);
+            return [];
         }
     }
 }

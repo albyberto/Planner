@@ -3,67 +3,72 @@
 @using Planner.Model
 @using Planner.Stores
 @implements IDisposable
+@inject IssueStore IssueStore
 
-<PageTitle>Test — Reactive Dashboard</PageTitle>
+<MudContainer MaxWidth="MaxWidth.ExtraLarge" Class="mt-4">
+    <MudText Typo="Typo.h4" Class="mb-4">Jira Dashboard</MudText>
 
-<MudText Typo="Typo.h4" GutterBottom="true">
-    <MudIcon Icon="@Icons.Material.Filled.Science" Class="mr-2" />
-    Test — Reactive Dashboard
-</MudText>
+    <Filters PageKey="@_pageKey" />
 
-<Filters PageKey="test" ShowAssigneeFilter="false" />
-
-@if (!_issues.Any())
-{
-    <MudAlert Severity="Severity.Info" Class="mt-4">
-        Seleziona un progetto per visualizzare le issue tramite il flusso reattivo.
-    </MudAlert>
-}
-else
-{
-    <MudText Typo="Typo.subtitle1" Class="mt-4 mb-2">
-        <strong>@_issues.Count</strong> issue trovate
-    </MudText>
-
-    <MudTable Items="_issues" Dense="true" Hover="true" Elevation="2" Class="mt-2">
+    <MudTable Items="@_issues" Hover="true" Striped="true" Loading="@_isLoading" Class="mt-6">
         <HeaderContent>
             <MudTh>Key</MudTh>
             <MudTh>Summary</MudTh>
+            <MudTh>Type</MudTh>
             <MudTh>Status</MudTh>
             <MudTh>Assignee</MudTh>
-            <MudTh>Type</MudTh>
         </HeaderContent>
         <RowTemplate>
-            <MudTd>@context.Key</MudTd>
-            <MudTd>@context.Summary</MudTd>
-            <MudTd>@context.Status.Name</MudTd>
-            <MudTd>@context.Assignee.DisplayName</MudTd>
-            <MudTd>@context.Type.Name</MudTd>
+            <MudTd DataLabel="Key">@context.Key</MudTd>
+            <MudTd DataLabel="Summary">@context.Summary</MudTd>
+            <MudTd DataLabel="Type">@context.Type?.Name</MudTd>
+            <MudTd DataLabel="Status">@context.Status?.Name</MudTd>
+            <MudTd DataLabel="Assignee">@context.Assignee?.DisplayName</MudTd>
         </RowTemplate>
+        <NoRecordsContent>
+            <MudText>Nessun ticket trovato con i filtri correnti.</MudText>
+        </NoRecordsContent>
+        <LoadingContent>
+            <MudText>Caricamento dati da Jira in corso...</MudText>
+        </LoadingContent>
     </MudTable>
-}
-
-@inject IssueStore IssueStore
+</MudContainer>
 
 @code {
-    private const string PageKey = "test";
-    private ImmutableList<IssueModel> _issues = [];
-    private IDisposable? _subscription;
+    // Generiamo una chiave univoca per questa istanza della pagina.
+    // Se l'utente apre la dashboard in 2 tab diversi del browser, 
+    // avranno due Guid separati e non si pesteranno i piedi.
+    private readonly Guid _pageKey = Guid.NewGuid();
+    
+    private ImmutableArray<IssueModel> _issues = [];
+    private IDisposable? _storeSubscription;
+    private bool _isLoading = true;
 
     protected override void OnInitialized()
     {
-        // Subscribe to the IssueStore for this page's key
-        _subscription = IssueStore.Observe(PageKey)
-        .Subscribe(issues =>
+        // Ci iscriviamo all'IssueStore per ricevere i dati calcolati dal BackgroundService.
+        // Grazie all'infrastruttura di DynamicQueryStoreBase, la prima volta che chiamiamo Observe()
+        // verrà inizializzato il BehaviorSubject nel dizionario interno.
+        _storeSubscription = IssueStore.Observe(_pageKey).Subscribe(issues =>
         {
-            _issues = issues;
-            InvokeAsync(StateHasChanged);
+            // Essendo chiamati da un thread in background (il BackgroundService),
+            // dobbiamo usare InvokeAsync per rientrare nel SynchronizationContext di Blazor
+            InvokeAsync(() =>
+            {
+                _issues = issues;
+                _isLoading = false;
+                StateHasChanged();
+            });
         });
     }
 
     public void Dispose()
     {
-        _subscription?.Dispose();
-        IssueStore.Release(PageKey);
+        // QUANDO L'UTENTE CAMBIA PAGINA:
+        // Chiamando .Dispose() sulla subscription, scatta la Return Action che hai 
+        // messo nel Observable.Create di DynamicQueryStoreBase.
+        // Questo andrà a fare ReleaseInternal(_pageKey), decrementando il refcount 
+        // e liberando istantaneamente la memoria!
+        _storeSubscription?.Dispose();
     }
 }

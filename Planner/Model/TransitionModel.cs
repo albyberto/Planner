@@ -1,14 +1,17 @@
 using Planner.Domain;
-using Planner.Extensions;
 
 namespace Planner.Model;
 
 public record TransitionModel
 {
-    public string To { get; init; }
+    public string Id { get; init; }
+    public string Name { get; init; }
+    public StatusModel TargetStatus { get; init; }
 
-    public TransitionModel(Transition status)
+    public TransitionModel(Transition dto)
     {
-        To = status.To.Name.ToTitleCase();
+        Id = dto.Id;
+        Name = dto.Name;
+        TargetStatus = new(dto.To);
     }
 }

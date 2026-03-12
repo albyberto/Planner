@@ -13,6 +13,6 @@ public record StatusModel
     {
         Name = status.Name.ToTitleCase();
         Icon = status.IconUrl; 
-        Category = status.StatusCategory?.Name ?? string.Empty;
+        Category = status.StatusCategory.Name;
     }
 }

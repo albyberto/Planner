@@ -13,10 +13,10 @@ public record IssueModel
     public StatusModel Status { get; set; }
     public UserModel Assignee { get; set; }
     public TypeModel Type { get; set; }
-    public ImmutableList<ComponentModel> Components { get; set; }
-    public ImmutableList<LabelModel> Labels { get; set; }
-    public ImmutableList<FixVersionModel> FixVersions { get; set; }
-    public ImmutableList<IssueCommentModel> Comments { get; set; }
+    public ImmutableArray<ComponentModel> Components { get; set; }
+    public ImmutableArray<LabelModel> Labels { get; set; }
+    public ImmutableArray<FixVersionModel> FixVersions { get; set; }
+    public ImmutableArray<IssueCommentModel> Comments { get; set; }
     public DateOnly? StartDate { get; set; }
     public DateOnly? EndDate { get; set; }
     public DateOnly? DueDate { get; set; }
@@ -35,10 +35,10 @@ public record IssueModel
         Status = new(dto.Fields.Status);
         Assignee = new(dto.Fields.Assignee);
         Type = new(dto.Fields.IssueType);
-        Components = dto.Fields.Components.Select(component => new ComponentModel(component)).ToImmutableList();
-        Labels = dto.Fields.Labels.Select(label => new LabelModel(label)).ToImmutableList();
-        FixVersions = dto.Fields.FixVersions.Select(version => new FixVersionModel(version)).ToImmutableList() ?? [];
-        Comments = dto.Fields.Comment?.Comments?.Select(comment => new IssueCommentModel(comment)).ToImmutableList() ?? [];
+        Components = [..dto.Fields.Components.Select(component => new ComponentModel(component))];
+        Labels = [..dto.Fields.Labels.Select(label => new LabelModel(label))];
+        FixVersions = [..dto.Fields.FixVersions.Select(version => new FixVersionModel(version))];
+        Comments = dto.Fields.Comment?.Comments?.Select(comment => new IssueCommentModel(comment)).ToImmutableArray() ?? [];
         StartDate = dto.Fields.StartDate;
         EndDate = dto.Fields.EndDate;
         DueDate = dto.Fields.DueDate;
@@ -58,6 +58,6 @@ public record IssueModel
         
         return transitions
             .Select(transition => new TransitionModel(transition))
-            .ToImmutableList();
+            .ToImmutableArray();
     }
 }

@@ -46,11 +46,11 @@
         {
             var options = FilterOptions.Value;
             
-            var emails = options.TeamMembers
-                .Select(m => m.Email)
-                .ToArray();
-            
-            var users = await ProjectsService.GetAsync(options.DefaultProject);
+            // var emails = options.TeamMembers
+            //     .Select(m => m.Email)
+            //     .ToArray();
+            //
+            // var users = await ProjectsService.GetAsync(options.DefaultProject);
         }
         catch
         {

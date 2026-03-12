@@ -8,7 +8,7 @@ namespace Planner.Builders;
 
 public static class JqlBuilderExtensions
 {
-    public static string ToJqlBuilder(this IssueSearchCriteria criteria)
+    public static string ToJql(this IssueSearchCriteria criteria)
     {
         if (string.IsNullOrWhiteSpace(criteria.ProjectKey)) throw new ArgumentException("ProjectKey is required to build JQL query.");
 

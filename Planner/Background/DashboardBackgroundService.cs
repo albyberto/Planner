@@ -1,70 +1,77 @@
+using System.Collections.Immutable;
 using System.Reactive.Linq;
+using Planner.Builders;
 using Planner.Infrastructure.Clients;
 using Planner.Model;
-using Planner.Services;
 using Planner.Stores;
 
 namespace Planner.Background;
 
-public class DashboardBackgroundService(FilterStore filterStore, IssueStore issueStore, JiraReadClient readClient, JqlFilterBuilder queryBuilder, ILogger<DashboardBackgroundService> logger) : BackgroundServiceBase(60, logger)
+public class DashboardBackgroundService(FilterStore filterStore, IssueStore issueStore, JiraReadClient readClient, ILogger<DashboardBackgroundService> logger) : BackgroundServiceBase(1, logger)
 {
-    protected override async Task RunAsync(CancellationToken stoppingToken)
+    protected override async Task ExecuteAsync(CancellationToken stoppingToken)
     {
-        logger.LogInformation("DashboardBackgroundService in ascolto dei filtri...");
-
-        var subscription = filterStore.ObserveGlobal()
-            .Where(emit => emit.Value is not null)
+        var instantSubscription = filterStore.ObserveGlobal()
             .GroupBy(emit => emit.Key)
             .SelectMany(group => group
-                .Throttle(TimeSpan.FromMilliseconds(500)) // Debounce di 500ms: aspetta che l'utente smetta di cliccare i filtri prima di partire
-                .SelectMany(async emit => await ProcessFilterAsync(emit, stoppingToken))
+                .Throttle(TimeSpan.FromMilliseconds(500))
+                .SelectMany(async emit =>
+                {
+                    await FetchAndEmitAsync(emit, stoppingToken);
+                    return System.Reactive.Unit.Default;
+                })
             )
             .Subscribe(
-                _ => { /* Elaborazione terminata con successo per l'evento */ },
-                ex => logger.LogCritical(ex, "Errore fatale nello stream globale dei filtri")
+                _ => { }, 
+                ex => logger.LogError(ex, "Errore nello stream istantaneo")
             );
 
         try
         {
-            await Task.Delay(Timeout.Infinite, stoppingToken);
-        }
-        catch (TaskCanceledException)
-        {
-            // Spegnimento grazioso (Ctrl+C o stop dell'app)
+            await base.ExecuteAsync(stoppingToken);
         }
         finally
         {
-            subscription.Dispose();
+            instantSubscription.Dispose();
         }
     }
 
-    private async Task<System.Reactive.Unit> ProcessFilterAsync(Emit<IssueSearchCriteria> emit, CancellationToken ct)
+    protected override async Task RunAsync(CancellationToken stoppingToken)
+    {
+        var activeTabs = filterStore.GetFiltersForPolling(TimeSpan.FromSeconds(60));
+
+        foreach (var emit in activeTabs)
+        {
+            if (stoppingToken.IsCancellationRequested) break;
+
+            await FetchAndEmitAsync(emit, stoppingToken);
+        }
+    }
+
+    private async Task FetchAndEmitAsync(Emit<IssueSearchCriteria> emit, CancellationToken cancellationToken)
     {
         try
         {
-            logger.LogDebug("Costruzione JQL per la Key: {Key}", emit.Key);
-            
-            // 1. Converti il filtro UI in JQL
-            var jql = queryBuilder.Build(emit.Value!);
+            var jql = emit.Value.ToJql();
 
-            // 2. Esegui la chiamata HTTP a Jira
-            var issues = await readClient.GetIssuesAsync(jql, ct);
+            if (string.IsNullOrWhiteSpace(jql))
+            {
+                issueStore.Emit(emit.Key, []);
+                return;
+            }
 
-            // 3. Emetti i risultati verso lo store che alimenta la tabella/dashboard
-            // Assumiamo che IssueStore accetti un IEnumerable/ImmutableArray e la stessa Key della vista
-            issueStore.Emit(emit.Key, issues);
+            var issues = await readClient.GetIssuesAsync(jql, cancellationToken: cancellationToken);
+
+            filterStore.MarkAsFetched(emit.Key);
+
+            issueStore.Emit(emit.Key, [..issues.Select(issue => new IssueModel(issue, () => readClient.GetAvailableTransitionsAsync(issue.Key, CancellationToken.None)))]);
             
             logger.LogInformation("Recuperate {Count} issue per la Key: {Key}", issues.Count, emit.Key);
         }
+        catch (OperationCanceledException) { }
         catch (Exception ex)
         {
-            // Gestione dell'errore confinata al singolo Emit. Non fa crollare il BackgroundService.
             logger.LogError(ex, "Errore di comunicazione con Jira per la Key {Key}", emit.Key);
-            
-            // Opzionale: potresti emettere un evento di errore allo store per mostrare uno Snackbar nella UI
-            // issueStore.EmitError(emit.Key, "Errore durante il recupero dei dati da Jira.");
         }
-
-        return System.Reactive.Unit.Default;
     }
 }
