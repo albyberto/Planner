@@ -2,7 +2,7 @@ using System.Text.Json.Serialization;
 
 namespace Planner.Domain;
 
-public record Component
+public class Component
 {
     [JsonPropertyName("id")] public required string Id { get; init; }
     [JsonPropertyName("name")] public required string Name { get; init; }

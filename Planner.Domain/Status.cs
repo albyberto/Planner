@@ -2,7 +2,7 @@ using System.Text.Json.Serialization;
 
 namespace Planner.Domain;
 
-public record Status
+public class Status
 {
     [JsonPropertyName("self")] public string? Self { get; init; }
     [JsonPropertyName("id")] public required string Id { get; init; }
@@ -12,7 +12,7 @@ public record Status
     [JsonPropertyName("statusCategory")] public required StatusCategory StatusCategory { get; init; }
 }
 
-public record StatusCategory
+public class StatusCategory
 {
     [JsonPropertyName("self")] public string? Self { get; init; }
     [JsonPropertyName("id")] public required int Id { get; init; }

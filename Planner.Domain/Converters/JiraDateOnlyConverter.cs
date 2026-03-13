@@ -2,7 +2,7 @@ using System.Globalization;
 using System.Text.Json;
 using System.Text.Json.Serialization;
 
-namespace Planner.Domain;
+namespace Planner.Domain.Converters;
 
 /// <summary>
 /// Converte le date Jira (es. "2025-02-10T11:21:25.496+0100") in DateOnly?.

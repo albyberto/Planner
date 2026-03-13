@@ -3,8 +3,7 @@ using System.Text.Json.Serialization;
 
 namespace Planner.Domain.Responses;
 
-public record TransitionsResponse
+public class TransitionsResponse
 {
-    [JsonPropertyName("transitions")]
-    public ImmutableArray<Transition> Transitions { get; init; } = [];
+    [JsonPropertyName("transitions")] public ImmutableArray<Transition> Transitions { get; init; } = [];
 }
