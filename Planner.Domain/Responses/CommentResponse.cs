@@ -2,7 +2,7 @@ using System.Text.Json.Serialization;
 
 namespace Planner.Domain.Responses;
 
-public record CommentRepsonse
+public record CommentResponse
 {
     [JsonPropertyName("maxResults")] public int? MaxResults { get; init; }
     [JsonPropertyName("total")] public int? Total { get; init; }
