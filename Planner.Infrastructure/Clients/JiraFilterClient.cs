@@ -5,6 +5,7 @@ using Microsoft.Extensions.Options;
 using Planner.Domain;
 using Planner.Infrastructure.Options;
 using ZiggyCreatures.Caching.Fusion;
+using Type = Planner.Domain.Type;
 
 namespace Planner.Infrastructure.Clients;
 
@@ -38,14 +39,14 @@ public class JiraFilterClient(HttpClient httpClient, IFusionCache cache, IOption
             cancellationToken
         );
 
-    public async Task<ImmutableHashSet<IssueType>> GetTypesAsync(string projectKey, CancellationToken cancellationToken = default) =>
+    public async Task<ImmutableHashSet<Type>> GetTypesAsync(string projectKey, CancellationToken cancellationToken = default) =>
         await cache.GetOrSetAsync(
             $"jira:types:{projectKey}",
             async ct =>
             {
                 try
                 {
-                    var response = await httpClient.GetFromJsonAsync<List<IssueType>>($"project/{projectKey}/statuses", ct);
+                    var response = await httpClient.GetFromJsonAsync<List<Type>>($"project/{projectKey}/statuses", ct);
                     return (response ?? [])
                         .DistinctBy(type => type.Id)
                         .ToImmutableHashSet();

@@ -2,13 +2,21 @@ using System.Text.Json.Serialization;
 
 namespace Planner.Domain;
 
-public record FixVersion(
-    [property: JsonPropertyName("self")] string Self,
-    [property: JsonPropertyName("id")] string Id,
-    [property: JsonPropertyName("description")] string Description,
-    [property: JsonPropertyName("name")] string Name,
-    [property: JsonPropertyName("startDate")] DateOnly? StartDate,
-    [property: JsonPropertyName("releaseDate")] DateOnly? ReleaseDate,
-    [property: JsonPropertyName("archived")] bool? Archived,
-    [property: JsonPropertyName("released")] bool? Released
-);
+public record FixVersion
+{
+    [JsonPropertyName("id")] public required string Id { get; init; }
+
+    [JsonPropertyName("name")] public required string Name { get; init; }
+
+    [JsonPropertyName("self")] public string? Self { get; init; }
+
+    [JsonPropertyName("description")] public string? Description { get; init; }
+
+    [JsonPropertyName("startDate")] public DateOnly? StartDate { get; init; }
+
+    [JsonPropertyName("releaseDate")] public DateOnly? ReleaseDate { get; init; }
+
+    [JsonPropertyName("archived")] public bool? Archived { get; init; }
+
+    [JsonPropertyName("released")] public bool? Released { get; init; }
+}

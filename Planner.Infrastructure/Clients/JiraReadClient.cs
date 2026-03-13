@@ -2,6 +2,8 @@ using System.Collections.Immutable;
 using System.Net.Http.Json;
 using Microsoft.Extensions.Logging;
 using Planner.Domain;
+using Planner.Domain.Issue;
+using Planner.Domain.Responses;
 
 namespace Planner.Infrastructure.Clients;
 
@@ -59,7 +61,7 @@ public class JiraReadClient(HttpClient client, ILogger<JiraReadClient> logger)
                     response.EnsureSuccessStatusCode();
                 }
 
-                var result = await response.Content.ReadFromJsonAsync<Issues>(cancellationToken);
+                var result = await response.Content.ReadFromJsonAsync<IssuesResponse>(cancellationToken);
 
                 if (result is null || result.List.Count == 0) break;
 

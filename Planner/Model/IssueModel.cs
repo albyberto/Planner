@@ -1,5 +1,6 @@
 using System.Collections.Immutable;
 using Planner.Domain;
+using Planner.Domain.Issue;
 
 namespace Planner.Model;
 

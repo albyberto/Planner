@@ -1,4 +1,5 @@
 using System.Collections.Immutable;
+using System.Reactive;
 using System.Reactive.Linq;
 using Planner.Builders;
 using Planner.Infrastructure.Clients;
@@ -18,11 +19,11 @@ public class DashboardBackgroundService(FilterStore filterStore, IssueStore issu
                 .SelectMany(async emit =>
                 {
                     await FetchAndEmitAsync(emit, stoppingToken);
-                    return System.Reactive.Unit.Default;
+                    return Unit.Default;
                 })
             )
             .Subscribe(
-                _ => { }, 
+                _ => { },
                 ex => logger.LogError(ex, "Errore nello stream istantaneo")
             );
 
@@ -60,15 +61,18 @@ public class DashboardBackgroundService(FilterStore filterStore, IssueStore issu
                 return;
             }
 
-            var issues = await readClient.GetIssuesAsync(jql, cancellationToken: cancellationToken);
+            ImmutableHashSet<string> fields = ["summary", "status", "assignee", "fixVersions", "issuetype", "components", "labels", "project"];
+            var issues = await readClient.GetIssuesAsync(jql, fields, cancellationToken: cancellationToken);
 
             filterStore.MarkAsFetched(emit.Key);
 
             issueStore.Emit(emit.Key, [..issues.Select(issue => new IssueModel(issue, () => readClient.GetAvailableTransitionsAsync(issue.Key, CancellationToken.None)))]);
-            
+
             logger.LogInformation("Recuperate {Count} issue per la Key: {Key}", issues.Count, emit.Key);
         }
-        catch (OperationCanceledException) { }
+        catch (OperationCanceledException)
+        {
+        }
         catch (Exception ex)
         {
             logger.LogError(ex, "Errore di comunicazione con Jira per la Key {Key}", emit.Key);
