@@ -18,6 +18,6 @@ public record TypeModel
         Name = type.Name.ToTitleCase();
         IconUrl = type.IconUrl ?? string.Empty;
         
-        Statuses = type.Statuses?.Select(status => new StatusModel(status)).ToImmutableList() ?? [];
+        Statuses = type.Statuses.Select(status => new StatusModel(status)).ToImmutableList() ?? [];
     }
 }

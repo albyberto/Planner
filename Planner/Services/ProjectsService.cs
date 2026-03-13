@@ -9,7 +9,7 @@ public class ProjectsService(JiraFilterClient client)
 {
     public async Task<ImmutableHashSet<ProjectModel>> GetAsync(CancellationToken cancellationToken = default)
     {
-        var projects = await client.GetProjectsAsync(cancellationToken);
+        var projects = await client.GetProjectsAsync(0,100, cancellationToken);
 
         return projects
             .Select(project => CreateProjectModel(project, cancellationToken))
@@ -18,7 +18,7 @@ public class ProjectsService(JiraFilterClient client)
 
     public async Task<ProjectModel?> GetAsync(string projectKey, CancellationToken cancellationToken = default)
     {
-        var projects = await client.GetProjectsAsync(cancellationToken);
+        var projects = await client.GetProjectsAsync(0, 100, cancellationToken);
 
         var project = projects
             .SingleOrDefault(p => p.Key.Equals(projectKey, StringComparison.OrdinalIgnoreCase));
@@ -83,7 +83,7 @@ public class ProjectsService(JiraFilterClient client)
 
     private async Task<ImmutableHashSet<LabelModel>> FetchLabelsAsync(CancellationToken cancellationToken)
     {
-        var labels = await client.GetLabelsAsync(cancellationToken);
+        var labels = await client.GetLabelsAsync(0, 100, cancellationToken);
         
         return labels
             .Select(label => new LabelModel(label))

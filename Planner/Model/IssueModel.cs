@@ -1,6 +1,5 @@
 using System.Collections.Immutable;
 using Planner.Domain;
-using Planner.Domain.Issue;
 
 namespace Planner.Model;
 
@@ -17,7 +16,7 @@ public record IssueModel
     public ImmutableArray<ComponentModel> Components { get; set; }
     public ImmutableArray<LabelModel> Labels { get; set; }
     public ImmutableArray<FixVersionModel> FixVersions { get; set; }
-    public ImmutableArray<IssueCommentModel> Comments { get; set; }
+    // public ImmutableArray<IssueCommentModel> Comments { get; set; }
     public DateOnly? StartDate { get; set; }
     public DateOnly? EndDate { get; set; }
     public DateOnly? DueDate { get; set; }
@@ -35,20 +34,20 @@ public record IssueModel
         Summary = dto.Fields.Summary;
         Status = new(dto.Fields.Status);
         Assignee = new(dto.Fields.Assignee);
-        Type = new(dto.Fields.IssueType);
+        Type = new(dto.Fields.Type);
         Components = [..dto.Fields.Components.Select(component => new ComponentModel(component))];
         Labels = [..dto.Fields.Labels.Select(label => new LabelModel(label))];
         FixVersions = [..dto.Fields.FixVersions.Select(version => new FixVersionModel(version))];
-        Comments = dto.Fields.Comment?.Comments?.Select(comment => new IssueCommentModel(comment)).ToImmutableArray() ?? [];
+        // Comments = dto.Fields.Comment?.Body.ContentList.Select(comment => new IssueCommentModel(comment)).ToImmutableArray() ?? [];
         StartDate = dto.Fields.StartDate;
         EndDate = dto.Fields.EndDate;
         DueDate = dto.Fields.DueDate;
 
         var originalEstimate = dto.Fields.TimeTracking?.OriginalEstimateSeconds ?? 0;
-        var timeSpent = dto.Fields.Worklog?.Worklogs?.Sum(w => w.TimeSpentSeconds ?? 0) ?? 0;
-        var remainingEstimate = dto.Fields.TimeTracking?.RemainingEstimateSeconds;
+        // var timeSpent = dto.Fields?.Worklog?.Worklogs?.Sum(w => w.TimeSpentSeconds ?? 0) ?? 0;
+        // var remainingEstimate = dto.Fields.TimeTracking?.RemainingEstimateSeconds;
         
-        Stats = new(originalEstimate, timeSpent, remainingEstimate);
+        // Stats = new(originalEstimate, timeSpent, remainingEstimate);
 
         _transitionsLoader = new(loadTransitions);
     }
