@@ -2,21 +2,18 @@
     <MudExpansionPanel Text="Filtri di Ricerca" Icon="@Icons.Material.Outlined.Flip" Expanded="true">
         <MudGrid>
             <MudItem xs="12" md="4">
-                <MudSelect T="string"
-                           Label="Projects"
-                           Value="_searchCriteria.ProjectKey"
-                           ValueChanged="OnProjectChangedAsync"
-                           Variant="Variant.Outlined"
-                           Dense="true"
-                           Required="true"
-                           RequiredError="Il progetto è obbligatorio">
-                    @* ECCO LA VIRTUALIZZAZIONE MUDBLAZOR *@
-                    <MudVirtualize ItemsProvider="LoadProjects" Context="project" OverscanCount="10" ItemSize="40">
-                        <MudSelectItem T="string" Value="@project.Key">
-                            @project.Key
-                        </MudSelectItem>
-                    </MudVirtualize>
-                </MudSelect>
+                <MudAutocomplete T="string"
+                                 Label="Projects"
+                                 Value="_searchCriteria.ProjectKey"
+                                 ValueChanged="OnProjectChangedAsync"
+                                 SearchFunc="SearchProjectsAsync"
+                                 Variant="Variant.Outlined"
+                                 Dense="true"
+                                 Required="true"
+                                 RequiredError="Il progetto è obbligatorio"
+                                 MinCharacters="1"
+                                 DebounceInterval="250"
+                                 ResetValueOnEmptyText="true" />
             </MudItem>
 
             <MudItem xs="12" sm="6" md="4">

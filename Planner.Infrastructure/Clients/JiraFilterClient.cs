@@ -6,7 +6,6 @@ using Planner.Domain;
 using Planner.Domain.Responses;
 using Planner.Infrastructure.Options;
 using ZiggyCreatures.Caching.Fusion;
-using Type = System.Type;
 
 namespace Planner.Infrastructure.Clients;
 
@@ -14,36 +13,44 @@ public class JiraFilterClient(HttpClient httpClient, IFusionCache cache, IOption
 {
     private readonly CacheOptions _cacheOptions = cacheOptions.Value;
 
-    public async Task<Project?> GetProjectAsync(string projectKey, CancellationToken cancellationToken = default) =>
-        await cache.GetOrSetAsync($"jira:project:{projectKey}", async ct =>
+    public async Task<ImmutableArray<Project>> GetProjectsAsync(CancellationToken cancellationToken = default)
+    {
+        const string cacheKey = "jira:projects:all";
+
+        return await cache.GetOrSetAsync(cacheKey, async ct =>
         {
+            const int maxResults = 100;
+
+            var isLast = false;
+            var startAt = 0;
+
+            List<Project> accumulator = [];
+            
             try
             {
-                return await httpClient.GetFromJsonAsync<Project>($"project/{projectKey}", ct);
-            }
-            catch (Exception ex)
-            {
-                logger.LogError(ex, "Error fetching project {Project}", projectKey);
-                return null;
-            }
-        }, new FusionCacheEntryOptions { Duration = _cacheOptions.Projects }, cancellationToken);
+                while (!isLast)
+                {
+                    var uri = $"project/search?startAt={startAt}&maxResults={maxResults}";
+                    var response = await httpClient.GetFromJsonAsync<ProjectResponse>(uri, ct);
 
-    public async Task<ImmutableArray<Project>> GetProjectsAsync(uint skip, uint take, CancellationToken cancellationToken = default) =>
-        await cache.GetOrSetAsync($"jira:projects:skip:{skip}:take:{take}", async ct =>
-        {
-            try
-            {
-                var uri = $"project/search?startAt={skip}&maxResults={take}";
-                var response = await httpClient.GetFromJsonAsync<ProjectResponse>(uri, ct);
+                    if (response is null) break;
+                    if (response.Projects.Any()) accumulator.AddRange(response.Projects);
 
-                return (response?.Values ?? []).DistinctBy(project => project.Id).ToImmutableArray();
+                    isLast = response.IsLast;
+                    startAt += maxResults; 
+                    
+                    if (startAt >= response.Total) isLast = true;
+                }
+
+                return accumulator.DistinctBy(project => project.Id).ToImmutableArray();
             }
             catch (Exception exception)
             {
-                logger.LogError(exception, "Error fetching paginated projects");
+                logger.LogError(exception, "Error fetching all paginated projects from Jira.");
                 throw;
             }
         }, new FusionCacheEntryOptions { Duration = _cacheOptions.Projects }, cancellationToken);
+    }
 
     public async Task<ImmutableArray<Domain.Type>> GetTypesAsync(string projectKey, CancellationToken cancellationToken = default) =>
         await cache.GetOrSetAsync($"jira:types:{projectKey}", async ct =>

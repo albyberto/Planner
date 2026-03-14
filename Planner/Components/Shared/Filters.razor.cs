@@ -20,6 +20,7 @@ public partial class Filters : ComponentBase, IDisposable
     [Parameter] public Guid PageKey { get; set; }
     [Parameter] public bool ShowAssigneeFilter { get; set; } = true;
         
+    private ImmutableArray<ProjectModel> _projects = [];
     private ImmutableArray<UserModel> _assignees = [];
     private ImmutableArray<ComponentModel> _components = [];
     private ImmutableArray<StatusModel> _statuses = [];
@@ -58,17 +59,26 @@ public partial class Filters : ComponentBase, IDisposable
 
     #region Projects
 
-    private async ValueTask<ItemsProviderResult<ProjectModel>> LoadProjects(ItemsProviderRequest request)
+    private Task<IEnumerable<string>> SearchProjectsAsync(string? value, CancellationToken cancellationToken)
     {
-        var take = request.Count == 0 ? 50 : (uint)request.Count; // Safety fallback
-        var projects = await ProjectsService.GetProjectsPageAsync((uint)request.StartIndex, take, request.CancellationToken);
-        
-        var total = request.StartIndex + projects.Length + (projects.Length == request.Count ? 1 : 0);
-        return new(projects, total);
+        if (string.IsNullOrWhiteSpace(value)) return Task.FromResult<IEnumerable<string>>([]);
+
+        var token = value.Trim().ToUpperInvariant();
+
+        var result = _projects
+            .Where(p => p.Key.StartsWith(token, StringComparison.OrdinalIgnoreCase))
+            .Select(p => p.Key);
+
+        return Task.FromResult(result);
     }
 
-    private async Task OnProjectChangedAsync(string projectKey)
+    private async Task OnProjectChangedAsync(string? projectKey)
     {
+        if (string.IsNullOrWhiteSpace(projectKey)) return;
+
+        var token = projectKey.Trim().ToUpperInvariant();
+        if (!_projects.Select(project => project.Key).Contains(projectKey, StringComparer.OrdinalIgnoreCase)) return;
+        
         _searchCriteria = IssuesSearchCriteria.Create(projectKey);
         Emit(_searchCriteria);
         await BuildAsync(projectKey);
@@ -176,13 +186,15 @@ public partial class Filters : ComponentBase, IDisposable
 
     private async Task BuildAsync(string projectKey)
     {
+        var projectsTask = ProjectsService.SearchProjectsAsync(CancellationToken.None);
         var typesTask = ProjectsService.GetTypesAsync(projectKey);
         var statusesTask = ProjectsService.GetStatusesAsync(projectKey);
         var assigneesTask = ProjectsService.GetAssigneesAsync(projectKey);
         var componentsTask = ProjectsService.GetComponentsAsync(projectKey);
 
-        await Task.WhenAll(typesTask, statusesTask, assigneesTask, componentsTask);
+        await Task.WhenAll(projectsTask, typesTask, statusesTask, assigneesTask, componentsTask);
 
+        _projects = projectsTask.Result;
         _types = typesTask.Result;
         _statuses = statusesTask.Result;
         _assignees = assigneesTask.Result;

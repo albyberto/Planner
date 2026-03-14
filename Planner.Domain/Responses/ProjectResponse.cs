@@ -11,5 +11,5 @@ public class ProjectResponse
     [JsonPropertyName("startAt")] public int StartAt { get; init; }
     [JsonPropertyName("total")] public int Total { get; init; }
     [JsonPropertyName("isLast")] public bool IsLast { get; init; }
-    [JsonPropertyName("values")] public ImmutableArray<Project> Values { get; init; } = [];
+    [JsonPropertyName("values")] public ImmutableArray<Project> Projects { get; init; } = [];
 }

@@ -6,19 +6,14 @@ namespace Planner.Services;
 
 public class ProjectsService(JiraFilterClient client)
 {
-    public async Task<ProjectModel?> GetSingleProjectAsync(string projectKey, CancellationToken cancellationToken = default)
+    public async Task<ImmutableArray<ProjectModel>> SearchProjectsAsync(CancellationToken cancellationToken = default)
     {
-        var project = await client.GetProjectAsync(projectKey, cancellationToken);
-        return project is not null ? new ProjectModel(project.Key, new AvatarsModel(project.AvatarUrls)) : null;
-    }
-
-    public async Task<ImmutableArray<ProjectModel>> GetProjectsPageAsync(uint skip, uint take, CancellationToken cancellationToken = default)
-    {
-        var projects = await client.GetProjectsAsync(skip, take, cancellationToken);
-        return [
+        var projects = await client.GetProjectsAsync(cancellationToken);
+        
+        return  [
             ..projects
                 .Select(p => new ProjectModel(p.Key, new(p.AvatarUrls)))
-        ];
+                .OrderBy(p => p.Key)];
     }
 
     public async Task<ImmutableArray<TypeModel>> GetTypesAsync(string projectKey, CancellationToken cancellationToken = default)
