@@ -4,18 +4,18 @@
             <MudItem xs="12" md="4">
                 <MudSelect T="string"
                            Label="Projects"
-                           Value="SearchCriteria.ProjectKey"
+                           Value="_searchCriteria.ProjectKey"
                            ValueChanged="OnProjectChangedAsync"
                            Variant="Variant.Outlined"
                            Dense="true"
                            Required="true"
                            RequiredError="Il progetto è obbligatorio">
-                    @foreach (var project in _projects)
-                    {
+                    @* ECCO LA VIRTUALIZZAZIONE MUDBLAZOR *@
+                    <MudVirtualize ItemsProvider="LoadProjects" Context="project" OverscanCount="10" ItemSize="40">
                         <MudSelectItem T="string" Value="@project.Key">
                             @project.Key
                         </MudSelectItem>
-                    }
+                    </MudVirtualize>
                 </MudSelect>
             </MudItem>
 
@@ -23,7 +23,7 @@
                 <MudSelect T="string"
                            Label="Statuses"
                            MultiSelection="true"
-                           SelectedValues="SearchCriteria.Statuses"
+                           SelectedValues="_searchCriteria.Statuses"
                            SelectedValuesChanged="OnStatusesChanged"
                            Variant="Variant.Outlined"
                            AnchorOrigin="Origin.BottomCenter"
@@ -41,7 +41,7 @@
                 <MudSelect T="string"
                            Label="Types"
                            MultiSelection="true"
-                           SelectedValues="SearchCriteria.Types"
+                           SelectedValues="_searchCriteria.Types"
                            SelectedValuesChanged="OnTypesChanged"
                            Variant="Variant.Outlined"
                            AnchorOrigin="Origin.BottomCenter"
@@ -59,7 +59,7 @@
                 <MudSelect T="string"
                            Label="Components"
                            MultiSelection="true"
-                           SelectedValues="SearchCriteria.Components"
+                           SelectedValues="_searchCriteria.Components"
                            SelectedValuesChanged="OnComponentsChanged"
                            Variant="Variant.Outlined"
                            AnchorOrigin="Origin.BottomCenter"
@@ -77,17 +77,17 @@
                 <MudSelect T="string"
                            Label="Labels"
                            MultiSelection="true"
-                           SelectedValues="SearchCriteria.Labels"
+                           SelectedValues="_searchCriteria.Labels"
                            SelectedValuesChanged="OnLabelsChanged"
                            Variant="Variant.Outlined"
                            AnchorOrigin="Origin.BottomCenter"
                            Clearable="true"
                            Dense="true"
                            MultiSelectionTextFunc="@(selected => GetSelectedLabelsText(selected))">
-                    @foreach (var label in _labels)
-                    {
-                        <MudSelectItem T="string" Value="@label.Value">@label.Name</MudSelectItem>
-                    }
+                    @* ECCO LA VIRTUALIZZAZIONE MUDBLAZOR *@
+                    <MudVirtualize ItemsProvider="LoadLabels" Context="label" OverscanCount="10" ItemSize="40">
+                        <MudSelectItem T="string" Value="@label.Name">@label.Name</MudSelectItem>
+                    </MudVirtualize>
                 </MudSelect>
             </MudItem>
 
@@ -97,7 +97,7 @@
                     <MudSelect T="string"
                                Label="Assignees"
                                MultiSelection="true"
-                               SelectedValues="SearchCriteria.Assignees"
+                               SelectedValues="_searchCriteria.Assignees"
                                SelectedValuesChanged="OnAssigneesChanged"
                                Variant="Variant.Outlined"
                                AnchorOrigin="Origin.BottomCenter"
@@ -116,7 +116,7 @@
                     <MudSwitch T="bool"
                                Label="Includi non assegnate"
                                Color="Color.Primary"
-                               Value="SearchCriteria.IncludeUnassigned"
+                               Value="_searchCriteria.IncludeUnassigned"
                                ValueChanged="OnUnassignedChanged"/>
                 </MudItem>
             }

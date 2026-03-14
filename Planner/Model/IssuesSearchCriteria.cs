@@ -2,7 +2,7 @@ namespace Planner.Model;
 
 using System.Collections.Immutable;
 
-public record IssueSearchCriteria(
+public record IssuesSearchCriteria(
     string? ProjectKey = null,
     HashSet<string>? Assignees = null,
     HashSet<string>? Statuses = null,
@@ -17,6 +17,6 @@ public record IssueSearchCriteria(
     public HashSet<string> Labels { get; init; } = Labels ?? [];
     public HashSet<string> Types { get; init; } = Types ?? [];
 
-    public static IssueSearchCriteria Create(string projectKey) => new(ProjectKey: projectKey);
-    public static IssueSearchCriteria Empty => new();
+    public static IssuesSearchCriteria Create(string projectKey) => new(ProjectKey: projectKey);
+    public static IssuesSearchCriteria Empty => new();
 }

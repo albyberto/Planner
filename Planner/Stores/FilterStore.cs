@@ -9,23 +9,23 @@ public class FilterStore
 {
     private class FilterEntry
     {
-        public BehaviorSubject<IssueSearchCriteria> Subject { get; } = new(IssueSearchCriteria.Empty);
+        public BehaviorSubject<IssuesSearchCriteria> Subject { get; } = new(IssuesSearchCriteria.Empty);
         public DateTime LastFetched { get; set; } = DateTime.MinValue;
     }
 
     private readonly ConcurrentDictionary<Guid, FilterEntry> _entries = new();
-    private readonly Subject<Emit<IssueSearchCriteria>> _stream = new();
+    private readonly Subject<Emit<IssuesSearchCriteria>> _stream = new();
 
-    public IObservable<IssueSearchCriteria> Observe(Guid key) => _entries.TryGetValue(key, out var entry) 
+    public IObservable<IssuesSearchCriteria> Observe(Guid key) => _entries.TryGetValue(key, out var entry) 
         ? entry.Subject.AsObservable() 
-        : Observable.Empty<IssueSearchCriteria>();
+        : Observable.Empty<IssuesSearchCriteria>();
 
-    public IObservable<Emit<IssueSearchCriteria>> ObserveGlobal() => _stream.AsObservable();
+    public IObservable<Emit<IssuesSearchCriteria>> ObserveGlobal() => _stream.AsObservable();
 
-    public IReadOnlyList<Emit<IssueSearchCriteria>> GetFiltersForPolling(TimeSpan threshold)
+    public IReadOnlyList<Emit<IssuesSearchCriteria>> GetFiltersForPolling(TimeSpan threshold)
     {
         var now = DateTime.UtcNow;
-        var result = new List<Emit<IssueSearchCriteria>>();
+        var result = new List<Emit<IssuesSearchCriteria>>();
 
         foreach (var kvp in _entries)
         {
@@ -44,15 +44,15 @@ public class FilterStore
         if (_entries.TryGetValue(key, out var entry)) entry.LastFetched = DateTime.UtcNow;
     }
     
-    public void Emit(Guid key, IssueSearchCriteria issueSearchCriteria)
+    public void Emit(Guid key, IssuesSearchCriteria issuesSearchCriteria)
     {
         if (_entries.TryGetValue(key, out var entry))
         {
-            entry.Subject.OnNext(issueSearchCriteria);
+            entry.Subject.OnNext(issuesSearchCriteria);
             entry.LastFetched = DateTime.UtcNow; 
         }
         
-        _stream.OnNext(new(key, issueSearchCriteria));
+        _stream.OnNext(new(key, issuesSearchCriteria));
     }
     
     public void Register(Guid key) => _entries.TryAdd(key, new());

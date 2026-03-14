@@ -1,5 +1,6 @@
 using System.Collections.Immutable;
 using Microsoft.AspNetCore.Components;
+using Microsoft.AspNetCore.Components.Web.Virtualization;
 using Microsoft.Extensions.Options;
 using MudBlazor;
 using Planner.Model;
@@ -21,12 +22,10 @@ public partial class Filters : ComponentBase, IDisposable
         
     private ImmutableArray<UserModel> _assignees = [];
     private ImmutableArray<ComponentModel> _components = [];
-    private ImmutableArray<LabelModel> _labels = [];
-    private ImmutableArray<ProjectModel> _projects = [];
     private ImmutableArray<StatusModel> _statuses = [];
     private ImmutableArray<TypeModel> _types = [];
 
-    public IssueSearchCriteria SearchCriteria = IssueSearchCriteria.Empty;
+    private IssuesSearchCriteria _searchCriteria = IssuesSearchCriteria.Empty;
 
     protected override async Task OnInitializedAsync()
     {
@@ -36,7 +35,7 @@ public partial class Filters : ComponentBase, IDisposable
         {
             var options = Options.Value;
 
-            SearchCriteria = SearchCriteria with
+            _searchCriteria = _searchCriteria with
             {
                 ProjectKey = options.DefaultProject,
                 Types = options.DefaultTypes,
@@ -47,43 +46,59 @@ public partial class Filters : ComponentBase, IDisposable
                 IncludeUnassigned = options.IncludeUnassignedByDefault
             };
 
-            Emit(SearchCriteria);
-
-            var projects = await ProjectsService.GetAsync();
-            _projects = [..projects.OrderBy(project => project.Key)];
-
+            Emit(_searchCriteria);
+            
             await BuildAsync(options.DefaultProject);
         }
         catch
         {
-            Snackbar.Add("Errore durante il recupero dei progetti.", Severity.Error);
+            Snackbar.Add("Errore durante l'inizializzazione dei filtri.", Severity.Error);
         }
+    }
+
+    #region Projects
+
+    private async ValueTask<ItemsProviderResult<ProjectModel>> LoadProjects(ItemsProviderRequest request)
+    {
+        var take = request.Count == 0 ? 50 : (uint)request.Count; // Safety fallback
+        var projects = await ProjectsService.GetProjectsPageAsync((uint)request.StartIndex, take, request.CancellationToken);
+        
+        var total = request.StartIndex + projects.Length + (projects.Length == request.Count ? 1 : 0);
+        return new(projects, total);
     }
 
     private async Task OnProjectChangedAsync(string projectKey)
     {
-        SearchCriteria = IssueSearchCriteria.Create(projectKey);
-        Emit(SearchCriteria);
-        
+        _searchCriteria = IssuesSearchCriteria.Create(projectKey);
+        Emit(_searchCriteria);
         await BuildAsync(projectKey);
     }
 
+    #endregion
+    
+    #region Types
+
     private void OnTypesChanged(IEnumerable<string> values)
     {
-        SearchCriteria = SearchCriteria with { Types = values.ToHashSet() };
-        Emit(SearchCriteria);
+        _searchCriteria = _searchCriteria with { Types = values.ToHashSet() };
+        Emit(_searchCriteria);
     }
 
     private string GetSelectedTypesText(IReadOnlyCollection<string?>? values)
     {
         if (values is null || values.Count == 0) return string.Empty;
+        
         return string.Join(", ", _types.Where(x => values.Contains(x.Value)).Select(x => x.Name));
     }
 
+    #endregion
+
+    #region Statuses
+
     private void OnStatusesChanged(IEnumerable<string> values)
     {
-        SearchCriteria = SearchCriteria with { Statuses = values.ToHashSet() };
-        Emit(SearchCriteria);
+        _searchCriteria = _searchCriteria with { Statuses = values.ToHashSet() };
+        Emit(_searchCriteria);
     }
 
     private string GetSelectedStatusesText(IReadOnlyCollection<string?>? values)
@@ -92,10 +107,14 @@ public partial class Filters : ComponentBase, IDisposable
         return string.Join(", ", _statuses.Where(x => values.Contains(x.Name)).Select(x => x.Name));
     }
 
+    #endregion
+
+    #region  Assignees
+
     private void OnAssigneesChanged(IEnumerable<string> values)
     {
-        SearchCriteria = SearchCriteria with { Assignees = values.ToHashSet() };
-        Emit(SearchCriteria);
+        _searchCriteria = _searchCriteria with { Assignees = values.ToHashSet() };
+        Emit(_searchCriteria);
     }
 
     private string GetSelectedAssigneesText(IReadOnlyCollection<string?>? values)
@@ -104,10 +123,14 @@ public partial class Filters : ComponentBase, IDisposable
         return string.Join(", ", _assignees.Where(x => values.Contains(x.EmailAddress)).Select(x => x.DisplayName));
     }
 
+    #endregion
+
+    #region Components
+
     private void OnComponentsChanged(IEnumerable<string> values)
     {
-        SearchCriteria = SearchCriteria with { Components = values.ToHashSet() };
-        Emit(SearchCriteria);
+        _searchCriteria = _searchCriteria with { Components = values.ToHashSet() };
+        Emit(_searchCriteria);
     }
 
     private string GetSelectedComponentsText(IReadOnlyCollection<string?>? values)
@@ -116,46 +139,54 @@ public partial class Filters : ComponentBase, IDisposable
         return string.Join(", ", _components.Where(x => values.Contains(x.Value)).Select(x => x.Name));
     }
 
+    #endregion
+
+    #region Labels
+
+    private async ValueTask<ItemsProviderResult<LabelModel>> LoadLabels(ItemsProviderRequest request)
+    {
+        var take = request.Count == 0 ? 50 : (uint)request.Count;
+        var labels = await ProjectsService.GetLabelsPageAsync((uint)request.StartIndex, take, request.CancellationToken);
+        
+        var total = request.StartIndex + labels.Length + (labels.Length == request.Count ? 1 : 0);
+        return new(labels, total);
+    }
+    
     private void OnLabelsChanged(IEnumerable<string> values)
     {
-        SearchCriteria = SearchCriteria with { Labels = values.ToHashSet() };
-        Emit(SearchCriteria);
+        _searchCriteria = _searchCriteria with { Labels = values.ToHashSet() };
+        Emit(_searchCriteria);
     }
 
-    private string GetSelectedLabelsText(IReadOnlyCollection<string?>? values)
+    private static string GetSelectedLabelsText(IReadOnlyCollection<string?>? values)
     {
         if (values is null || values.Count == 0) return string.Empty;
-        return string.Join(", ", _labels.Where(x => values.Contains(x.Value)).Select(x => x.Name));
+        return string.Join(", ", values);
     }
+
+    #endregion
 
     private void OnUnassignedChanged(bool value)
     {
-        SearchCriteria = SearchCriteria with { IncludeUnassigned = value };
-        Emit(SearchCriteria);
+        _searchCriteria = _searchCriteria with { IncludeUnassigned = value };
+        Emit(_searchCriteria);
     }
 
-    private void Emit(IssueSearchCriteria criteria) => FilterStore.Emit(PageKey, criteria);
+    private void Emit(IssuesSearchCriteria criteria) => FilterStore.Emit(PageKey, criteria);
 
     private async Task BuildAsync(string projectKey)
     {
-        var project = await ProjectsService.GetAsync(projectKey);
+        var typesTask = ProjectsService.GetTypesAsync(projectKey);
+        var statusesTask = ProjectsService.GetStatusesAsync(projectKey);
+        var assigneesTask = ProjectsService.GetAssigneesAsync(projectKey);
+        var componentsTask = ProjectsService.GetComponentsAsync(projectKey);
 
-        if (project is null) return;
+        await Task.WhenAll(typesTask, statusesTask, assigneesTask, componentsTask);
 
-        var types = await project.GetIssueTypesAsync();
-        _types = [..types.OrderBy(t => t.Name)];
-
-        var statuses = await project.GetStatusesAsync();
-        _statuses = [..statuses.OrderBy(s => s.Name)];
-
-        var assignees = await project.GetAssigneesAsync();
-        _assignees = [..assignees.OrderBy(a => a.DisplayName)];
-
-        var components = await project.GetComponentsAsync();
-        _components = [..components.OrderBy(c => c.Name)];
-
-        var labels = await project.GetLabelsAsync();
-        _labels = [..labels.OrderBy(l => l.Name)];
+        _types = typesTask.Result;
+        _statuses = statusesTask.Result;
+        _assignees = assigneesTask.Result;
+        _components = componentsTask.Result;
     }
 
     public void Dispose() => FilterStore.UnRegister(PageKey);
