@@ -1,3 +1,4 @@
+@using Planner.Builders
 <MudExpansionPanels Class="mb-4 mud-width-full" Elevation="2">
     <MudExpansionPanel Text="Filtri di Ricerca" Icon="@Icons.Material.Outlined.Flip" Expanded="true">
         
@@ -141,6 +142,16 @@
                                Disabled="@_isLoading"/>
                 </MudItem>
             }
+            
+            <MudItem xs="12" Class="pt-2">
+                @if (!string.IsNullOrWhiteSpace(_searchCriteria.ProjectKey))
+                {
+                    <MudText Typo="Typo.caption" Style="color: var(--mud-palette-text-secondary); font-family: monospace;">
+                        JQL: @_searchCriteria.ToJql()
+                    </MudText>
+                }
+            </MudItem>
+            
         </MudGrid>
     </MudExpansionPanel>
 </MudExpansionPanels>
