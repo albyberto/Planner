@@ -27,6 +27,7 @@ public partial class Filters : ComponentBase, IDisposable
     private ImmutableArray<TypeModel> _types = [];
 
     private IssuesSearchCriteria _searchCriteria = IssuesSearchCriteria.Empty;
+    private bool _isLoading = true;
 
     protected override async Task OnInitializedAsync()
     {
@@ -34,7 +35,11 @@ public partial class Filters : ComponentBase, IDisposable
 
         try
         {
+            _isLoading = true;
+
             var options = Options.Value;
+
+            await BuildAsync(options.DefaultProject);
 
             _searchCriteria = _searchCriteria with
             {
@@ -48,12 +53,14 @@ public partial class Filters : ComponentBase, IDisposable
             };
 
             Emit(_searchCriteria);
-            
-            await BuildAsync(options.DefaultProject);
         }
         catch
         {
             Snackbar.Add("Errore durante l'inizializzazione dei filtri.", Severity.Error);
+        }
+        finally
+        {
+            _isLoading = false; 
         }
     }
 
@@ -79,9 +86,17 @@ public partial class Filters : ComponentBase, IDisposable
         var token = projectKey.Trim().ToUpperInvariant();
         if (!_projects.Select(project => project.Key).Contains(projectKey, StringComparer.OrdinalIgnoreCase)) return;
         
-        _searchCriteria = IssuesSearchCriteria.Create(projectKey);
-        Emit(_searchCriteria);
-        await BuildAsync(projectKey);
+        try
+        {
+            _isLoading = true;
+            _searchCriteria = IssuesSearchCriteria.Create(projectKey);
+            Emit(_searchCriteria);
+            await BuildAsync(projectKey);
+        }
+        finally
+        {
+            _isLoading = false;
+        }
     }
 
     #endregion

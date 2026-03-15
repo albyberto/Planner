@@ -1,5 +1,11 @@
 <MudExpansionPanels Class="mb-4 mud-width-full" Elevation="2">
     <MudExpansionPanel Text="Filtri di Ricerca" Icon="@Icons.Material.Outlined.Flip" Expanded="true">
+        
+        @if (_isLoading)
+        {
+            <MudProgressLinear Color="Color.Secondary" Indeterminate="true" Class="mb-4" />
+        }
+
         <MudGrid>
             <MudItem xs="12" md="4">
                 <MudAutocomplete T="string"
@@ -13,7 +19,8 @@
                                  RequiredError="Il progetto è obbligatorio"
                                  MinCharacters="1"
                                  DebounceInterval="250"
-                                 ResetValueOnEmptyText="true" />
+                                 ResetValueOnEmptyText="true" 
+                                 Disabled="@_isLoading" />
             </MudItem>
 
             <MudItem xs="12" sm="6" md="4">
@@ -26,7 +33,8 @@
                            AnchorOrigin="Origin.BottomCenter"
                            Clearable="true"
                            Dense="true"
-                           MultiSelectionTextFunc="@(selected => GetSelectedStatusesText(selected))">
+                           MultiSelectionTextFunc="@(selected => GetSelectedStatusesText(selected))"
+                           Disabled="@_isLoading">
                     @foreach (var status in _statuses)
                     {
                         <MudSelectItem T="string" Value="@status.Name">@status.Name</MudSelectItem>
@@ -44,7 +52,8 @@
                            AnchorOrigin="Origin.BottomCenter"
                            Clearable="true"
                            Dense="true"
-                           MultiSelectionTextFunc="@(selected => GetSelectedTypesText(selected))">
+                           MultiSelectionTextFunc="@(selected => GetSelectedTypesText(selected))"
+                           Disabled="@_isLoading">
                     @foreach (var type in _types)
                     {
                         <MudSelectItem T="string" Value="@type.Value">@type.Name</MudSelectItem>
@@ -62,7 +71,8 @@
                            AnchorOrigin="Origin.BottomCenter"
                            Clearable="true"
                            Dense="true"
-                           MultiSelectionTextFunc="@(selected => GetSelectedComponentsText(selected))">
+                           MultiSelectionTextFunc="@(selected => GetSelectedComponentsText(selected))"
+                           Disabled="@_isLoading">
                     @foreach (var component in _components)
                     {
                         <MudSelectItem T="string" Value="@component.Value">@component.Name</MudSelectItem>
@@ -80,7 +90,8 @@
                            AnchorOrigin="Origin.BottomCenter"
                            Clearable="true"
                            Dense="true"
-                           MultiSelectionTextFunc="@(selected => GetSelectedLabelsText(selected))">
+                           MultiSelectionTextFunc="@(selected => GetSelectedLabelsText(selected))"
+                           Disabled="@_isLoading">
                     @* ECCO LA VIRTUALIZZAZIONE MUDBLAZOR *@
                     <MudVirtualize ItemsProvider="LoadLabels" Context="label" OverscanCount="10" ItemSize="40">
                         <MudSelectItem T="string" Value="@label.Name">@label.Name</MudSelectItem>
@@ -100,7 +111,8 @@
                                AnchorOrigin="Origin.BottomCenter"
                                Clearable="true"
                                Dense="true"
-                               MultiSelectionTextFunc="@(selected => GetSelectedAssigneesText(selected))">
+                               MultiSelectionTextFunc="@(selected => GetSelectedAssigneesText(selected))"
+                               Disabled="@_isLoading">
                         @foreach (var assignee in _assignees)
                         {
                             <MudSelectItem T="string"
@@ -114,7 +126,8 @@
                                Label="Includi non assegnate"
                                Color="Color.Primary"
                                Value="_searchCriteria.IncludeUnassigned"
-                               ValueChanged="OnUnassignedChanged"/>
+                               ValueChanged="OnUnassignedChanged"
+                               Disabled="@_isLoading"/>
                 </MudItem>
             }
         </MudGrid>
