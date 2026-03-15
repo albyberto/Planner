@@ -200,8 +200,7 @@ public partial class Filters : ComponentBase, IDisposable
 
         if (string.IsNullOrWhiteSpace(newLabel)) return;
 
-        var currentLabels = _searchCriteria.Labels?.ToHashSet() ?? [];
-
+        var currentLabels = _searchCriteria.Labels.ToHashSet();
         if (!currentLabels.Add(newLabel)) return;
         
         _searchCriteria = _searchCriteria with { Labels = currentLabels };
@@ -210,9 +209,11 @@ public partial class Filters : ComponentBase, IDisposable
 
     private void RemoveLabel(string labelToRemove)
     {
+        if (string.IsNullOrWhiteSpace(labelToRemove)) return;
+        
         var currentLabels = _searchCriteria.Labels.ToHashSet();
-
         if (!currentLabels.Remove(labelToRemove)) return;
+        
         _searchCriteria = _searchCriteria with { Labels = currentLabels };
         Emit(_searchCriteria);
     }
