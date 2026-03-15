@@ -174,16 +174,24 @@ public partial class Filters : ComponentBase, IDisposable
     private Task<IEnumerable<string>> SearchLabelsAsync(string? value, CancellationToken cancellationToken)
     {
         if (string.IsNullOrWhiteSpace(value)) 
-            return Task.FromResult(_labels.Take(50).Select(l => l.Name));
+        {
+            var defaultResult = _labels
+                .Select(l => l.Name)
+                .Distinct(StringComparer.OrdinalIgnoreCase)
+                .Take(50);
+                
+            return Task.FromResult(defaultResult);
+        }
 
         var token = value.Trim();
 
         var result = _labels
             .Where(l => l.Name.Contains(token, StringComparison.OrdinalIgnoreCase))
             .Select(l => l.Name)
+            .Distinct(StringComparer.OrdinalIgnoreCase)
             .Take(50);
 
-        return Task.FromResult(result!);
+        return Task.FromResult(result);
     }
 
     private void OnLabelAdded(string? newLabel)
@@ -202,7 +210,7 @@ public partial class Filters : ComponentBase, IDisposable
 
     private void RemoveLabel(string labelToRemove)
     {
-        var currentLabels = _searchCriteria.Labels.ToHashSet() ?? [];
+        var currentLabels = _searchCriteria.Labels.ToHashSet();
 
         if (!currentLabels.Remove(labelToRemove)) return;
         _searchCriteria = _searchCriteria with { Labels = currentLabels };
