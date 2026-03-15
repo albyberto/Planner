@@ -1,6 +1,5 @@
 using System.Collections.Immutable;
 using Microsoft.AspNetCore.Components;
-using Microsoft.AspNetCore.Components.Web.Virtualization;
 using Microsoft.Extensions.Options;
 using MudBlazor;
 using Planner.Model;
@@ -37,14 +36,15 @@ public partial class Filters : ComponentBase, IDisposable
             _isLoading = true;
             var options = Options.Value;
 
+            // Mappiamo i valori di default di stringa nei nuovi record FilterValue
             _searchCriteria = _searchCriteria with
             {
                 ProjectKey = options.DefaultProject,
-                Types = options.DefaultTypes,
-                Statuses = options.DefaultStatuses,
-                Assignees = options.DefaultAssignees,
-                Components = options.DefaultComponents,
-                Labels = options.DefaultLabels,
+                Types = options.DefaultTypes?.Select(x => new FilterValue(x)).ToHashSet() ?? [],
+                Statuses = options.DefaultStatuses?.Select(x => new FilterValue(x)).ToHashSet() ?? [],
+                Assignees = options.DefaultAssignees?.Select(x => new FilterValue(x)).ToHashSet() ?? [],
+                Components = options.DefaultComponents?.Select(x => new FilterValue(x)).ToHashSet() ?? [],
+                Labels = options.DefaultLabels?.Select(x => new FilterValue(x)).ToHashSet() ?? [],
                 IncludeUnassigned = options.IncludeUnassignedByDefault
             };
 
@@ -65,14 +65,35 @@ public partial class Filters : ComponentBase, IDisposable
         }
     }
 
-    #region Projects
+    // --- HELPER UNIVERSALI PER I FILTER VALUE ---
 
+    // Allinea le stringhe in arrivo dal MudSelect con la nostra memoria di FilterValue (preservando lo stato IsExcluded)
+    private HashSet<FilterValue> ReconcileSet(HashSet<FilterValue> currentSet, IEnumerable<string> incomingValues)
+    {
+        var newSet = new HashSet<FilterValue>();
+        foreach (var val in incomingValues)
+        {
+            var existing = currentSet.FirstOrDefault(x => x.Value == val);
+            newSet.Add(existing ?? new FilterValue(val));
+        }
+        return newSet;
+    }
+
+    // Inverte lo stato In/NotIn di un singolo elemento quando si clicca la MudChip
+    private HashSet<FilterValue> ToggleItemState(HashSet<FilterValue> set, FilterValue item)
+    {
+        var newSet = set.ToHashSet();
+        newSet.Remove(item);
+        newSet.Add(item with { IsExcluded = !item.IsExcluded });
+        return newSet;
+    }
+
+    #region Projects
     private Task<IEnumerable<string>> SearchProjectsAsync(string? value, CancellationToken cancellationToken)
     {
         if (string.IsNullOrWhiteSpace(value)) return Task.FromResult<IEnumerable<string>>([]);
 
         var token = value.Trim().ToUpperInvariant();
-
         var result = _projects
             .Where(p => p.Key.StartsWith(token, StringComparison.OrdinalIgnoreCase))
             .Select(p => p.Key);
@@ -99,76 +120,69 @@ public partial class Filters : ComponentBase, IDisposable
             _isLoading = false;
         }
     }
-
     #endregion
     
     #region Types
-
-    private void OnTypesChanged(IEnumerable<string> values)
-    {
-        _searchCriteria = _searchCriteria with { Types = values.ToHashSet() };
-        Emit(_searchCriteria);
+    private void OnTypesChanged(IEnumerable<string> values) => 
+        Emit(_searchCriteria = _searchCriteria with { Types = ReconcileSet(_searchCriteria.Types, values) });
+    
+    private void ToggleType(FilterValue item) => 
+        Emit(_searchCriteria = _searchCriteria with { Types = ToggleItemState(_searchCriteria.Types, item) });
+    
+    private void RemoveType(FilterValue item) 
+    { 
+        var s = _searchCriteria.Types.ToHashSet(); 
+        s.Remove(item); 
+        Emit(_searchCriteria = _searchCriteria with { Types = s }); 
     }
-
-    private string GetSelectedTypesText(IReadOnlyCollection<string?>? values)
-    {
-        if (values is null || values.Count == 0) return string.Empty;
-        
-        return string.Join(", ", _types.Where(x => values.Contains(x.Value)).Select(x => x.Name));
-    }
-
     #endregion
 
     #region Statuses
-
-    private void OnStatusesChanged(IEnumerable<string> values)
-    {
-        _searchCriteria = _searchCriteria with { Statuses = values.ToHashSet() };
-        Emit(_searchCriteria);
+    private void OnStatusesChanged(IEnumerable<string> values) => 
+        Emit(_searchCriteria = _searchCriteria with { Statuses = ReconcileSet(_searchCriteria.Statuses, values) });
+    
+    private void ToggleStatus(FilterValue item) => 
+        Emit(_searchCriteria = _searchCriteria with { Statuses = ToggleItemState(_searchCriteria.Statuses, item) });
+    
+    private void RemoveStatus(FilterValue item) 
+    { 
+        var s = _searchCriteria.Statuses.ToHashSet(); 
+        s.Remove(item); 
+        Emit(_searchCriteria = _searchCriteria with { Statuses = s }); 
     }
-
-    private string GetSelectedStatusesText(IReadOnlyCollection<string?>? values)
-    {
-        if (values is null || values.Count == 0) return string.Empty;
-        return string.Join(", ", _statuses.Where(x => values.Contains(x.Name)).Select(x => x.Name));
-    }
-
     #endregion
 
-    #region  Assignees
-
-    private void OnAssigneesChanged(IEnumerable<string> values)
-    {
-        _searchCriteria = _searchCriteria with { Assignees = values.ToHashSet() };
-        Emit(_searchCriteria);
+    #region Assignees
+    private void OnAssigneesChanged(IEnumerable<string> values) => 
+        Emit(_searchCriteria = _searchCriteria with { Assignees = ReconcileSet(_searchCriteria.Assignees, values) });
+    
+    private void ToggleAssignee(FilterValue item) => 
+        Emit(_searchCriteria = _searchCriteria with { Assignees = ToggleItemState(_searchCriteria.Assignees, item) });
+    
+    private void RemoveAssignee(FilterValue item) 
+    { 
+        var s = _searchCriteria.Assignees.ToHashSet(); 
+        s.Remove(item); 
+        Emit(_searchCriteria = _searchCriteria with { Assignees = s }); 
     }
-
-    private string GetSelectedAssigneesText(IReadOnlyCollection<string?>? values)
-    {
-        if (values is null || values.Count == 0) return string.Empty;
-        return string.Join(", ", _assignees.Where(x => values.Contains(x.EmailAddress)).Select(x => x.DisplayName));
-    }
-
     #endregion
 
     #region Components
-
-    private void OnComponentsChanged(IEnumerable<string> values)
-    {
-        _searchCriteria = _searchCriteria with { Components = values.ToHashSet() };
-        Emit(_searchCriteria);
+    private void OnComponentsChanged(IEnumerable<string> values) => 
+        Emit(_searchCriteria = _searchCriteria with { Components = ReconcileSet(_searchCriteria.Components, values) });
+    
+    private void ToggleComponent(FilterValue item) => 
+        Emit(_searchCriteria = _searchCriteria with { Components = ToggleItemState(_searchCriteria.Components, item) });
+    
+    private void RemoveComponent(FilterValue item) 
+    { 
+        var s = _searchCriteria.Components.ToHashSet(); 
+        s.Remove(item); 
+        Emit(_searchCriteria = _searchCriteria with { Components = s }); 
     }
-
-    private string GetSelectedComponentsText(IReadOnlyCollection<string?>? values)
-    {
-        if (values is null || values.Count == 0) return string.Empty;
-        return string.Join(", ", _components.Where(x => values.Contains(x.Value)).Select(x => x.Name));
-    }
-
     #endregion
 
     #region Labels
-
     private string? _labelSearchInput;
 
     private Task<IEnumerable<string>> SearchLabelsAsync(string? value, CancellationToken cancellationToken)
@@ -201,23 +215,24 @@ public partial class Filters : ComponentBase, IDisposable
         if (string.IsNullOrWhiteSpace(newLabel)) return;
 
         var currentLabels = _searchCriteria.Labels.ToHashSet();
-        if (!currentLabels.Add(newLabel)) return;
         
-        _searchCriteria = _searchCriteria with { Labels = currentLabels };
-        Emit(_searchCriteria);
+        // Aggiunge solo se non esiste già un elemento con lo stesso Value
+        if (!currentLabels.Any(x => x.Value.Equals(newLabel, StringComparison.OrdinalIgnoreCase)))
+        {
+            currentLabels.Add(new FilterValue(newLabel));
+            Emit(_searchCriteria = _searchCriteria with { Labels = currentLabels });
+        }
     }
 
-    private void RemoveLabel(string labelToRemove)
+    private void ToggleLabel(FilterValue item) => 
+        Emit(_searchCriteria = _searchCriteria with { Labels = ToggleItemState(_searchCriteria.Labels, item) });
+
+    private void RemoveLabel(FilterValue item)
     {
-        if (string.IsNullOrWhiteSpace(labelToRemove)) return;
-        
-        var currentLabels = _searchCriteria.Labels.ToHashSet();
-        if (!currentLabels.Remove(labelToRemove)) return;
-        
-        _searchCriteria = _searchCriteria with { Labels = currentLabels };
-        Emit(_searchCriteria);
+        var s = _searchCriteria.Labels.ToHashSet();
+        s.Remove(item);
+        Emit(_searchCriteria = _searchCriteria with { Labels = s });
     }
-
     #endregion
 
     private void OnUnassignedChanged(bool value)

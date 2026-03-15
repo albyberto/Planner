@@ -1,145 +1,128 @@
 @using Planner.Builders
-<MudExpansionPanels Class="mb-4 mud-width-full" Elevation="2">
-    <MudExpansionPanel Text="Filtri di Ricerca" Icon="@Icons.Material.Outlined.Flip" Expanded="true">
-        
-        @if (_isLoading)
-        {
-            <MudProgressLinear Color="Color.Secondary" Indeterminate="true" Class="mb-4" />
-        }
-
-        <MudGrid>
+<MudGrid>
             <MudItem xs="12" md="4">
-                <MudAutocomplete T="string"
-                                 Label="Projects"
-                                 Value="_searchCriteria.ProjectKey"
-                                 ValueChanged="OnProjectChangedAsync"
-                                 SearchFunc="SearchProjectsAsync"
-                                 Variant="Variant.Outlined"
-                                 Dense="true"
-                                 Required="true"
-                                 RequiredError="Il progetto è obbligatorio"
-                                 MinCharacters="1"
-                                 DebounceInterval="250"
-                                 ResetValueOnEmptyText="true" 
-                                 Disabled="@_isLoading" />
+                <MudAutocomplete T="string" Label="Projects"
+                                 Value="_searchCriteria.ProjectKey" ValueChanged="OnProjectChangedAsync"
+                                 SearchFunc="SearchProjectsAsync" Variant="Variant.Outlined" Dense="true"
+                                 Required="true" RequiredError="Il progetto è obbligatorio"
+                                 MinCharacters="1" DebounceInterval="250" ResetValueOnEmptyText="true" Disabled="@_isLoading" />
             </MudItem>
 
+            @* STATUSES *@
             <MudItem xs="12" sm="6" md="4">
-                <MudSelect T="string"
-                           Label="Statuses"
-                           MultiSelection="true"
-                           SelectedValues="_searchCriteria.Statuses"
+                <MudSelect T="string" Label="Statuses" MultiSelection="true"
+                           SelectedValues="_searchCriteria.Statuses.Select(x => x.Value).ToList()"
                            SelectedValuesChanged="OnStatusesChanged"
-                           Variant="Variant.Outlined"
-                           AnchorOrigin="Origin.BottomCenter"
-                           Clearable="true"
-                           Dense="true"
-                           MultiSelectionTextFunc="@(selected => GetSelectedStatusesText(selected))"
+                           Variant="Variant.Outlined" AnchorOrigin="Origin.BottomCenter" Clearable="true" Dense="true"
+                           MultiSelectionTextFunc="@(selected => selected is not null && selected.Count == 0 ? $"{selected.Count} selezionati" : string.Empty)"
                            Disabled="@_isLoading">
-                    @foreach (var status in _statuses)
-                    {
-                        <MudSelectItem T="string" Value="@status.Name">@status.Name</MudSelectItem>
-                    }
+                    @foreach (var status in _statuses) { <MudSelectItem T="string" Value="@status.Name">@status.Name</MudSelectItem> }
                 </MudSelect>
+                <div class="d-flex flex-wrap gap-1 mt-2">
+                    @foreach (var item in _searchCriteria.Statuses)
+                    {
+                        <MudChip T="string" Size="Size.Small" 
+                                 Color="@(item.IsExcluded ? Color.Error : Color.Success)"
+                                 Icon="@(item.IsExcluded ? Icons.Material.Filled.Block : Icons.Material.Filled.Check)"
+                                 OnClick="@(() => ToggleStatus(item))" OnClose="@(() => RemoveStatus(item))">
+                            @item.Value
+                        </MudChip>
+                    }
+                </div>
             </MudItem>
 
+            @* TYPES *@
             <MudItem xs="12" sm="6" md="4">
-                <MudSelect T="string"
-                           Label="Types"
-                           MultiSelection="true"
-                           SelectedValues="_searchCriteria.Types"
+                <MudSelect T="string" Label="Types" MultiSelection="true"
+                           SelectedValues="_searchCriteria.Types.Select(x => x.Value).ToList()"
                            SelectedValuesChanged="OnTypesChanged"
-                           Variant="Variant.Outlined"
-                           AnchorOrigin="Origin.BottomCenter"
-                           Clearable="true"
-                           Dense="true"
-                           MultiSelectionTextFunc="@(selected => GetSelectedTypesText(selected))"
+                           Variant="Variant.Outlined" AnchorOrigin="Origin.BottomCenter" Clearable="true" Dense="true"
+                           MultiSelectionTextFunc="@(selected => selected is not null && selected.Count == 0 ? $"{selected.Count} selezionati" : string.Empty)"
                            Disabled="@_isLoading">
-                    @foreach (var type in _types)
-                    {
-                        <MudSelectItem T="string" Value="@type.Value">@type.Name</MudSelectItem>
-                    }
+                    @foreach (var type in _types) { <MudSelectItem T="string" Value="@type.Value">@type.Name</MudSelectItem> }
                 </MudSelect>
+                <div class="d-flex flex-wrap gap-1 mt-2">
+                    @foreach (var item in _searchCriteria.Types)
+                    {
+                        <MudChip T="string" Size="Size.Small" 
+                                 Color="@(item.IsExcluded ? Color.Error : Color.Success)"
+                                 Icon="@(item.IsExcluded ? Icons.Material.Filled.Block : Icons.Material.Filled.Check)"
+                                 OnClick="@(() => ToggleType(item))" OnClose="@(() => RemoveType(item))">
+                            @item.Value
+                        </MudChip>
+                    }
+                </div>
             </MudItem>
 
+            @* COMPONENTS *@
             <MudItem xs="12" sm="6" md="4">
-                <MudSelect T="string"
-                           Label="Components"
-                           MultiSelection="true"
-                           SelectedValues="_searchCriteria.Components"
+                <MudSelect T="string" Label="Components" MultiSelection="true"
+                           SelectedValues="_searchCriteria.Components.Select(x => x.Value).ToList()"
                            SelectedValuesChanged="OnComponentsChanged"
-                           Variant="Variant.Outlined"
-                           AnchorOrigin="Origin.BottomCenter"
-                           Clearable="true"
-                           Dense="true"
-                           MultiSelectionTextFunc="@(selected => GetSelectedComponentsText(selected))"
+                           Variant="Variant.Outlined" AnchorOrigin="Origin.BottomCenter" Clearable="true" Dense="true"
+                           MultiSelectionTextFunc="@(selected => selected is not null && selected.Count == 0 ? $"{selected.Count} selezionati" : string.Empty)"
                            Disabled="@_isLoading">
-                    @foreach (var component in _components)
-                    {
-                        <MudSelectItem T="string" Value="@component.Value">@component.Name</MudSelectItem>
-                    }
+                    @foreach (var component in _components) { <MudSelectItem T="string" Value="@component.Value">@component.Name</MudSelectItem> }
                 </MudSelect>
+                <div class="d-flex flex-wrap gap-1 mt-2">
+                    @foreach (var item in _searchCriteria.Components)
+                    {
+                        <MudChip T="string" Size="Size.Small" 
+                                 Color="@(item.IsExcluded ? Color.Error : Color.Success)"
+                                 Icon="@(item.IsExcluded ? Icons.Material.Filled.Block : Icons.Material.Filled.Check)"
+                                 OnClick="@(() => ToggleComponent(item))" OnClose="@(() => RemoveComponent(item))">
+                            @item.Value
+                        </MudChip>
+                    }
+                </div>
             </MudItem>
 
+            @* LABELS (Autocomplete) *@
             <MudItem xs="12" sm="6" md="4">
-                <MudAutocomplete T="string"
-                                 Label="Cerca e aggiungi Label"
-                                 Value="@_labelSearchInput"
-                                 ValueChanged="OnLabelAdded"
-                                 SearchFunc="SearchLabelsAsync"
-                                 Variant="Variant.Outlined"
-                                 Dense="true"
-                                 Clearable="true"
-                                 MinCharacters="1"
-                                 DebounceInterval="250"
-                                 ResetValueOnEmptyText="true"
-                                 Disabled="@_isLoading" />
-
-                @if (_searchCriteria.Labels.Any())
-                {
-                    <div class="d-flex flex-wrap gap-1 mt-2">
-                        @foreach (var label in _searchCriteria.Labels)
-                        {
-                            <MudChip T="string" 
-                                     Color="Color.Info" 
-                                     Size="Size.Small" 
-                                     OnClose="@(() => RemoveLabel(label))">
-                                @label
-                            </MudChip>
-                        }
-                    </div>
-                }
+                <MudAutocomplete T="string" Label="Cerca e aggiungi Label"
+                                 Value="@_labelSearchInput" ValueChanged="OnLabelAdded" SearchFunc="SearchLabelsAsync"
+                                 Variant="Variant.Outlined" Dense="true" Clearable="true" MinCharacters="1" DebounceInterval="250"
+                                 ResetValueOnEmptyText="true" Disabled="@_isLoading" />
+                <div class="d-flex flex-wrap gap-1 mt-2">
+                    @foreach (var item in _searchCriteria.Labels)
+                    {
+                        <MudChip T="string" Size="Size.Small" 
+                                 Color="@(item.IsExcluded ? Color.Error : Color.Success)"
+                                 Icon="@(item.IsExcluded ? Icons.Material.Filled.Block : Icons.Material.Filled.Check)"
+                                 OnClick="@(() => ToggleLabel(item))" OnClose="@(() => RemoveLabel(item))">
+                            @item.Value
+                        </MudChip>
+                    }
+                </div>
             </MudItem>
 
             @if (ShowAssigneeFilter)
             {
                 <MudItem xs="12" sm="6" md="4">
-                    <MudSelect T="string"
-                               Label="Assignees"
-                               MultiSelection="true"
-                               SelectedValues="_searchCriteria.Assignees"
+                    <MudSelect T="string" Label="Assignees" MultiSelection="true"
+                               SelectedValues="_searchCriteria.Assignees.Select(x => x.Value).ToList()"
                                SelectedValuesChanged="OnAssigneesChanged"
-                               Variant="Variant.Outlined"
-                               AnchorOrigin="Origin.BottomCenter"
-                               Clearable="true"
-                               Dense="true"
-                               MultiSelectionTextFunc="@(selected => GetSelectedAssigneesText(selected))"
+                               Variant="Variant.Outlined" AnchorOrigin="Origin.BottomCenter" Clearable="true" Dense="true"
+                               MultiSelectionTextFunc="@(selected => selected is not null && selected.Count == 0 ? $"{selected.Count} selezionati" : string.Empty)"
                                Disabled="@_isLoading">
-                        @foreach (var assignee in _assignees)
-                        {
-                            <MudSelectItem T="string"
-                                           Value="@assignee.EmailAddress">@assignee.DisplayName</MudSelectItem>
-                        }
+                        @foreach (var assignee in _assignees) { <MudSelectItem T="string" Value="@assignee.EmailAddress">@assignee.DisplayName</MudSelectItem> }
                     </MudSelect>
+                    <div class="d-flex flex-wrap gap-1 mt-2">
+                        @foreach (var item in _searchCriteria.Assignees)
+                        {
+                            <MudChip T="string" Size="Size.Small" 
+                                     Color="@(item.IsExcluded ? Color.Error : Color.Success)"
+                                     Icon="@(item.IsExcluded ? Icons.Material.Filled.Block : Icons.Material.Filled.Check)"
+                                     OnClick="@(() => ToggleAssignee(item))" OnClose="@(() => RemoveAssignee(item))">
+                                @(_assignees.FirstOrDefault(a => a.EmailAddress == item.Value)?.DisplayName ?? item.Value)
+                            </MudChip>
+                        }
+                    </div>
                 </MudItem>
 
                 <MudItem xs="12" sm="6" md="4" Class="d-flex align-center">
-                    <MudSwitch T="bool"
-                               Label="Includi non assegnate"
-                               Color="Color.Primary"
-                               Value="_searchCriteria.IncludeUnassigned"
-                               ValueChanged="OnUnassignedChanged"
-                               Disabled="@_isLoading"/>
+                    <MudSwitch T="bool" Label="Includi non assegnate" Color="Color.Primary"
+                               Value="_searchCriteria.IncludeUnassigned" ValueChanged="OnUnassignedChanged" Disabled="@_isLoading"/>
                 </MudItem>
             }
             
@@ -151,7 +134,4 @@
                     </MudText>
                 }
             </MudItem>
-            
         </MudGrid>
-    </MudExpansionPanel>
-</MudExpansionPanels>
