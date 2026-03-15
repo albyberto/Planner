@@ -25,21 +25,17 @@ public partial class Filters : ComponentBase, IDisposable
     private ImmutableArray<ComponentModel> _components = [];
     private ImmutableArray<StatusModel> _statuses = [];
     private ImmutableArray<TypeModel> _types = [];
+    private ImmutableArray<LabelModel> _labels = [];
 
     private IssuesSearchCriteria _searchCriteria = IssuesSearchCriteria.Empty;
     private bool _isLoading = true;
 
     protected override async Task OnInitializedAsync()
     {
-        FilterStore.Register(PageKey);
-
         try
         {
             _isLoading = true;
-
             var options = Options.Value;
-
-            await BuildAsync(options.DefaultProject);
 
             _searchCriteria = _searchCriteria with
             {
@@ -52,9 +48,14 @@ public partial class Filters : ComponentBase, IDisposable
                 IncludeUnassigned = options.IncludeUnassignedByDefault
             };
 
+            FilterStore.Register(PageKey);
             Emit(_searchCriteria);
+
+            await BuildAsync(options.DefaultProject);
+
+            _searchCriteria = _searchCriteria with { };
         }
-        catch
+        catch(Exception)
         {
             Snackbar.Add("Errore durante l'inizializzazione dei filtri.", Severity.Error);
         }
@@ -168,25 +169,44 @@ public partial class Filters : ComponentBase, IDisposable
 
     #region Labels
 
-    private async ValueTask<ItemsProviderResult<LabelModel>> LoadLabels(ItemsProviderRequest request)
+    private string? _labelSearchInput;
+
+    private Task<IEnumerable<string>> SearchLabelsAsync(string? value, CancellationToken cancellationToken)
     {
-        var take = request.Count == 0 ? 50 : (uint)request.Count;
-        var labels = await ProjectsService.GetLabelsPageAsync((uint)request.StartIndex, take, request.CancellationToken);
-        
-        var total = request.StartIndex + labels.Length + (labels.Length == request.Count ? 1 : 0);
-        return new(labels, total);
+        if (string.IsNullOrWhiteSpace(value)) 
+            return Task.FromResult(_labels.Take(50).Select(l => l.Name));
+
+        var token = value.Trim();
+
+        var result = _labels
+            .Where(l => l.Name.Contains(token, StringComparison.OrdinalIgnoreCase))
+            .Select(l => l.Name)
+            .Take(50);
+
+        return Task.FromResult(result!);
     }
-    
-    private void OnLabelsChanged(IEnumerable<string> values)
+
+    private void OnLabelAdded(string? newLabel)
     {
-        _searchCriteria = _searchCriteria with { Labels = values.ToHashSet() };
+        _labelSearchInput = null;
+
+        if (string.IsNullOrWhiteSpace(newLabel)) return;
+
+        var currentLabels = _searchCriteria.Labels?.ToHashSet() ?? [];
+
+        if (!currentLabels.Add(newLabel)) return;
+        
+        _searchCriteria = _searchCriteria with { Labels = currentLabels };
         Emit(_searchCriteria);
     }
 
-    private static string GetSelectedLabelsText(IReadOnlyCollection<string?>? values)
+    private void RemoveLabel(string labelToRemove)
     {
-        if (values is null || values.Count == 0) return string.Empty;
-        return string.Join(", ", values);
+        var currentLabels = _searchCriteria.Labels.ToHashSet() ?? [];
+
+        if (!currentLabels.Remove(labelToRemove)) return;
+        _searchCriteria = _searchCriteria with { Labels = currentLabels };
+        Emit(_searchCriteria);
     }
 
     #endregion
@@ -201,19 +221,21 @@ public partial class Filters : ComponentBase, IDisposable
 
     private async Task BuildAsync(string projectKey)
     {
-        var projectsTask = ProjectsService.SearchProjectsAsync(CancellationToken.None);
+        var projectsTask = ProjectsService.GetProjectsAsync(CancellationToken.None);
         var typesTask = ProjectsService.GetTypesAsync(projectKey);
         var statusesTask = ProjectsService.GetStatusesAsync(projectKey);
         var assigneesTask = ProjectsService.GetAssigneesAsync(projectKey);
         var componentsTask = ProjectsService.GetComponentsAsync(projectKey);
+        var labelsTask = ProjectsService.GetLabelsAsync(CancellationToken.None);
 
-        await Task.WhenAll(projectsTask, typesTask, statusesTask, assigneesTask, componentsTask);
+        await Task.WhenAll(projectsTask, typesTask, statusesTask, assigneesTask, componentsTask, labelsTask);
 
         _projects = projectsTask.Result;
         _types = typesTask.Result;
         _statuses = statusesTask.Result;
         _assignees = assigneesTask.Result;
         _components = componentsTask.Result;
+        _labels = labelsTask.Result;
     }
 
     public void Dispose() => FilterStore.UnRegister(PageKey);

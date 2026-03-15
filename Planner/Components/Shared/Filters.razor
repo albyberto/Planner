@@ -81,22 +81,33 @@
             </MudItem>
 
             <MudItem xs="12" sm="6" md="4">
-                <MudSelect T="string"
-                           Label="Labels"
-                           MultiSelection="true"
-                           SelectedValues="_searchCriteria.Labels"
-                           SelectedValuesChanged="OnLabelsChanged"
-                           Variant="Variant.Outlined"
-                           AnchorOrigin="Origin.BottomCenter"
-                           Clearable="true"
-                           Dense="true"
-                           MultiSelectionTextFunc="@(selected => GetSelectedLabelsText(selected))"
-                           Disabled="@_isLoading">
-                    @* ECCO LA VIRTUALIZZAZIONE MUDBLAZOR *@
-                    <MudVirtualize ItemsProvider="LoadLabels" Context="label" OverscanCount="10" ItemSize="40">
-                        <MudSelectItem T="string" Value="@label.Name">@label.Name</MudSelectItem>
-                    </MudVirtualize>
-                </MudSelect>
+                <MudAutocomplete T="string"
+                                 Label="Cerca e aggiungi Label"
+                                 Value="@_labelSearchInput"
+                                 ValueChanged="OnLabelAdded"
+                                 SearchFunc="SearchLabelsAsync"
+                                 Variant="Variant.Outlined"
+                                 Dense="true"
+                                 Clearable="true"
+                                 MinCharacters="1"
+                                 DebounceInterval="250"
+                                 ResetValueOnEmptyText="true"
+                                 Disabled="@_isLoading" />
+
+                @if (_searchCriteria.Labels.Any())
+                {
+                    <div class="d-flex flex-wrap gap-1 mt-2">
+                        @foreach (var label in _searchCriteria.Labels)
+                        {
+                            <MudChip T="string" 
+                                     Color="Color.Info" 
+                                     Size="Size.Small" 
+                                     OnClose="@(() => RemoveLabel(label))">
+                                @label
+                            </MudChip>
+                        }
+                    </div>
+                }
             </MudItem>
 
             @if (ShowAssigneeFilter)

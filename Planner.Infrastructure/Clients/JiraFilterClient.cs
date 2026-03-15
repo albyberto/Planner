@@ -97,18 +97,42 @@ public class JiraFilterClient(HttpClient httpClient, IFusionCache cache, IOption
             }
         }, new FusionCacheEntryOptions { Duration = _cacheOptions.Components }, cancellationToken);
 
-    public async Task<ImmutableArray<string>> GetLabelsAsync(uint skip, uint take, CancellationToken cancellationToken = default) =>
-        await cache.GetOrSetAsync($"jira:labels:skip:{skip}:take:{take}", async ct =>
+    public async Task<ImmutableArray<string>> GetLabelsAsync(CancellationToken cancellationToken = default)
+    {
+        const string cacheKey = "jira:labels:all";
+
+        return await cache.GetOrSetAsync(cacheKey, async ct =>
         {
+            const int maxResults = 100;
+            
+            var isLast = false;
+            var startAt = 0;
+            
+            List<string> accumulator = [];
+            
             try
             {
-                var response = await httpClient.GetFromJsonAsync<LabelResponse>($"label?startAt={skip}&maxResults={take}", ct);
-                return (response?.Values ?? []).ToImmutableArray();
+                while (!isLast)
+                {
+                    var uri = $"label?startAt={startAt}&maxResults={maxResults}";
+                    var response = await httpClient.GetFromJsonAsync<LabelResponse>(uri, ct);
+
+                    if (response == null) break;
+                    if (response.Values.Any()) accumulator.AddRange(response.Values);
+
+                    isLast = response.IsLast;
+                    startAt += maxResults; 
+
+                    if (response.Total > 0 && startAt >= response.Total) isLast = true;
+                }
+
+                return accumulator.Distinct().ToImmutableArray();
             }
             catch (Exception exception)
             {
-                logger.LogError(exception, "Error fetching paginated labels");
+                logger.LogError(exception, "Errore durante il fetch di tutte le labels paginate da Jira.");
                 throw;
             }
         }, new FusionCacheEntryOptions { Duration = _cacheOptions.Labels }, cancellationToken);
+    }
 }

@@ -6,7 +6,7 @@ namespace Planner.Services;
 
 public class ProjectsService(JiraFilterClient client)
 {
-    public async Task<ImmutableArray<ProjectModel>> SearchProjectsAsync(CancellationToken cancellationToken = default)
+    public async Task<ImmutableArray<ProjectModel>> GetProjectsAsync(CancellationToken cancellationToken = default)
     {
         var projects = await client.GetProjectsAsync(cancellationToken);
         
@@ -58,12 +58,13 @@ public class ProjectsService(JiraFilterClient client)
         ];
     }
 
-    public async Task<ImmutableArray<LabelModel>> GetLabelsPageAsync(uint skip, uint take, CancellationToken cancellationToken = default)
+    public async Task<ImmutableArray<LabelModel>> GetLabelsAsync(CancellationToken cancellationToken = default)
     {
-        var labels = await client.GetLabelsAsync(skip, take, cancellationToken);
-        return [
+        var labels = await client.GetLabelsAsync(cancellationToken);
+    
+        return  [
             ..labels
                 .Select(l => new LabelModel(l))
-        ];
+                .OrderBy(l => l.Name)];
     }
 }
