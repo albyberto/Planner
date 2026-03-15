@@ -36,15 +36,14 @@ public partial class Filters : ComponentBase, IDisposable
             _isLoading = true;
             var options = Options.Value;
 
-            // Mappiamo i valori di default di stringa nei nuovi record FilterValue
             _searchCriteria = _searchCriteria with
             {
                 ProjectKey = options.DefaultProject,
-                Types = options.DefaultTypes?.Select(x => new FilterValue(x)).ToHashSet() ?? [],
-                Statuses = options.DefaultStatuses?.Select(x => new FilterValue(x)).ToHashSet() ?? [],
-                Assignees = options.DefaultAssignees?.Select(x => new FilterValue(x)).ToHashSet() ?? [],
-                Components = options.DefaultComponents?.Select(x => new FilterValue(x)).ToHashSet() ?? [],
-                Labels = options.DefaultLabels?.Select(x => new FilterValue(x)).ToHashSet() ?? [],
+                Types = options.DefaultTypes.Select(x => new FilterValue(x.Value, x.IsExcluded)).ToHashSet(),
+                Statuses = options.DefaultStatuses.Select(x => new FilterValue(x.Value, x.IsExcluded)).ToHashSet(),
+                Assignees = options.DefaultAssignees.Select(x => new FilterValue(x.Value, x.IsExcluded)).ToHashSet(),
+                Components = options.DefaultComponents.Select(x => new FilterValue(x.Value, x.IsExcluded)).ToHashSet(),
+                Labels = options.DefaultLabels.Select(x => new FilterValue(x.Value, x.IsExcluded)).ToHashSet(),
                 IncludeUnassigned = options.IncludeUnassignedByDefault
             };
 
