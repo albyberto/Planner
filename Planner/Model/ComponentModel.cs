@@ -3,7 +3,7 @@ using Planner.Extensions;
 
 namespace Planner.Model;
 
-public record ComponentModel : IMultiSelect
+public record ComponentModel
 {
     public string Value { get; init; }
     public string Name { get; init; }
@@ -13,4 +13,6 @@ public record ComponentModel : IMultiSelect
         Value = component.Id;
         Name = component.Name.ToTitleCase();
     }
+    
+    public override string ToString() => Name;
 }

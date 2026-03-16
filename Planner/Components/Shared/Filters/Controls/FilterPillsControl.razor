@@ -1,0 +1,40 @@
+@using Planner.Components.Shared.Filters.Model
+@typeparam TItem
+
+<div class="d-flex flex-wrap gap-1 mt-2">
+    @foreach (var value in Selection.Included)
+    {
+        <MudChip T="TItem"
+                 Value="@value"
+                 Size="Size.Small"
+                 Color="Color.Success"
+                 Icon="@Icons.Material.Outlined.Check"
+                 OnClick="@(() => OnToggleAsync(value))"
+                 OnClose="@(() => OnRemoveAsync(value))">
+            @ChildContent(value)
+        </MudChip>
+    }
+
+    @foreach (var value in Selection.Excluded)
+    {
+        <MudChip T="TItem"
+                 Value="@value"
+                 Size="Size.Small"
+                 Color="Color.Error"
+                 Icon="@Icons.Material.Outlined.Block"
+                 OnClick="@(() => OnToggleAsync(value))"
+                 OnClose="@(() => OnRemoveAsync(value))">
+            @ChildContent(value)
+        </MudChip>
+    }
+</div>
+
+@code {
+    [Parameter, EditorRequired] public required IFilterSelection<TItem> Selection { get; set; }
+    [Parameter] public EventCallback<IFilterSelection<TItem>> SelectionChanged { get; set; }
+
+    [Parameter, EditorRequired] public required RenderFragment<TItem> ChildContent { get; set; }
+
+    private Task OnToggleAsync(TItem val) => SelectionChanged.InvokeAsync(Selection.Toggle(val));
+    private Task OnRemoveAsync(TItem val) => SelectionChanged.InvokeAsync(Selection.Remove(val));
+}

@@ -1,0 +1,56 @@
+@* @using Planner.Model *@
+@* *@
+@* <div class="d-flex flex-row flex-wrap gap-3 align-start"> *@
+@*     $1$ 1. Riferimento #1# *@
+@*     <div style="min-width: 200px; max-width: 250px; flex: 1;"> *@
+@*         <MudSelect T="TimeFilterTarget" Label="Riferimento temporale" *@
+@*                    Value="@(Value?.Target ?? TimeFilterTarget.CreatedDate)" *@
+@*                    ValueChanged="HandleTargetChanged" *@
+@*                    Variant="Variant.Outlined" Dense="true" Disabled="@Disabled"> *@
+@*             <MudSelectItem T="TimeFilterTarget" Value="TimeFilterTarget.CreatedDate">Data creazione</MudSelectItem> *@
+@*             <MudSelectItem T="TimeFilterTarget" Value="TimeFilterTarget.ResolvedDate">Data risoluzione</MudSelectItem> *@
+@*             <MudSelectItem T="TimeFilterTarget" Value="TimeFilterTarget.StatusTransitionDate">Passaggio di stato a...</MudSelectItem> *@
+@*         </MudSelect> *@
+@*     </div> *@
+@* *@
+@*     $1$ 1.1 Seleziona Stato (condizionale) #1# *@
+@*     @if (Value?.Target == TimeFilterTarget.StatusTransitionDate) *@
+@*     { *@
+@*         <div style="min-width: 150px; max-width: 200px; flex: 1;"> *@
+@*             <MudSelect T="string" Label="Allo stato..." *@
+@*                        Value="@Value?.StatusName" *@
+@*                        ValueChanged="HandleStatusChanged" *@
+@*                        Variant="Variant.Outlined" Dense="true" Disabled="@Disabled"> *@
+@*                 @foreach (var status in Statuses) { <MudSelectItem T="string" Value="@status.Name">@status.Name</MudSelectItem> } *@
+@*             </MudSelect> *@
+@*         </div> *@
+@*     } *@
+@* *@
+@*     $1$ 2. Periodo #1# *@
+@*     <div style="min-width: 200px; max-width: 250px; flex: 1;"> *@
+@*         <MudSelect T="RelativeTimePreset" Label="Periodo" *@
+@*                    Value="@(Value?.Preset ?? RelativeTimePreset.None)" *@
+@*                    ValueChanged="HandlePresetChanged" *@
+@*                    Variant="Variant.Outlined" Dense="true" Disabled="@Disabled" Clearable="true"> *@
+@*             @foreach (RelativeTimePreset preset in Enum.GetValues(typeof(RelativeTimePreset))) *@
+@*             { *@
+@*                 <MudSelectItem T="RelativeTimePreset" Value="@preset">@GetPresetLabel(preset)</MudSelectItem> *@
+@*             } *@
+@*         </MudSelect> *@
+@*     </div> *@
+@* *@
+@*     $1$ 2.1 Date personalizzate (condizionali) #1# *@
+@*     @if (Value?.Preset == RelativeTimePreset.CustomRange) *@
+@*     { *@
+@*         <div style="width: 140px;"> *@
+@*             <MudDatePicker Label="Dal" Dense="true" Variant="Variant.Outlined" *@
+@*                            Date="@Value?.Range.From?.ToDateTime(TimeOnly.MinValue)" *@
+@*                            DateChanged="HandleFromChanged" Disabled="@Disabled" /> *@
+@*         </div> *@
+@*         <div style="width: 140px;"> *@
+@*             <MudDatePicker Label="Al" Dense="true" Variant="Variant.Outlined" *@
+@*                            Date="@Value?.Range.To?.ToDateTime(TimeOnly.MinValue)" *@
+@*                            DateChanged="HandleToChanged" Disabled="@Disabled" /> *@
+@*         </div> *@
+@*     } *@
+@* </div> *@
