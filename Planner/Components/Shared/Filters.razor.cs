@@ -28,6 +28,9 @@ public partial class Filters : ComponentBase, IDisposable
 
     private IssuesSearchCriteria _searchCriteria = IssuesSearchCriteria.Empty;
     private bool _isLoading = true;
+    private bool _timeFilterPopoverOpen;
+    private DateTime? _timeFrom;
+    private DateTime? _timeTo;
 
     protected override async Task OnInitializedAsync()
     {
@@ -239,6 +242,111 @@ public partial class Filters : ComponentBase, IDisposable
         _searchCriteria = _searchCriteria with { IncludeUnassigned = value };
         Emit(_searchCriteria);
     }
+
+    #region Time filter
+    private void OnTimeTargetChanged(TimeFilterTarget target) =>
+        UpdateTimeFilter(current => current with { Target = target });
+
+    private void OnTimePresetChanged(RelativeTimePreset preset)
+    {
+        if (preset == RelativeTimePreset.None)
+        {
+            // Clear time filter entirely
+            _searchCriteria = _searchCriteria with { TimeFilter = null };
+            Emit(_searchCriteria);
+            return;
+        }
+
+        UpdateTimeFilter(current => current with { Preset = preset });
+    }
+
+    private void OnTimeStatusChanged(string? statusName)
+    {
+        UpdateTimeFilter(current => current with { StatusName = string.IsNullOrWhiteSpace(statusName) ? null : statusName });
+    }
+
+    private void OnTimeFromChanged(DateTime? value)
+    {
+        _timeFrom = value;
+        UpdateTimeFilter(current =>
+        {
+            var from = _timeFrom is null ? current.Range.From : DateOnly.FromDateTime(_timeFrom.Value);
+            return current with { Preset = RelativeTimePreset.CustomRange, Range = current.Range with { From = from } };
+        });
+    }
+
+    private void OnTimeToChanged(DateTime? value)
+    {
+        _timeTo = value;
+        UpdateTimeFilter(current =>
+        {
+            var to = _timeTo is null ? current.Range.To : DateOnly.FromDateTime(_timeTo.Value);
+            return current with { Preset = RelativeTimePreset.CustomRange, Range = current.Range with { To = to } };
+        });
+    }
+
+    private void UpdateTimeFilter(Func<TimeFilter, TimeFilter> update)
+    {
+        var current = _searchCriteria.TimeFilter ?? new TimeFilter(
+            Target: TimeFilterTarget.CreatedDate,
+            Preset: RelativeTimePreset.Last7Days,
+            Range: new TimeRange(null, null),
+            StatusName: null);
+
+        var updated = update(current);
+        _searchCriteria = _searchCriteria with { TimeFilter = updated };
+        Emit(_searchCriteria);
+    }
+
+    private void ClearTimeFilter()
+    {
+        _searchCriteria = _searchCriteria with { TimeFilter = null };
+        _timeFrom = null;
+        _timeTo = null;
+        _timeFilterPopoverOpen = false;
+        Emit(_searchCriteria);
+    }
+
+    /// <summary>
+    /// Short label for the time filter anchor (e.g. "Created, Last 7 days" or "Time filter" when none).
+    /// </summary>
+    private string TimeFilterSummary
+    {
+        get
+        {
+            var tf = _searchCriteria.TimeFilter;
+            if (tf is null || tf.Preset == RelativeTimePreset.None)
+                return "Time filter";
+
+            var targetLabel = tf.Target switch
+            {
+                TimeFilterTarget.CreatedDate => "Created",
+                TimeFilterTarget.ResolvedDate => "Resolved",
+                TimeFilterTarget.StatusTransitionDate => string.IsNullOrWhiteSpace(tf.StatusName) ? "Status changed" : $"→ {tf.StatusName}",
+                _ => "Date"
+            };
+
+            if (tf.Preset == RelativeTimePreset.CustomRange)
+            {
+                var from = tf.Range.From?.ToString("d MMM", System.Globalization.CultureInfo.CurrentUICulture) ?? "?";
+                var to = tf.Range.To?.ToString("d MMM", System.Globalization.CultureInfo.CurrentUICulture) ?? "?";
+                return $"{targetLabel}, {from} – {to}";
+            }
+
+            var presetLabel = tf.Preset switch
+            {
+                RelativeTimePreset.Last7Days => "Last 7 days",
+                RelativeTimePreset.Last30Days => "Last 30 days",
+                RelativeTimePreset.ThisWeek => "This week",
+                RelativeTimePreset.LastWeek => "Last week",
+                RelativeTimePreset.ThisMonth => "This month",
+                RelativeTimePreset.LastMonth => "Last month",
+                _ => "Date"
+            };
+            return $"{targetLabel}, {presetLabel}";
+        }
+    }
+    #endregion
 
     private void Emit(IssuesSearchCriteria criteria) => FilterStore.Emit(PageKey, criteria);
 

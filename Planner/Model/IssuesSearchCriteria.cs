@@ -2,6 +2,29 @@ namespace Planner.Model;
 
 public record FilterValue(string Value, bool IsExcluded = false);
 
+public enum TimeFilterTarget
+{
+    CreatedDate,
+    ResolvedDate,
+    StatusTransitionDate
+}
+
+public enum RelativeTimePreset
+{
+    None,
+    Last7Days,
+    Last30Days,
+    ThisWeek,
+    ThisMonth,
+    LastWeek,
+    LastMonth,
+    CustomRange
+}
+
+public record TimeRange(DateOnly? From, DateOnly? To);
+
+public record TimeFilter(TimeFilterTarget Target, RelativeTimePreset Preset, TimeRange Range, string? StatusName = null);
+
 public record IssuesSearchCriteria(
     string? ProjectKey = null,
     HashSet<FilterValue>? Assignees = null,
@@ -9,7 +32,8 @@ public record IssuesSearchCriteria(
     HashSet<FilterValue>? Components = null,
     HashSet<FilterValue>? Labels = null,
     HashSet<FilterValue>? Types = null,
-    bool IncludeUnassigned = false)
+    bool IncludeUnassigned = false,
+    TimeFilter? TimeFilter = null)
 {
     public HashSet<FilterValue> Assignees { get; init; } = Assignees ?? [];
     public HashSet<FilterValue> Statuses { get; init; } = Statuses ?? [];

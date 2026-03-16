@@ -1,4 +1,5 @@
 @using Planner.Builders
+@using Planner.Model
 <MudGrid>
             <MudItem xs="12" md="4">
                 <MudAutocomplete T="string" Label="Projects"
@@ -6,6 +7,90 @@
                                  SearchFunc="SearchProjectsAsync" Variant="Variant.Outlined" Dense="true"
                                  Required="true" RequiredError="Il progetto è obbligatorio"
                                  MinCharacters="1" DebounceInterval="250" ResetValueOnEmptyText="true" Disabled="@_isLoading" />
+            </MudItem>
+
+            @* TIME FILTER (single menu / dropdown) *@
+            <MudItem xs="12" sm="6" md="4">
+                <MudMenu AnchorOrigin="Origin.BottomCenter" TransformOrigin="Origin.TopCenter" Open="_timeFilterPopoverOpen" OpenChanged="e => _timeFilterPopoverOpen = e">
+                    <ActivatorContent>
+                        <MudButton Variant="Variant.Outlined" Color="Color.Default" OnClick="@(() => _timeFilterPopoverOpen = true)"
+                                  StartIcon="@Icons.Material.Filled.DateRange" EndIcon="@Icons.Material.Filled.ArrowDropDown"
+                                  Disabled="@_isLoading" FullWidth="true" Style="text-transform: none;">
+                            @TimeFilterSummary
+                        </MudButton>
+                    </ActivatorContent>
+                    <ChildContent>
+                        <MudPaper Class="pa-4" Outlined="true" Style="min-width: 280px;">
+                            <MudStack Spacing="3">
+                                <MudText Typo="Typo.subtitle2">Time filter</MudText>
+
+                                <MudSelect T="TimeFilterTarget" Label="Filter by"
+                                           Value="@(_searchCriteria.TimeFilter?.Target ?? TimeFilterTarget.CreatedDate)"
+                                           ValueChanged="OnTimeTargetChanged"
+                                           Variant="Variant.Outlined" Dense="true" Disabled="@_isLoading">
+                                    <MudSelectItem T="TimeFilterTarget" Value="TimeFilterTarget.CreatedDate">Created date</MudSelectItem>
+                                    <MudSelectItem T="TimeFilterTarget" Value="TimeFilterTarget.ResolvedDate">Resolved/closed date</MudSelectItem>
+                                    <MudSelectItem T="TimeFilterTarget" Value="TimeFilterTarget.StatusTransitionDate">Status changed to…</MudSelectItem>
+                                </MudSelect>
+
+                                @if (_searchCriteria.TimeFilter?.Target == TimeFilterTarget.StatusTransitionDate)
+                                {
+                                    <MudSelect T="string" Label="Status"
+                                               Value="@_searchCriteria.TimeFilter?.StatusName"
+                                               ValueChanged="OnTimeStatusChanged"
+                                               Variant="Variant.Outlined" Dense="true" Disabled="@_isLoading">
+                                        @foreach (var status in _statuses)
+                                        {
+                                            <MudSelectItem T="string" Value="@status.Name">@status.Name</MudSelectItem>
+                                        }
+                                    </MudSelect>
+                                }
+
+                                <MudText Typo="Typo.caption" Class="mt-1">Period</MudText>
+                                <div class="d-flex flex-wrap gap-1">
+                                    @foreach (var preset in new[] { RelativeTimePreset.None, RelativeTimePreset.Last7Days, RelativeTimePreset.Last30Days, RelativeTimePreset.ThisWeek, RelativeTimePreset.LastWeek, RelativeTimePreset.ThisMonth, RelativeTimePreset.LastMonth, RelativeTimePreset.CustomRange })
+                                    {
+                                        var label = preset switch
+                                        {
+                                            RelativeTimePreset.None => "None",
+                                            RelativeTimePreset.Last7Days => "7d",
+                                            RelativeTimePreset.Last30Days => "30d",
+                                            RelativeTimePreset.ThisWeek => "This week",
+                                            RelativeTimePreset.LastWeek => "Last week",
+                                            RelativeTimePreset.ThisMonth => "This month",
+                                            RelativeTimePreset.LastMonth => "Last month",
+                                            RelativeTimePreset.CustomRange => "Custom",
+                                            _ => preset.ToString()
+                                        };
+                                        var current = _searchCriteria.TimeFilter?.Preset ?? RelativeTimePreset.None;
+                                        <MudChip T="string" Size="Size.Small" Variant="current == preset ? Variant.Filled : Variant.Outlined"
+                                                 Color="current == preset ? Color.Primary : Color.Default"
+                                                 OnClick="@(() => OnTimePresetChanged(preset))">@label</MudChip>
+                                    }
+                                </div>
+
+                                @if ((_searchCriteria.TimeFilter?.Preset ?? RelativeTimePreset.None) == RelativeTimePreset.CustomRange)
+                                {
+                                    <MudStack Direction="Direction.Row" Spacing="2">
+                                        <MudDatePicker Label="From" Dense="true"
+                                                      Value="@_timeFrom"
+                                                      ValueChanged="OnTimeFromChanged"
+                                                      Disabled="@_isLoading"
+                                                      DateFormat="yyyy-MM-dd" />
+                                        <MudDatePicker Label="To" Dense="true"
+                                                      Value="@_timeTo"
+                                                      ValueChanged="OnTimeToChanged"
+                                                      Disabled="@_isLoading"
+                                                      DateFormat="yyyy-MM-dd" />
+                                    </MudStack>
+                                }
+
+                                <MudDivider />
+                                <MudButton Variant="Variant.Text" Color="Color.Default" Size="Size.Small" OnClick="ClearTimeFilter">Clear time filter</MudButton>
+                            </MudStack>
+                        </MudPaper>
+                    </ChildContent>
+                </MudMenu>
             </MudItem>
 
             @* STATUSES *@
