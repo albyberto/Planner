@@ -1,0 +1,112 @@
+@using Planner.Builders
+@using Planner.Model
+
+<MudPaper Elevation="0" Outlined="true" Class="pa-4 mb-4 position-relative overflow-hidden">
+    
+    @* PROGRESS BAR ELEGANTE IN CIMA AL PANNELLO *@
+    @if (_isLoading)
+    {
+        <MudProgressLinear Color="Color.Secondary" Indeterminate="true" Size="Size.Small" 
+                           Class="position-absolute" Style="top: 0; left: 0; right: 0; z-index: 10;" />
+    }
+
+    <MudGrid>
+        @* SEZIONE 1: CONTESTO PRINCIPALE *@
+        <MudItem xs="12" Class="pb-0">
+            <MudText Typo="Typo.overline" Style="color: var(--mud-palette-primary);">Contesto di ricerca</MudText>
+        </MudItem>
+        
+        <MudItem xs="12" md="3">
+            <MudAutocomplete T="string" Label="Progetto Jira"
+                             Value="_searchCriteria.ProjectKey" ValueChanged="OnProjectChangedAsync"
+                             SearchFunc="SearchProjectsAsync" Variant="Variant.Outlined" Dense="true"
+                             Required="true" RequiredError="Il progetto è obbligatorio"
+                             MinCharacters="1" DebounceInterval="250" ResetValueOnEmptyText="true" Disabled="@_isLoading" />
+        </MudItem>
+
+        <MudItem xs="12" md="9">
+            <TimeFilterControl Value="_searchCriteria.TimeFilter" 
+                               ValueChanged="OnTimeFilterChanged" 
+                               Statuses="_statuses" 
+                               Disabled="@_isLoading" />
+        </MudItem>
+
+        <MudItem xs="12" Class="py-1">
+            <MudDivider />
+        </MudItem>
+
+        @* SEZIONE 2: CLASSIFICAZIONE TICKET *@
+        <MudItem xs="12" Class="pb-0">
+            <MudText Typo="Typo.overline" Style="color: var(--mud-palette-primary);">Classificazione</MudText>
+        </MudItem>
+
+        <MudItem xs="12" sm="4">
+            <MudSelect T="string" Label="Status" MultiSelection="true" SelectedValues="_searchCriteria.Statuses.Select(x => x.Value).ToList()" SelectedValuesChanged="OnStatusesChanged" Variant="Variant.Outlined" Dense="true" MultiSelectionTextFunc="@(s => s != null && s.Any() ? $"{s.Count} selezionati" : string.Empty)" Disabled="@_isLoading">
+                @foreach (var status in _statuses) { <MudSelectItem T="string" Value="@status.Name">@status.Name</MudSelectItem> }
+            </MudSelect>
+            <div class="d-flex flex-wrap gap-1 mt-2">
+                @foreach (var item in _searchCriteria.Statuses) { <MudChip T="string" Size="Size.Small" Color="@(item.IsExcluded ? Color.Error : Color.Success)" Icon="@(item.IsExcluded ? Icons.Material.Filled.Block : Icons.Material.Filled.Check)" OnClick="@(() => ToggleStatus(item))" OnClose="@(() => RemoveStatus(item))">@item.Value</MudChip> }
+            </div>
+        </MudItem>
+
+        <MudItem xs="12" sm="4">
+            <MudSelect T="string" Label="Tipo" MultiSelection="true" SelectedValues="_searchCriteria.Types.Select(x => x.Value).ToList()" SelectedValuesChanged="OnTypesChanged" Variant="Variant.Outlined" Dense="true" MultiSelectionTextFunc="@(s => s != null && s.Any() ? $"{s.Count} selezionati" : string.Empty)" Disabled="@_isLoading">
+                @foreach (var type in _types) { <MudSelectItem T="string" Value="@type.Name">@type.Name</MudSelectItem> }
+            </MudSelect>
+            <div class="d-flex flex-wrap gap-1 mt-2">
+                @foreach (var item in _searchCriteria.Types) { <MudChip T="string" Size="Size.Small" Color="@(item.IsExcluded ? Color.Error : Color.Success)" Icon="@(item.IsExcluded ? Icons.Material.Filled.Block : Icons.Material.Filled.Check)" OnClick="@(() => ToggleType(item))" OnClose="@(() => RemoveType(item))">@item.Value</MudChip> }
+            </div>
+        </MudItem>
+
+        <MudItem xs="12" sm="4">
+            <MudSelect T="string" Label="Componente" MultiSelection="true" SelectedValues="_searchCriteria.Components.Select(x => x.Value).ToList()" SelectedValuesChanged="OnComponentsChanged" Variant="Variant.Outlined" Dense="true" MultiSelectionTextFunc="@(s => s != null && s.Any() ? $"{s.Count} selezionati" : string.Empty)" Disabled="@_isLoading">
+                @foreach (var comp in _components) { <MudSelectItem T="string" Value="@comp.Name">@comp.Name</MudSelectItem> }
+            </MudSelect>
+            <div class="d-flex flex-wrap gap-1 mt-2">
+                @foreach (var item in _searchCriteria.Components) { <MudChip T="string" Size="Size.Small" Color="@(item.IsExcluded ? Color.Error : Color.Success)" Icon="@(item.IsExcluded ? Icons.Material.Filled.Block : Icons.Material.Filled.Check)" OnClick="@(() => ToggleComponent(item))" OnClose="@(() => RemoveComponent(item))">@item.Value</MudChip> }
+            </div>
+        </MudItem>
+
+        <MudItem xs="12" Class="py-1">
+            <MudDivider />
+        </MudItem>
+
+        @* SEZIONE 3: ASSEGNAZIONE E TAG *@
+        <MudItem xs="12" Class="pb-0">
+            <MudText Typo="Typo.overline" Style="color: var(--mud-palette-primary);">Assegnazioni e Tag</MudText>
+        </MudItem>
+
+        <MudItem xs="12" sm="4">
+            <MudAutocomplete T="string" Label="Cerca e aggiungi Label" Value="@_labelSearchInput" ValueChanged="OnLabelAdded" SearchFunc="SearchLabelsAsync" Variant="Variant.Outlined" Dense="true" Clearable="true" MinCharacters="1" DebounceInterval="250" ResetValueOnEmptyText="true" Disabled="@_isLoading" />
+            <div class="d-flex flex-wrap gap-1 mt-2">
+                @foreach (var item in _searchCriteria.Labels) { <MudChip T="string" Size="Size.Small" Color="@(item.IsExcluded ? Color.Error : Color.Success)" Icon="@(item.IsExcluded ? Icons.Material.Filled.Block : Icons.Material.Filled.Check)" OnClick="@(() => ToggleLabel(item))" OnClose="@(() => RemoveLabel(item))">@item.Value</MudChip> }
+            </div>
+        </MudItem>
+
+        @if (ShowAssigneeFilter)
+        {
+            <MudItem xs="12" sm="4">
+                <MudSelect T="string" Label="Assegnatari" MultiSelection="true" SelectedValues="_searchCriteria.Assignees.Select(x => x.Value).ToList()" SelectedValuesChanged="OnAssigneesChanged" Variant="Variant.Outlined" Dense="true" MultiSelectionTextFunc="@(s => s != null && s.Any() ? $"{s.Count} selezionati" : string.Empty)" Disabled="@_isLoading">
+                    @foreach (var assignee in _assignees) { <MudSelectItem T="string" Value="@assignee.EmailAddress">@assignee.DisplayName</MudSelectItem> }
+                </MudSelect>
+                <div class="d-flex flex-wrap gap-1 mt-2">
+                    @foreach (var item in _searchCriteria.Assignees) { <MudChip T="string" Size="Size.Small" Color="@(item.IsExcluded ? Color.Error : Color.Success)" Icon="@(item.IsExcluded ? Icons.Material.Filled.Block : Icons.Material.Filled.Check)" OnClick="@(() => ToggleAssignee(item))" OnClose="@(() => RemoveAssignee(item))">@(_assignees.FirstOrDefault(a => a.EmailAddress == item.Value)?.DisplayName ?? item.Value)</MudChip> }
+                </div>
+            </MudItem>
+
+            <MudItem xs="12" sm="4" Class="d-flex align-start pt-4">
+                <MudSwitch T="bool" Label="Includi ticket non assegnati" Color="Color.Primary" Value="_searchCriteria.IncludeUnassigned" ValueChanged="OnUnassignedChanged" Disabled="@_isLoading" />
+            </MudItem>
+        }
+
+        @* JQL DI DEBUG / INFORMAZIONE (Posizionato elegantemente in basso a destra) *@
+        <MudItem xs="12" Class="d-flex justify-end pt-2">
+            @if (!_isLoading && !string.IsNullOrWhiteSpace(_searchCriteria.ProjectKey))
+            {
+                <MudText Typo="Typo.caption" Style="color: var(--mud-palette-text-disabled); font-family: monospace; max-width: 100%; word-break: break-all;">
+                    @_searchCriteria.ToJql()
+                </MudText>
+            }
+        </MudItem>
+    </MudGrid>
+</MudPaper>
