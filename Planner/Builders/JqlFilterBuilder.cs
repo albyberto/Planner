@@ -1,9 +1,4 @@
-using System.Globalization;
-using JQLBuilder;
-using JQLBuilder.Infrastructure.Operators;
-using JQLBuilder.Types.JqlTypes;
 using Planner.Model;
-using JqlFilter = JQLBuilder.Render.JqlFilter;
 
 namespace Planner.Builders;
 
