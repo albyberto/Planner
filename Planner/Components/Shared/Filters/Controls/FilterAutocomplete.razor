@@ -3,71 +3,75 @@
 @typeparam TItem
 
 <div class="d-flex flex-column gap-1">
-    <MudAutocomplete T="TItem"
+    <MudAutocomplete @ref="_autocomplete" T="TItem"
                      Label="@Label"
                      Placeholder="@Placeholder"
-
                      Value="default(TItem)"
                      ValueChanged="OnItemSelected"
                      SearchFunc="@SearchFunc"
-
                      Clearable="false"
                      ResetValueOnEmptyText="true"
                      CoerceText="false"
                      CoerceValue="false"
                      Variant="Variant.Outlined"
-                     Margin="Margin.Dense">
+                     Margin="Margin.Dense"> 
         
         <ItemTemplate>
-            @if (ChildContent is null)
+            @if (ChildContent is not null)
             {
-                @($"{context}")
+                @ChildContent(context)
             }
             else
             {
-                @ChildContent(context)
-            }    
+                @($"{context}");
+            }
         </ItemTemplate>
-        
         
     </MudAutocomplete>
 
     <FilterPillsControl TItem="TItem" Selection="Selection">
-        @if (ChildContent is null)
+        @if (ChildContent is not null)
         {
-            @($"{context}")
+            @ChildContent(context)
         }
         else
         {
-            @ChildContent(context)
-        }    
+            @($"{context}");
+        }
     </FilterPillsControl>
 </div>
 
 @code {
-    [Parameter] public string Label { get; set; } = "Search...";
-    [Parameter] public string Placeholder { get; set; } = "Start typing...";
+    private MudAutocomplete<TItem>? _autocomplete;
 
     [Parameter, EditorRequired] public required ImmutableArray<TItem> Items { get; set; }
     [Parameter, EditorRequired] public required IFilterSelection<TItem> Selection { get; set; }
-
+    
+    [Parameter] public string Label { get; set; } = "Search...";
+    [Parameter] public string Placeholder { get; set; } = "Start typing...";
+    
     [Parameter] public RenderFragment<TItem>? ChildContent { get; set; }
-
+    
     private Task<IEnumerable<TItem>> SearchFunc(string value, CancellationToken _)
     {
+        var available = Items.Where(item => !Selection.All.Contains(item));
+        
         var result = string.IsNullOrWhiteSpace(value) 
-            ? Items 
-            : Items.Where(item => $"{item}".StartsWith(value, StringComparison.OrdinalIgnoreCase));
+            ? available 
+            : available.Where(item => $"{item}".Trim().StartsWith(value, StringComparison.OrdinalIgnoreCase));
         
         return Task.FromResult(result.Take(50));
     }
 
-    private Task OnItemSelected(TItem item)
+    private async Task OnItemSelected(TItem? item)
     {
-        if (item == null) return Task.CompletedTask;
+        if (item is null) return;
 
         Selection = Selection.Add(item);
-        
-        return Task.CompletedTask;
+
+        if (_autocomplete is not null) 
+        {
+            await _autocomplete.ClearAsync();
+        }
     }
 }
