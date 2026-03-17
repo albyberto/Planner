@@ -15,7 +15,7 @@
     }
 
     <MudGrid>
-        <MudItem xs="12" md="4">
+        <MudItem xs="12" md="4" sm="5" lg="6" xl="1" xxl="3">
             <MudAutocomplete T="string" 
                              Label="Project Key"
                              Value="_searchCriteria.ProjectKey" 
@@ -38,6 +38,15 @@
                                Items="_types"
                                Selection="_searchCriteria.Types"
                                SelectionChanged="OnTypesChanged"/>
+        </MudItem>
+        
+        <MudItem xs="12" md="8">
+            <FilterMultiSelect TItem="StatusModel" 
+                               Label="Select Statuses"
+                               Disabled="_isLoading"
+                               Items="@AvailableStatuses"
+                               Selection="_searchCriteria.Statuses"
+                               SelectionChanged="OnStatusesChanged"/>
         </MudItem>
         
         <MudItem xs="12" md="8">
@@ -117,20 +126,20 @@
         return Task.FromResult(_projects.Where(p => p.Key.StartsWith(token, StringComparison.OrdinalIgnoreCase)).Select(p => p.Key));
     }
 
-    private async Task OnProjectChangedAsync(string? projectKey)
+    private async Task OnProjectChangedAsync(string? key)
     {
-        if (string.IsNullOrWhiteSpace(projectKey)) return;
-
-        var token = projectKey.Trim().ToUpperInvariant();
-        if (!_projects.Select(project => project.Key).Contains(projectKey, StringComparer.OrdinalIgnoreCase)) return;
+        if (string.IsNullOrWhiteSpace(key) || !_projects.Any(p => string.Equals(p.Key, key.Trim(), StringComparison.OrdinalIgnoreCase)))
+        {
+            return;
+        }
         
         try
         {
             _isLoading = true;
-            _searchCriteria = IssuesSearchCriteria.Create(projectKey);
+            _searchCriteria = IssuesSearchCriteria.Create(key);
             
             Emit(_searchCriteria);
-            await BuildAsync(projectKey);
+            await BuildAsync(key);
         }
         finally
         {
@@ -138,21 +147,41 @@
         }
     }
 
-    private void OnTypesChanged(IFilterSelection<TypeModel> selection)
+    private void OnTypesChanged(IFilterSelection<TypeModel> types)
     {
-        _searchCriteria = _searchCriteria with { Types = selection };
+        _searchCriteria = _searchCriteria with { Types = types };
+        Emit(_searchCriteria);
+    }
+
+    private IEnumerable<StatusModel> AvailableStatuses 
+    {
+        get 
+        {
+            var selectedTypes = _searchCriteria.Types.Items;
+
+            var types = selectedTypes.Any() 
+                ? _types.Where(t => selectedTypes.Contains(t)) 
+                : _types;
+
+            return types.SelectMany(t => t.Statuses).Distinct();
+        }
+    }
+    
+    private void OnStatusesChanged(IFilterSelection<StatusModel> statuses)
+    {
+        _searchCriteria = _searchCriteria with { Statuses = statuses };
         Emit(_searchCriteria);
     }
     
-    private void OnComponentsChanged(IFilterSelection<ComponentModel> selection)
+    private void OnComponentsChanged(IFilterSelection<ComponentModel> components)
     {
-        _searchCriteria = _searchCriteria with { Components = selection };
+        _searchCriteria = _searchCriteria with { Components = components };
         Emit(_searchCriteria);
     }
     
-    private void OnLabelsChanged(IFilterSelection<LabelModel> selection)
+    private void OnLabelsChanged(IFilterSelection<LabelModel> labels)
     {
-        _searchCriteria = _searchCriteria with { Labels = selection };
+        _searchCriteria = _searchCriteria with { Labels = labels };
         Emit(_searchCriteria);
     }
 
