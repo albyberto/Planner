@@ -6,7 +6,7 @@ namespace Planner.Model;
 public record StatusModel
 {
     public string Name { get; init; }
-    public string Icon { get; init; }
+    public string? Icon { get; init; }
     public string Category { get; init; }
 
     public StatusModel(Status status)
@@ -15,4 +15,6 @@ public record StatusModel
         Icon = status.IconUrl; 
         Category = status.StatusCategory.Name;
     }
+    
+    public override string ToString() => Name;
 }

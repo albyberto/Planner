@@ -1,4 +1,3 @@
-@using Planner.Builders
 @using Planner.Components.Shared.Filters.Model
 @using System.Collections.Immutable;
 @using Microsoft.Extensions.Options;
@@ -17,19 +16,46 @@
 
     <MudGrid>
         <MudItem xs="12" md="4">
-            <MudAutocomplete T="string" Label="Progetto Jira"
-                             Value="_searchCriteria.ProjectKey" ValueChanged="OnProjectChangedAsync"
-                             SearchFunc="SearchProjectsAsync" Variant="Variant.Outlined" Dense="true"
-                             Required="true" RequiredError="Il progetto è obbligatorio"
-                             MinCharacters="1" DebounceInterval="250" ResetValueOnEmptyText="true" Disabled="@_isLoading" />
+            <MudAutocomplete T="string" 
+                             Label="Project Key"
+                             Value="_searchCriteria.ProjectKey" 
+                             ValueChanged="OnProjectChangedAsync"
+                             SearchFunc="SearchProjectsAsync" 
+                             Variant="Variant.Outlined" 
+                             Dense="true"
+                             Required="true" 
+                             RequiredError="Il progetto è obbligatorio"
+                             MinCharacters="1" 
+                             DebounceInterval="250" 
+                             ResetValueOnEmptyText="true" 
+                             Disabled="@_isLoading" />
         </MudItem>
 
         <MudItem xs="12" md="8">
-            <FilterAutocomplete TItem="ComponentModel" 
-                                Label="Cerca Componente"
-                                Items="_components"
-                                Selection="_searchCriteria.Components"/>
-            
+            <FilterMultiSelect TItem="TypeModel" 
+                               Label="Select Types"
+                               Disabled="_isLoading"
+                               Items="_types"
+                               Selection="_searchCriteria.Types"
+                               SelectionChanged="OnTypesChanged"/>
+        </MudItem>
+        
+        <MudItem xs="12" md="8">
+            <FilterMultiSelect TItem="ComponentModel" 
+                               Label="Select Components"
+                               Disabled="_isLoading"
+                               Items="_components"
+                               Selection="_searchCriteria.Components"
+                               SelectionChanged="OnComponentsChanged"/>
+        </MudItem>
+        
+        <MudItem xs="12" md="8">
+            <FilterAutocomplete TItem="LabelModel" 
+                                Label="Search Labels"
+                                Disabled="_isLoading"
+                               Items="_labels"
+                               Selection="_searchCriteria.Labels"
+                               SelectionChanged="OnLabelsChanged"/>
         </MudItem>
 
         <MudItem xs="12" Class="d-flex justify-end pt-2">
@@ -52,7 +78,10 @@
     [Parameter] public Guid PageKey { get; set; }
         
     private ImmutableArray<ProjectModel> _projects = [];
+    
+    private ImmutableArray<TypeModel> _types = [];
     private ImmutableArray<ComponentModel> _components = [];
+    private ImmutableArray<LabelModel> _labels = [];
 
     private IssuesSearchCriteria _searchCriteria = IssuesSearchCriteria.Empty;
     private bool _isLoading = true;
@@ -98,7 +127,8 @@
         try
         {
             _isLoading = true;
-            _searchCriteria = IssuesSearchCriteria.Create(projectKey); // Resetta implicitamente anche i components
+            _searchCriteria = IssuesSearchCriteria.Create(projectKey);
+            
             Emit(_searchCriteria);
             await BuildAsync(projectKey);
         }
@@ -108,10 +138,21 @@
         }
     }
 
-    // ECCO LA TUA LOGICA PULITA: Riceve l'interfaccia ed emette il nuovo stato. Fine.
-    private void OnComponentsChanged(IFilterSelection<ComponentModel> newSelection)
+    private void OnTypesChanged(IFilterSelection<TypeModel> selection)
     {
-        _searchCriteria = _searchCriteria with { Components = newSelection };
+        _searchCriteria = _searchCriteria with { Types = selection };
+        Emit(_searchCriteria);
+    }
+    
+    private void OnComponentsChanged(IFilterSelection<ComponentModel> selection)
+    {
+        _searchCriteria = _searchCriteria with { Components = selection };
+        Emit(_searchCriteria);
+    }
+    
+    private void OnLabelsChanged(IFilterSelection<LabelModel> selection)
+    {
+        _searchCriteria = _searchCriteria with { Labels = selection };
         Emit(_searchCriteria);
     }
 
@@ -120,12 +161,17 @@
     private async Task BuildAsync(string projectKey)
     {
         var projectsTask = ProjectsService.GetProjectsAsync(CancellationToken.None);
+        var typesTask = ProjectsService.GetTypesAsync(projectKey);
         var componentsTask = ProjectsService.GetComponentsAsync(projectKey);
-
-        await Task.WhenAll(projectsTask, componentsTask);
+        var labelsTask = ProjectsService.GetLabelsAsync();
+        
+        await Task.WhenAll(projectsTask, typesTask, componentsTask, labelsTask);
 
         _projects = projectsTask.Result;
+        
+        _types = typesTask.Result;
         _components = componentsTask.Result;
+        _labels = labelsTask.Result;
     }
 
     public void Dispose() => FilterStore.UnRegister(PageKey);

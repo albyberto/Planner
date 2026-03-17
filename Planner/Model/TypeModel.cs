@@ -20,4 +20,6 @@ public record TypeModel
         
         Statuses = type.Statuses.Select(status => new StatusModel(status)).ToImmutableList() ?? [];
     }
+    
+    public override string ToString() => Name;
 }
