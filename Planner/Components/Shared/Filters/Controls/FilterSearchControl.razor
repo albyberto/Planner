@@ -7,11 +7,14 @@
                  Value="@_selectedItem"
                  ValueChanged="OnItemAddedAsync"
                  SearchFunc="@SearchFunc"
-                 ToStringFunc="@(item => item is null ? string.Empty : $"{item}")"
+                 ToStringFunc="@(item => item is null ? string.Empty : item.ToString()!)"
                  Variant="Variant.Outlined"
                  Dense="true"
                  Clearable="true"
-                 MinCharacters="1"
+                 MinCharacters="0" 
+                 AdornmentIcon="@Icons.Material.Filled.Search"
+                 AdornmentColor="Color.Primary"
+                 CoerceText="false"
                  DebounceInterval="250"
                  ResetValueOnEmptyText="true"
                  Disabled="@Disabled">
@@ -22,7 +25,7 @@
         }
         else
         {
-            @($"{context}")
+            @context?.ToString()
         }
     </ItemTemplate>
 </MudAutocomplete>
