@@ -11,7 +11,7 @@ public static class JqlBuilderExtensions
 {
     public static string ToJql(this IssuesSearchCriteria criteria)
     {
-        return "TEST";
+        return "project = OPNMS";
     }
 }
 

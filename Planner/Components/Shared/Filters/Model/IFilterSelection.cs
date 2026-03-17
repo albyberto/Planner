@@ -6,6 +6,7 @@ public interface IFilterSelection<T>
 {
     ImmutableHashSet<T> Included { get; }
     ImmutableHashSet<T> Excluded { get; }
+    ImmutableHashSet<T> All => Included.Concat(Excluded).ToImmutableHashSet();
 
     IFilterSelection<T> Toggle(T value);
     IFilterSelection<T> Remove(T value);

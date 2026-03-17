@@ -25,13 +25,11 @@
         </MudItem>
 
         <MudItem xs="12" md="8">
-            <FilterSearchControl 
-                TItem="ComponentModel" 
-                Label="Cerca Componente" 
-                Items="_components.ToImmutableHashSet()"
-                Selection="_searchCriteria.Components"
-                SelectionChanged="OnComponentsChanged"
-                Disabled="@_isLoading"/>
+            <FilterAutocomplete TItem="ComponentModel" 
+                                Label="Cerca Componente"
+                                Items="_components"
+                                Selection="_searchCriteria.Components"/>
+            
         </MudItem>
 
         <MudItem xs="12" Class="d-flex justify-end pt-2">

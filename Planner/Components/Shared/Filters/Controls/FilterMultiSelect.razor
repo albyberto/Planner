@@ -1,0 +1,92 @@
+@using Planner.Components.Shared.Filters.Model
+@typeparam TItem
+
+<div class="d-flex flex-column gap-1">
+    <MudSelect T="TItem"
+               MultiSelection="true"
+               SelectedValues="CurrentSelectedValues"
+               SelectedValuesChanged="OnSelectedValuesChanged"
+               Label="@Label"
+               Clearable="true"
+               AnchorOrigin="Origin.BottomCenter"
+               Variant="Variant.Outlined"
+               Margin="Margin.Dense"
+               ToStringFunc="@ToStringFunc">
+        
+        @* Barra di ricerca interna con stopPropagation *@
+        <div class="px-3 py-2" @onclick:stopPropagation="true" @onkeydown:stopPropagation="true">
+            <MudTextField @bind-Value="SearchText"
+                          Placeholder="Filtra elementi..."
+                          Adornment="Adornment.Start"
+                          AdornmentIcon="@Icons.Material.Filled.Search"
+                          IconSize="Size.Small"
+                          Variant="Variant.Text"
+                          Margin="Margin.Dense"
+                          Clearable="true"
+                          Immediate="true" />
+        </div>
+
+        @foreach (var item in FilteredItems)
+        {
+            <MudSelectItem T="TItem" Value="@item">
+                @(ToStringFunc != null ? ToStringFunc(item) : item?.ToString())
+            </MudSelectItem>
+        }
+    </MudSelect>
+
+    @* Includiamo il tuo componente Chips *@
+    <FilterPillsControl TItem="TItem"
+                          Selection="Selection"
+                          SelectionChanged="SelectionChanged"
+                          ChildContent="ChildContent" />
+</div>
+
+@code {
+    [Parameter] public string Label { get; set; } = "Seleziona...";
+    [Parameter, EditorRequired] public required IEnumerable<TItem> Items { get; set; }
+    [Parameter] public Func<TItem, string> ToStringFunc { get; set; }
+
+    // Parametri condivisi per il modello di selezione
+    [Parameter, EditorRequired] public required IFilterSelection<TItem> Selection { get; set; }
+    [Parameter] public EventCallback<IFilterSelection<TItem>> SelectionChanged { get; set; }
+    [Parameter, EditorRequired] public required RenderFragment<TItem> ChildContent { get; set; }
+
+    // Gestione ricerca testuale interna
+    private string _searchText = string.Empty;
+    private string SearchText
+    {
+        get => _searchText;
+        set { if (_searchText != value) _searchText = value; }
+    }
+
+    private IEnumerable<TItem> FilteredItems => string.IsNullOrWhiteSpace(SearchText)
+        ? Items
+        : Items.Where(x => (ToStringFunc != null ? ToStringFunc(x) : x?.ToString() ?? "")
+            .Contains(SearchText, StringComparison.OrdinalIgnoreCase));
+
+    // Proprietà calcolata: il MudSelect deve mostrare spuntati sia gli inclusi che gli esclusi
+    private IReadOnlyList<TItem> CurrentSelectedValues => Selection.All.ToList();
+
+    private async Task OnSelectedValuesChanged(IEnumerable<TItem> newValues)
+    {
+        var currentValues = CurrentSelectedValues.ToList();
+        var addedItems = newValues.Except(currentValues).ToList();
+        var removedItems = currentValues.Except(newValues).ToList();
+
+        var updatedSelection = Selection;
+
+        // Aggiungiamo i nuovi spuntati (di default li mettiamo in Included)
+        foreach (var item in addedItems)
+        {
+            updatedSelection = updatedSelection.Add(item); // Usa il metodo corretto della tua interfaccia
+        }
+
+        // Rimuoviamo quelli che l'utente ha deselezionato dalla tendina
+        foreach (var item in removedItems)
+        {
+            updatedSelection = updatedSelection.Remove(item);
+        }
+
+        await SelectionChanged.InvokeAsync(updatedSelection);
+    }
+}

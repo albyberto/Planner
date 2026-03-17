@@ -1,0 +1,73 @@
+@using System.Collections.Immutable
+@using Planner.Components.Shared.Filters.Model
+@typeparam TItem
+
+<div class="d-flex flex-column gap-1">
+    <MudAutocomplete T="TItem"
+                     Label="@Label"
+                     Placeholder="@Placeholder"
+
+                     Value="default(TItem)"
+                     ValueChanged="OnItemSelected"
+                     SearchFunc="@SearchFunc"
+
+                     Clearable="false"
+                     ResetValueOnEmptyText="true"
+                     CoerceText="false"
+                     CoerceValue="false"
+                     Variant="Variant.Outlined"
+                     Margin="Margin.Dense">
+        
+        <ItemTemplate>
+            @if (ChildContent is null)
+            {
+                @($"{context}")
+            }
+            else
+            {
+                @ChildContent(context)
+            }    
+        </ItemTemplate>
+        
+        
+    </MudAutocomplete>
+
+    <FilterPillsControl TItem="TItem" Selection="Selection">
+        @if (ChildContent is null)
+        {
+            @($"{context}")
+        }
+        else
+        {
+            @ChildContent(context)
+        }    
+    </FilterPillsControl>
+</div>
+
+@code {
+    [Parameter] public string Label { get; set; } = "Search...";
+    [Parameter] public string Placeholder { get; set; } = "Start typing...";
+
+    [Parameter, EditorRequired] public required ImmutableArray<TItem> Items { get; set; }
+    [Parameter, EditorRequired] public required IFilterSelection<TItem> Selection { get; set; }
+
+    [Parameter] public RenderFragment<TItem>? ChildContent { get; set; }
+
+    private Task<IEnumerable<TItem>> SearchFunc(string value, CancellationToken _)
+    {
+        var result = string.IsNullOrWhiteSpace(value) 
+            ? Items 
+            : Items.Where(item => $"{item}".StartsWith(value, StringComparison.OrdinalIgnoreCase));
+        
+        return Task.FromResult(result.Take(50));
+    }
+
+    private Task OnItemSelected(TItem item)
+    {
+        if (item == null) return Task.CompletedTask;
+
+        Selection = Selection.Add(item);
+        
+        return Task.CompletedTask;
+    }
+}

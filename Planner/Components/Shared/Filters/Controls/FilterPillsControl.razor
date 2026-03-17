@@ -31,10 +31,8 @@
 
 @code {
     [Parameter, EditorRequired] public required IFilterSelection<TItem> Selection { get; set; }
-    [Parameter] public EventCallback<IFilterSelection<TItem>> SelectionChanged { get; set; }
-
     [Parameter, EditorRequired] public required RenderFragment<TItem> ChildContent { get; set; }
 
-    private Task OnToggleAsync(TItem val) => SelectionChanged.InvokeAsync(Selection.Toggle(val));
-    private Task OnRemoveAsync(TItem val) => SelectionChanged.InvokeAsync(Selection.Remove(val));
+    private void OnToggleAsync(TItem val) => Selection = Selection.Toggle(val);
+    private void OnRemoveAsync(TItem val) => Selection = Selection.Remove(val);
 }
