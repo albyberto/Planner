@@ -1,19 +1,23 @@
+@using System.Collections.Immutable
 @typeparam TItem
 
 <MudAutocomplete T="TItem"
                  Label="@Label"
-                 Value="@Value"
-                 ValueChanged="OnValueChangedAsync"
+                 Placeholder="@Placeholder"
+                 Disabled="@Disabled"
+                 Value="@SelectedValue"
+                 ValueChanged="OnItemSelected"
                  SearchFunc="@SearchFunc"
+                 Clearable="false"
+                 ResetValueOnEmptyText="true"
+                 CoerceText="false"
+                 CoerceValue="false"
                  Variant="Variant.Outlined"
                  Margin="Margin.Dense"
-                 Required="@Required"
-                 RequiredError="@RequiredError"
                  MinCharacters="1"
                  DebounceInterval="250"
-                 ResetValueOnEmptyText="true"
-                 Disabled="@Disabled"
-                 Clearable="@Clearable">
+                 Required="@Required"
+                 RequiredError="Value is required">
     <ItemTemplate>
         @if (ChildContent is not null)
         {
@@ -27,24 +31,31 @@
 </MudAutocomplete>
 
 @code {
+    [Parameter, EditorRequired] public required ImmutableArray<TItem> Items { get; set; }
+    [Parameter] public TItem? SelectedValue { get; set; }
+
+    [Parameter, EditorRequired] public required EventCallback<TItem?> SelectedValueChanged { get; set; }
+    
+    [Parameter] public bool Disabled { get; set; } = true;
     [Parameter] public string Label { get; set; } = "Select...";
-    [Parameter] public TItem? Value { get; set; }
-    [Parameter] public EventCallback<TItem?> ValueChanged { get; set; }
-    
-    [Parameter, EditorRequired] public required Func<string, CancellationToken, Task<IEnumerable<TItem>>> SearchFunc { get; set; }
-    
-    [Parameter] public bool Disabled { get; set; }
-    [Parameter] public bool Required { get; set; }
-    [Parameter] public string? RequiredError { get; set; }
-    [Parameter] public bool Clearable { get; set; } = true;
+    [Parameter] public string Placeholder { get; set; } = "Start typing...";
+    [Parameter] public bool Required { get; set; } = true;
     
     [Parameter] public RenderFragment<TItem>? ChildContent { get; set; }
 
-    private async Task OnValueChangedAsync(TItem? newValue)
+    private Task<IEnumerable<TItem>> SearchFunc(string value, CancellationToken _)
     {
-        if (EqualityComparer<TItem>.Default.Equals(Value, newValue)) return;
+        var result = string.IsNullOrWhiteSpace(value) 
+            ? Items 
+            : Items.Where(item => $"{item}".Trim().StartsWith(value, StringComparison.OrdinalIgnoreCase));
+        
+        return Task.FromResult(result.OrderBy(item => $"{item}").Take(50));
+    }
+    
+    private async Task OnItemSelected(TItem value)
+    {
+        if (EqualityComparer<TItem>.Default.Equals(SelectedValue, value)) return;
 
-        Value = newValue;
-        await ValueChanged.InvokeAsync(newValue);
+        await SelectedValueChanged.InvokeAsync(value);
     }
 }

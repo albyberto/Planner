@@ -15,15 +15,13 @@
 
     <MudGrid>
         <MudItem xs="12" sm="6" md="4" lg="2">
-            <FilterSingleAutocomplete TItem="string"
+            <FilterSingleAutocomplete TItem="ProjectModel"
                                       Label="Project Key"
-                                      Value="_searchCriteria.ProjectKey"
-                                      ValueChanged="OnProjectChangedAsync"
-                                      SearchFunc="SearchProjectsAsync"
-                                      Required="true"
-                                      RequiredError="Il progetto è obbligatorio"
                                       Disabled="@_isLoading"
-                                      Clearable="false"/>
+                                      Items="_projects"
+                                      SelectedValue="_searchCriteria.ProjectKey"
+                                      SelectedValueChanged="OnProjectChangedAsync"
+                                      Required="true"  />
         </MudItem>
 
         <MudItem xs="12" sm="6" md="4" lg="2">
@@ -63,7 +61,7 @@
         </MudItem>
 
         <MudItem xs="12" sm="6" md="4" lg="2" Class="d-flex justify-end pt-2">
-            @if (!_isLoading && !string.IsNullOrWhiteSpace(_searchCriteria.ProjectKey))
+            @if (!_isLoading)
             {
                 <MudText Typo="Typo.caption">
                     @* @_searchCriteria.ToJql() *@
@@ -115,15 +113,10 @@
         }
     }
 
-    private Task<IEnumerable<string>> SearchProjectsAsync(string? value, CancellationToken cancellationToken)
+    private async Task OnProjectChangedAsync(ProjectModel? project)
     {
-        if (string.IsNullOrWhiteSpace(value)) return Task.FromResult<IEnumerable<string>>([]);
-        var token = value.Trim().ToUpperInvariant();
-        return Task.FromResult(_projects.Where(p => p.Key.StartsWith(token, StringComparison.OrdinalIgnoreCase)).Select(p => p.Key));
-    }
-
-    private async Task OnProjectChangedAsync(string? key)
-    {
+        var key = project?.Key;
+        
         if (string.IsNullOrWhiteSpace(key) || !_projects.Any(p => string.Equals(p.Key, key.Trim(), StringComparison.OrdinalIgnoreCase)))
         {
             return;

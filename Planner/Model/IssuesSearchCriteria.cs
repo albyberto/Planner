@@ -4,7 +4,7 @@ namespace Planner.Model;
 
 public record IssuesSearchCriteria
 {
-    public string ProjectKey { get; init; } = string.Empty;
+    public ProjectModel? ProjectKey { get; init; }
     
     public IFilterSelection<TypeModel> Types { get; init; } = FilterSelection<TypeModel>.Empty;
     public IFilterSelection<StatusModel> Statuses { get; init; } = FilterSelection<StatusModel>.Empty;
@@ -14,5 +14,5 @@ public record IssuesSearchCriteria
 
     public static IssuesSearchCriteria Empty => new();
     
-    public static IssuesSearchCriteria Create(string projectKey) => new() { ProjectKey = projectKey };
+    public static IssuesSearchCriteria Create(string key) => new() { ProjectKey = new(key) };
 }
