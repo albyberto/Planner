@@ -43,7 +43,7 @@ public static class Bootstrapper
 
     public IServiceCollection AddPlannerServices()
     {
-        services.AddScoped<ProjectsService>();
+        services.AddScoped<FilterService>();
 
         return services;
     }

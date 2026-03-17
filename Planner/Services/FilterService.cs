@@ -4,7 +4,7 @@ using Planner.Model;
 
 namespace Planner.Services;
 
-public class ProjectsService(JiraFilterClient client)
+public class FilterService(JiraFilterClient client)
 {
     public async Task<ImmutableArray<ProjectModel>> GetProjectsAsync(CancellationToken cancellationToken = default)
     {

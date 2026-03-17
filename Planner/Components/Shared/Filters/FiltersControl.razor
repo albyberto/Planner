@@ -22,7 +22,7 @@
                                       Items="_projects"
                                       SelectedValue="_searchCriteria.ProjectKey"
                                       SelectedValueChanged="OnProjectChangedAsync"
-                                      Required="true"  />
+                                      Required="true"/>
         </MudItem>
 
         <MudItem xs="12" sm="12" md="4" lg="4">
@@ -61,6 +61,30 @@
                                 SelectionChanged="OnLabelsChanged"/>
         </MudItem>
 
+        <MudItem xs="12" sm="12" md="4" lg="4">
+            <FilterDateControl
+                Label="Data Creazione"
+                Value="@(GetDateFilter("created"))"
+                ValueChanged="@(v => SetDateFilter("created", v))"
+                Disabled="_isLoading" />
+        </MudItem>
+
+        <MudItem xs="12" sm="12" md="4" lg="4">
+            <FilterDateControl 
+                Label="Data Risoluzione"
+                Value="@(GetDateFilter("resolved"))"
+                ValueChanged="@(v => SetDateFilter("resolved", v))"
+                Disabled="_isLoading" />
+        </MudItem>
+
+        <MudItem xs="12" sm="12" md="4" lg="4">
+            <FilterDateControl 
+                Label="Due Date"
+                Value="@(GetDateFilter("duedate"))"
+                ValueChanged="@(v => SetDateFilter("duedate", v))"
+                Disabled="_isLoading" />
+        </MudItem>
+
         <MudItem xs="12" sm="12" md="4" lg="4" Class="d-flex justify-end pt-2">
             @if (!_isLoading)
             {
@@ -75,7 +99,7 @@
 
 @code {
     [Inject] public required IOptions<JiraFilterOptions> Options { get; set; }
-    [Inject] public required ProjectsService ProjectsService { get; set; }
+    [Inject] public required FilterService FilterService { get; set; }
     [Inject] public required FilterStore FilterStore { get; set; }
     [Inject] public required ISnackbar Snackbar { get; set; }
 
@@ -89,6 +113,17 @@
 
     private IssuesSearchCriteria _searchCriteria = IssuesSearchCriteria.Empty;
     private bool _isLoading = true;
+
+    private DatePreset GetDateFilter(string field) => 
+        _searchCriteria.DateFilters.TryGetValue(field, out var preset) 
+            ? preset 
+            : DatePreset.None;
+
+    private void SetDateFilter(string field, DatePreset preset)
+    {
+        _searchCriteria = _searchCriteria.SetDateFilter(field, preset);
+        Emit(_searchCriteria);
+    }
 
     protected override async Task OnInitializedAsync()
     {
@@ -117,7 +152,7 @@
     private async Task OnProjectChangedAsync(ProjectModel? project)
     {
         var key = project?.Key;
-        
+
         if (string.IsNullOrWhiteSpace(key) || !_projects.Any(p => string.Equals(p.Key, key.Trim(), StringComparison.OrdinalIgnoreCase)))
         {
             return;
@@ -177,10 +212,10 @@
 
     private async Task BuildAsync(string projectKey)
     {
-        var projectsTask = ProjectsService.GetProjectsAsync(CancellationToken.None);
-        var typesTask = ProjectsService.GetTypesAsync(projectKey);
-        var componentsTask = ProjectsService.GetComponentsAsync(projectKey);
-        var labelsTask = ProjectsService.GetLabelsAsync();
+        var projectsTask = FilterService.GetProjectsAsync(CancellationToken.None);
+        var typesTask = FilterService.GetTypesAsync(projectKey);
+        var componentsTask = FilterService.GetComponentsAsync(projectKey);
+        var labelsTask = FilterService.GetLabelsAsync();
 
         await Task.WhenAll(projectsTask, typesTask, componentsTask, labelsTask);
 
