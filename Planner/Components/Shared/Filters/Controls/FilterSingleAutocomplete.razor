@@ -1,0 +1,50 @@
+@typeparam TItem
+
+<MudAutocomplete T="TItem"
+                 Label="@Label"
+                 Value="@Value"
+                 ValueChanged="OnValueChangedAsync"
+                 SearchFunc="@SearchFunc"
+                 Variant="Variant.Outlined"
+                 Margin="Margin.Dense"
+                 Required="@Required"
+                 RequiredError="@RequiredError"
+                 MinCharacters="1"
+                 DebounceInterval="250"
+                 ResetValueOnEmptyText="true"
+                 Disabled="@Disabled"
+                 Clearable="@Clearable">
+    <ItemTemplate>
+        @if (ChildContent is not null)
+        {
+            @ChildContent(context)
+        }
+        else
+        {
+            @($"{context}")
+        }
+    </ItemTemplate>
+</MudAutocomplete>
+
+@code {
+    [Parameter] public string Label { get; set; } = "Select...";
+    [Parameter] public TItem? Value { get; set; }
+    [Parameter] public EventCallback<TItem?> ValueChanged { get; set; }
+    
+    [Parameter, EditorRequired] public required Func<string, CancellationToken, Task<IEnumerable<TItem>>> SearchFunc { get; set; }
+    
+    [Parameter] public bool Disabled { get; set; }
+    [Parameter] public bool Required { get; set; }
+    [Parameter] public string? RequiredError { get; set; }
+    [Parameter] public bool Clearable { get; set; } = true;
+    
+    [Parameter] public RenderFragment<TItem>? ChildContent { get; set; }
+
+    private async Task OnValueChangedAsync(TItem? newValue)
+    {
+        if (EqualityComparer<TItem>.Default.Equals(Value, newValue)) return;
+
+        Value = newValue;
+        await ValueChanged.InvokeAsync(newValue);
+    }
+}
