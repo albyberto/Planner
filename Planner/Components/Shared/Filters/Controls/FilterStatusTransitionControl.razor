@@ -21,54 +21,58 @@
                   Class="w-100" />
 
     @* Il Popover: appare in sovrimpressione solo quando clicchi *@
-    <MudPopover Open="@_isOpen" AnchorOrigin="Origin.BottomLeft" TransformOrigin="Origin.TopLeft" MaxHeight="400" Class="mud-elevation-2 rounded-lg overflow-hidden harmonized-popover" Style="width: calc(100% - 2px); margin-top: 1px;">
-
-        <div class="d-flex flex-row" style="height: 250px;">
+    <MudPopover Open="@_isOpen" 
+                AnchorOrigin="Origin.BottomLeft" 
+                TransformOrigin="Origin.TopLeft" 
+                RelativeWidth="DropdownWidth.Relative"
+                MaxHeight="400" 
+                Class="mud-elevation-2 rounded-lg overflow-hidden harmonized-popover" 
+                Style="margin-top: 2px;">
+        
+        @* Assicurati che questo div usi w-100 e non abbia width fisse *@
+        <div class="d-flex flex-row w-100" style="height: 250px;">
+            
             @* Colonna Sinistra: Gli Elementi Generici (Stato) *@
-            <div class="flex-1 d-flex flex-column" style="border-right: 1px solid var(--mud-palette-lines-default);">
+            <div class="flex-1 d-flex flex-column w-50" style="border-right: 1px solid var(--mud-palette-lines-default);">
                 <div class="pa-2 text-center" style="background-color: var(--mud-palette-background-grey); border-bottom: 1px solid var(--mud-palette-lines-default);">
-                    <MudText Typo="Typo.caption" Color="@Color.Dark" Style="font-weight: 500;">@LeftColumnHeader</MudText>
+                    <MudText Typo="Typo.caption" Color="Color.Dark" Style="font-weight: 500;">@LeftColumnHeader</MudText>
                 </div>
                 <div class="picker-scroll-container">
-                    <div class="picker-item @(Value.Item is null ? "selected" : "")"
+                    <div class="picker-item @(Value.Item is null ? "selected" : "")" 
                          @onclick="@(() => OnItemClickedAsync(default))">
                         @NullItemLabel
                     </div>
                     @if (Items is not null)
                     {
-                    @foreach (var item in Items)
-                    {
-                    var isSelected = EqualityComparer<TItem>.Default.Equals(Value.Item, item);
-                    <div class="picker-item @(isSelected ? "selected" : "")"
-                         @onclick="@(() => OnItemClickedAsync(item))">
-                        @($"{item}")
-                    </div>
-                    }
+                        @foreach (var item in Items)
+                        {
+                            var isSelected = EqualityComparer<TItem>.Default.Equals(Value.Item, item);
+                            <div class="picker-item @(isSelected ? "selected" : "")" 
+                                 @onclick="@(() => OnItemClickedAsync(item))">
+                                @($"{item}")
+                            </div>
+                        }
                     }
                 </div>
             </div>
 
             @* Colonna Destra: Il Periodo *@
-            <div class="flex-1 d-flex flex-column">
+            <div class="flex-1 d-flex flex-column w-50">
                 <div class="pa-2 text-center" style="background-color: var(--mud-palette-background-grey); border-bottom: 1px solid var(--mud-palette-lines-default);">
-                    <MudText Typo="Typo.caption" Color="@Color.Dark" Style="font-weight: 500;">@RightColumnHeader</MudText>
+                    <MudText Typo="Typo.caption" Color="Color.Dark" Style="font-weight: 500;">@RightColumnHeader</MudText>
                 </div>
                 <div class="picker-scroll-container">
                     @foreach (DatePreset preset in Enum.GetValues(typeof(DatePreset)))
                     {
-                    <div class="picker-item @(Value.Preset == preset ? "selected" : "")"
-                         @onclick="@(() => OnPresetClickedAsync(preset))">
-                        @GetPresetLabel(preset)
-                    </div>
+                        <div class="picker-item @(Value.Preset == preset ? "selected" : "")" 
+                             @onclick="@(() => OnPresetClickedAsync(preset))">
+                            @GetPresetLabel(preset)
+                        </div>
                     }
                 </div>
             </div>
         </div>
-
-        @* Pulsante di conferma rimosso e sostituito con chiusura automatica al click esterno per un look più pulito. *@
-
     </MudPopover>
-
     @* Overlay invisibile: serve per chiudere la tendina se l'utente clicca fuori dal componente *@
     <MudOverlay Visible="@_isOpen" OnClick="ToggleOpen" Background="Color.Transparent" ZIndex="99" />
 </div>
