@@ -84,6 +84,14 @@
                 ValueChanged="@(v => SetDateFilter("duedate", v))"
                 Disabled="_isLoading" />
         </MudItem>
+        
+        <MudItem xs="12" md="6">
+            <FilterStatusTransitionControl TItem="StatusModel"
+                                           Items="AvailableStatuses"
+                                           Value="_searchCriteria.StatusTransition"
+                                           ValueChanged="OnStatusTransitionChanged"
+                                           Disabled="_isLoading" />
+        </MudItem>
 
         <MudItem xs="12" sm="12" md="4" lg="4" Class="d-flex justify-end pt-2">
             @if (!_isLoading)
@@ -205,6 +213,12 @@
     private void OnLabelsChanged(IFilterSelection<LabelModel> labels)
     {
         _searchCriteria = _searchCriteria with { Labels = labels };
+        Emit(_searchCriteria);
+    }
+    
+    private void OnStatusTransitionChanged(TransitionFilter<StatusModel> transition)
+    {
+        _searchCriteria = _searchCriteria with { StatusTransition = transition };
         Emit(_searchCriteria);
     }
 

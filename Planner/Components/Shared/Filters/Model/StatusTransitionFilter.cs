@@ -1,0 +1,3 @@
+namespace Planner.Components.Shared.Filters.Model;
+
+public record TransitionFilter<TItem>(TItem? Item = default, DatePreset Preset = DatePreset.None);

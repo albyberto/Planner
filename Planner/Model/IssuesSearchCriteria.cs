@@ -15,6 +15,9 @@ public record IssuesSearchCriteria
     public IFilterSelection<LabelModel> Labels { get; init; } = FilterSelection<LabelModel>.Empty;
 
     public ImmutableDictionary<string, DatePreset> DateFilters { get; private init; } = [];
+    
+    public TransitionFilter<StatusModel> StatusTransition { get; init; } = new();
+    
     public static IssuesSearchCriteria Create(string key) => new() { ProjectKey = new(key) };
 
     public IssuesSearchCriteria SetDateFilter(string field, DatePreset preset) =>

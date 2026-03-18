@@ -1,0 +1,131 @@
+@typeparam TItem
+@using Planner.Components.Shared.Filters.Model
+@using Planner.Model
+
+<MudPaper Outlined="true" Class="d-flex flex-row overflow-hidden" Style="height: 200px; border-radius: 8px;">
+    
+    @* Colonna Sinistra: Gli Elementi Generici *@
+    <div class="flex-1 d-flex flex-column" style="border-right: 1px solid var(--mud-palette-lines-default);">
+        <div class="pa-2 mud-theme-dark text-center" style="background-color: var(--mud-palette-background-grey);">
+            <MudText Typo="Typo.caption" Style="font-weight: 600;">@LeftColumnHeader</MudText>
+        </div>
+        <div class="picker-scroll-container">
+            @* Opzione "Nessuno/Qualsiasi" *@
+            <div class="picker-item @(Value.Item is null ? "selected" : "")" 
+                 @onclick="@(() => OnItemClickedAsync(default))">
+                @NullItemLabel
+            </div>
+
+            @foreach (var item in Items)
+            {
+                // Usiamo EqualityComparer per fare confronti sicuri su tipi generici
+                var isSelected = EqualityComparer<TItem>.Default.Equals(Value.Item, item);
+                
+                <div class="picker-item @(isSelected ? "selected" : "")" 
+                     @onclick="@(() => OnItemClickedAsync(item))">
+                    @($"{item}") @* <--- Interpolazione stringa che chiama il ToString() del tuo modello *@
+                </div>
+            }
+        </div>
+    </div>
+
+    @* Colonna Destra: Il Periodo *@
+    <div class="flex-1 d-flex flex-column">
+        <div class="pa-2 mud-theme-dark text-center" style="background-color: var(--mud-palette-background-grey);">
+            <MudText Typo="Typo.caption" Style="font-weight: 600;">@RightColumnHeader</MudText>
+        </div>
+        <div class="picker-scroll-container">
+            @foreach (DatePreset preset in Enum.GetValues(typeof(DatePreset)))
+            {
+                <div class="picker-item @(Value.Preset == preset ? "selected" : "")" 
+                     @onclick="@(() => OnPresetClickedAsync(preset))">
+                    @GetPresetLabel(preset)
+                </div>
+            }
+        </div>
+    </div>
+
+</MudPaper>
+
+@* Riassunto visivo della selezione *@
+@if (Value.Item is not null || Value.Preset != DatePreset.None)
+{
+    <MudText Typo="Typo.caption" Color="Color.Primary" Class="d-block mt-2 text-center">
+        Filtro attivo: @SummaryPrefix <b>@(Value.Item is not null ? $"{Value.Item}" : NullItemLabel.ToLower())</b> 
+        @(Value.Preset != DatePreset.None ? $"({GetPresetLabel(Value.Preset).ToLower()})" : "")
+    </MudText>
+}
+
+<style>
+    .picker-scroll-container {
+        flex: 1;
+        overflow-y: auto;
+        scrollbar-width: none; 
+        -ms-overflow-style: none;  
+        padding: 8px 0;
+    }
+    .picker-scroll-container::-webkit-scrollbar {
+        display: none; 
+    }
+    .picker-item {
+        padding: 8px 16px;
+        text-align: center;
+        cursor: pointer;
+        color: var(--mud-palette-text-secondary);
+        transition: all 0.2s ease-in-out;
+        font-size: 0.9rem;
+    }
+    .picker-item:hover {
+        background-color: var(--mud-palette-action-default-hover);
+        color: var(--mud-palette-text-primary);
+    }
+    .picker-item.selected {
+        color: var(--mud-palette-primary);
+        font-weight: 700;
+        font-size: 1.05rem;
+        background-color: var(--mud-palette-primary-hover);
+        border-left: 3px solid var(--mud-palette-primary);
+        border-right: 3px solid var(--mud-palette-primary);
+    }
+</style>
+
+@code {
+    [Parameter, EditorRequired] public required IEnumerable<TItem> Items { get; set; }
+    
+    [Parameter] public TransitionFilter<TItem> Value { get; set; } = new();
+    [Parameter] public EventCallback<TransitionFilter<TItem>> ValueChanged { get; set; }
+    
+    [Parameter] public bool Disabled { get; set; }
+
+    // Parametri per rendere personalizzabile l'interfaccia a prescindere dal tipo TItem
+    [Parameter] public string LeftColumnHeader { get; set; } = "Passato allo stato...";
+    [Parameter] public string RightColumnHeader { get; set; } = "Nel periodo...";
+    [Parameter] public string NullItemLabel { get; set; } = "Qualsiasi stato";
+    [Parameter] public string SummaryPrefix { get; set; } = "Passaggio a";
+
+    private Task OnItemClickedAsync(TItem? newItem)
+    {
+        if (Disabled) return Task.CompletedTask;
+        
+        var newState = Value with { Item = newItem };
+        return ValueChanged.InvokeAsync(newState);
+    }
+
+    private Task OnPresetClickedAsync(DatePreset newPreset)
+    {
+        if (Disabled) return Task.CompletedTask;
+
+        var newState = Value with { Preset = newPreset };
+        return ValueChanged.InvokeAsync(newState);
+    }
+
+    private string GetPresetLabel(DatePreset preset) => preset switch
+    {
+        DatePreset.None => "Nessun periodo",
+        DatePreset.Today => "Oggi",
+        DatePreset.Yesterday => "Ieri",
+        DatePreset.LastWeek => "Ultima settimana",
+        DatePreset.LastMonth => "Ultimo mese",
+        _ => preset.ToString()
+    };
+}
