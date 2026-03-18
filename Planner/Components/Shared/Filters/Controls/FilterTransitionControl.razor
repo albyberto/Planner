@@ -7,6 +7,7 @@
     <MudTextField T="string"
                   Label="@Label"
                   Value="@GetDisplayValue()"
+                  ValueChanged="OnDisplayValueChangedAsync"
                   Variant="Variant.Outlined"
                   Margin="Margin.Dense"
                   ReadOnly="true"
@@ -15,7 +16,6 @@
                   OnAdornmentClick="ToggleOpen"
                   @onclick="ToggleOpen"
                   Clearable="@Clearable"
-                  OnClearButtonClick="ClearSelectionAsync"
                   Disabled="@Disabled"
                   Style="cursor: pointer;"
                   Class="w-100" />
@@ -147,6 +147,19 @@ private Task OnItemClickedAsync(TItem? newItem)
 {
 var newState = Value with { Item = newItem };
 return ValueChanged.InvokeAsync(newState);
+}
+
+// Rimuovi o commenta questo:
+// private Task ClearSelectionAsync() { ... }
+
+// Aggiungi questo:
+private Task OnDisplayValueChangedAsync(string newValue)
+{
+    // Se l'utente clicca la X, MudBlazor prova a svuotare la stringa passando null o ""
+    if (!string.IsNullOrEmpty(newValue)) return Task.CompletedTask;
+    _isOpen = false; // Chiudiamo la tendina se era aperta per sbaglio
+            
+    return ValueChanged.InvokeAsync(new TransitionFilter<TItem>());
 }
 
 private Task OnPresetClickedAsync(DatePreset newPreset)
