@@ -2,43 +2,118 @@
 @using Planner.Components.Shared.Filters.Model
 @using Planner.Model
 
-<div class="d-flex flex-row gap-2 w-100">
-    @* 1. Tendina dell'Elemento (es. Stato) *@
-    <MudSelect T="TItem" 
-               Label="@LeftColumnHeader"
-               Value="Value.Item"
-               ValueChanged="OnItemChangedAsync"
-               Variant="Variant.Outlined" 
-               Margin="Margin.Dense" 
-               Disabled="@Disabled"
-               Clearable="true"
-               Class="flex-1">
-        @foreach (var item in Items)
-        {
-            <MudSelectItem T="TItem" Value="@item">
-                @($"{item}")
-            </MudSelectItem>
-        }
-    </MudSelect>
+<div class="position-relative">
+    @* L'innesco: Sembra una normale MudSelect, grande 1 riga *@
+    <MudTextField T="string"
+                  Label="@Label"
+                  Value="@GetDisplayValue()"
+                  Variant="Variant.Outlined"
+                  Margin="Margin.Dense"
+                  ReadOnly="true"
+                  Adornment="Adornment.End"
+                  AdornmentIcon="@(_isOpen ? Icons.Material.Filled.ArrowDropUp : Icons.Material.Filled.ArrowDropDown)"
+                  OnAdornmentClick="ToggleOpen"
+                  @onclick="ToggleOpen"
+                  Clearable="@Clearable"
+                  OnClearButtonClick="ClearSelectionAsync"
+                  Disabled="@Disabled"
+                  Style="cursor: pointer;" />
 
-    @* 2. Tendina del Periodo (si abilita solo se scegli l'elemento a sinistra) *@
-    <MudSelect T="DatePreset" 
-               Label="@RightColumnHeader"
-               Value="Value.Preset"
-               ValueChanged="OnPresetChangedAsync"
-               Variant="Variant.Outlined" 
-               Margin="Margin.Dense" 
-               Disabled="@(Disabled || Value.Item is null)"
-               Clearable="true"
-               Class="flex-1">
-        @foreach (DatePreset preset in Enum.GetValues(typeof(DatePreset)))
-        {
-            <MudSelectItem T="DatePreset" Value="@preset">
-                @GetPresetLabel(preset)
-            </MudSelectItem>
-        }
-    </MudSelect>
+    @* Il Popover: appare in sovrimpressione solo quando clicchi *@
+    <MudPopover Open="@_isOpen" AnchorOrigin="Origin.BottomLeft" TransformOrigin="Origin.TopLeft" Class="mud-elevation-4 rounded-lg overflow-hidden">
+        
+        <div class="d-flex flex-row" style="width: 400px; height: 260px;">
+            @* Colonna Sinistra: Gli Elementi Generici (Stato) *@
+            <div class="flex-1 d-flex flex-column" style="border-right: 1px solid var(--mud-palette-lines-default);">
+                <div class="pa-2 mud-theme-dark text-center" style="background-color: var(--mud-palette-background-grey);">
+                    <MudText Typo="Typo.caption" Style="font-weight: 600;">@LeftColumnHeader</MudText>
+                </div>
+                <div class="picker-scroll-container">
+                    <div class="picker-item @(Value.Item is null ? "selected" : "")" 
+                         @onclick="@(() => OnItemClickedAsync(default))">
+                        @NullItemLabel
+                    </div>
+                    @if (Items is not null)
+                    {
+                        @foreach (var item in Items)
+                        {
+                            var isSelected = EqualityComparer<TItem>.Default.Equals(Value.Item, item);
+                            <div class="picker-item @(isSelected ? "selected" : "")" 
+                                 @onclick="@(() => OnItemClickedAsync(item))">
+                                @($"{item}")
+                            </div>
+                        }
+                    }
+                </div>
+            </div>
+
+            @* Colonna Destra: Il Periodo *@
+            <div class="flex-1 d-flex flex-column">
+                <div class="pa-2 mud-theme-dark text-center" style="background-color: var(--mud-palette-background-grey);">
+                    <MudText Typo="Typo.caption" Style="font-weight: 600;">@RightColumnHeader</MudText>
+                </div>
+                <div class="picker-scroll-container">
+                    @foreach (DatePreset preset in Enum.GetValues(typeof(DatePreset)))
+                    {
+                        <div class="picker-item @(Value.Preset == preset ? "selected" : "")" 
+                             @onclick="@(() => OnPresetClickedAsync(preset))">
+                            @GetPresetLabel(preset)
+                        </div>
+                    }
+                </div>
+            </div>
+        </div>
+        
+        @* Pulsante di conferma opzionale per chiudere il popup *@
+        <div class="d-flex justify-end pa-2" style="border-top: 1px solid var(--mud-palette-lines-default); background-color: var(--mud-palette-surface);">
+            <MudButton Size="Size.Small" Color="Color.Primary" OnClick="ToggleOpen">Fatto</MudButton>
+        </div>
+    </MudPopover>
+
+    @* Overlay invisibile: serve per chiudere la tendina se l'utente clicca fuori dal componente *@
+    <MudOverlay Visible="@_isOpen" OnClick="ToggleOpen" Background="Color.Transparent" ZIndex="99" />
 </div>
+
+<style>
+    /* Nasconde la scrollbar mantenendo lo scroll funzionante (effetto mobile) */
+    .picker-scroll-container {
+        flex: 1;
+        overflow-y: auto;
+        scrollbar-width: none; /* Firefox */
+        -ms-overflow-style: none;  /* IE and Edge */
+        padding: 8px 0;
+        background-color: var(--mud-palette-surface);
+    }
+    .picker-scroll-container::-webkit-scrollbar {
+        display: none; /* Chrome, Safari and Opera */
+    }
+
+    /* Stile degli elementi cliccabili */
+    .picker-item {
+        padding: 10px 16px;
+        text-align: center;
+        cursor: pointer;
+        color: var(--mud-palette-text-secondary);
+        transition: all 0.2s ease-in-out;
+        font-size: 0.9rem;
+    }
+
+    /* Effetto Hover */
+    .picker-item:hover {
+        background-color: var(--mud-palette-action-default-hover);
+        color: var(--mud-palette-text-primary);
+    }
+
+    /* Elemento Selezionato (Esalta la voce scelta) */
+    .picker-item.selected {
+        color: var(--mud-palette-primary);
+        font-weight: 700;
+        font-size: 1rem;
+        background-color: var(--mud-palette-primary-hover);
+        border-left: 4px solid var(--mud-palette-primary);
+        border-right: 4px solid var(--mud-palette-primary);
+    }
+</style>
 
 @code {
     [Parameter, EditorRequired] public required IEnumerable<TItem> Items { get; set; }
@@ -46,25 +121,48 @@
     [Parameter] public TransitionFilter<TItem> Value { get; set; } = new();
     [Parameter] public EventCallback<TransitionFilter<TItem>> ValueChanged { get; set; }
     
+    [Parameter] public string Label { get; set; } = "Passaggio di Stato";
     [Parameter] public bool Disabled { get; set; }
+    [Parameter] public bool Clearable { get; set; } = true;
 
-    [Parameter] public string LeftColumnHeader { get; set; } = "Passato allo stato...";
-    [Parameter] public string RightColumnHeader { get; set; } = "Nel periodo...";
+    [Parameter] public string LeftColumnHeader { get; set; } = "Stato...";
+    [Parameter] public string RightColumnHeader { get; set; } = "Periodo...";
+    [Parameter] public string NullItemLabel { get; set; } = "Qualsiasi stato";
 
-    private Task OnItemChangedAsync(TItem? newItem)
+    private bool _isOpen;
+
+    private void ToggleOpen()
     {
-        // Se l'utente svuota lo stato (clicca la X), svuotiamo anche il preset
-        var newState = newItem is null 
-            ? new TransitionFilter<TItem>() 
-            : Value with { Item = newItem };
-            
+        if (!Disabled) _isOpen = !_isOpen;
+    }
+
+    private Task OnItemClickedAsync(TItem? newItem)
+    {
+        var newState = Value with { Item = newItem };
         return ValueChanged.InvokeAsync(newState);
     }
 
-    private Task OnPresetChangedAsync(DatePreset newPreset)
+    private Task OnPresetClickedAsync(DatePreset newPreset)
     {
         var newState = Value with { Preset = newPreset };
         return ValueChanged.InvokeAsync(newState);
+    }
+
+    private Task ClearSelectionAsync()
+    {
+        // Se clicco la X sul TextField, resetta tutto emettendo un record vuoto
+        return ValueChanged.InvokeAsync(new TransitionFilter<TItem>());
+    }
+
+    // Costruisce la stringa da mostrare nel TextField quando il popover è chiuso
+    private string GetDisplayValue()
+    {
+        if (Value.Item is null && Value.Preset == DatePreset.None) return string.Empty;
+
+        var itemName = Value.Item is not null ? $"{Value.Item}" : "Qualsiasi";
+        var presetName = Value.Preset != DatePreset.None ? GetPresetLabel(Value.Preset) : "Sempre";
+
+        return $"{itemName} ({presetName})";
     }
 
     private string GetPresetLabel(DatePreset preset) => preset switch
