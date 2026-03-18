@@ -16,17 +16,17 @@ public record IssuesSearchCriteria
     public IFilterSelection<ComponentModel> Components { get; init; } = FilterSelection<ComponentModel>.Empty;
     public IFilterSelection<LabelModel> Labels { get; init; } = FilterSelection<LabelModel>.Empty;
 
-    public ImmutableDictionary<string, DatePreset> DateFilters { get; private init; } = ImmutableDictionary<string, DatePreset>.Empty;
+    public ImmutableDictionary<string, DatePreset.Preset> DateFilters { get; private init; } = ImmutableDictionary<string, DatePreset.Preset>.Empty;
     
     public ImmutableDictionary<string, TransitionFilter<string>> TransitionFilters { get; private init; } = ImmutableDictionary<string, TransitionFilter<string>>.Empty;
     
-    public IssuesSearchCriteria SetDateFilter(string field, DatePreset preset) =>
-        preset == DatePreset.None 
+    public IssuesSearchCriteria SetDateFilter(string field, DatePreset.Preset preset) =>
+        preset == DatePreset.Preset.None 
             ? this with { DateFilters = DateFilters.Remove(field) } 
             : this with { DateFilters = DateFilters.SetItem(field, preset) };
 
     public IssuesSearchCriteria SetTransitionFilter(string field, TransitionFilter<string> filter) =>
-        filter.Item is null && filter.Preset == DatePreset.None 
+        filter.Item is null && filter.Preset == DatePreset.Preset.None 
             ? this with { TransitionFilters = TransitionFilters.Remove(field) } 
             : this with { TransitionFilters = TransitionFilters.SetItem(field, filter) };
 }

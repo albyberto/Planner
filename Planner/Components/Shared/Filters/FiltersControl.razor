@@ -22,7 +22,9 @@
                                       Items="_projects"
                                       SelectedValue="_searchCriteria.ProjectKey"
                                       SelectedValueChanged="OnProjectChangedAsync"
-                                      Required="true"/>
+                                      Required="true">
+                
+            </FilterSingleAutocomplete>
         </MudItem>
 
         <MudItem xs="12" sm="12" md="4" lg="4">
@@ -86,7 +88,7 @@
         </MudItem>
         
         <MudItem xs="12" sm="12" md="4" lg="4">
-            <FilterTransitionControl TItem="StatusModel"
+            <FilterTransition TItem="StatusModel"
                                      Items="AvailableStatuses"
                                      Value="@(GetStatusTransition("status"))"
                                      ValueChanged="OnStatusTransitionChanged"
@@ -125,12 +127,12 @@
     private IssuesSearchCriteria _searchCriteria = IssuesSearchCriteria.Empty;
     private bool _isLoading = true;
 
-    private DatePreset GetDateFilter(string field) => 
+    private DatePreset.Preset GetDateFilter(string field) => 
         _searchCriteria.DateFilters.TryGetValue(field, out var preset) 
             ? preset 
-            : DatePreset.None;
+            : DatePreset.Preset.None;
 
-    private void SetDateFilter(string field, DatePreset preset)
+    private void SetDateFilter(string field, DatePreset.Preset preset)
     {
         _searchCriteria = _searchCriteria.SetDateFilter(field, preset);
         Emit(_searchCriteria);

@@ -1,6 +1,6 @@
 @using Planner.Components.Shared.Filters.Model
 
-<MudSelect T="DatePreset" 
+<MudSelect T="DatePreset.Preset" 
            Label="@Label"
            Value="@Value"
            ValueChanged="OnValueChangedAsync"
@@ -8,19 +8,19 @@
            Margin="Margin.Dense" 
            Disabled="@Disabled" 
            Clearable="true">
-    @foreach (DatePreset preset in Enum.GetValues(typeof(DatePreset)))
+    @foreach (DatePreset.Preset preset in Enum.GetValues(typeof(DatePreset.Preset)))
     {
-        <MudSelectItem T="DatePreset" Value="@preset">@($"{preset}")</MudSelectItem>
+        <MudSelectItem T="DatePreset.Preset" Value="@preset">@($"{preset}")</MudSelectItem>
     }
 </MudSelect>
 
 @code {
     [Parameter] public string Label { get; set; } = "Periodo...";
     
-    [Parameter] public DatePreset Value { get; set; } = DatePreset.None;
-    [Parameter] public EventCallback<DatePreset> ValueChanged { get; set; }
+    [Parameter] public DatePreset.Preset Value { get; set; } = DatePreset.Preset.None;
+    [Parameter] public EventCallback<DatePreset.Preset> ValueChanged { get; set; }
 
     [Parameter] public bool Disabled { get; set; } = true;
 
-    private Task OnValueChangedAsync(DatePreset preset) => ValueChanged.InvokeAsync(preset);
+    private Task OnValueChangedAsync(DatePreset.Preset preset) => ValueChanged.InvokeAsync(preset);
 }

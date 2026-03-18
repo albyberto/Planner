@@ -1,0 +1,106 @@
+/* --- Nuove classi estratte dagli inline styles --- */
+
+.clickable-input {
+    cursor: pointer;
+}
+
+.picker-layout {
+    height: 250px;
+    min-width: 350px;
+}
+
+.picker-border-right {
+    border-right: 1px solid var(--mud-palette-lines-default);
+}
+
+.picker-column-header {
+    background-color: var(--mud-palette-background-grey);
+    border-bottom: 1px solid var(--mud-palette-lines-default);
+}
+
+.fw-500 {
+    font-weight: 500;
+}
+
+/* --- Classi esistenti ottimizzate --- */
+
+.harmonized-popover {
+    background-color: var(--mud-palette-surface);
+    margin-top: 2px; /* Estratto dallo style inline del popover */
+}
+
+/* Nasconde la scrollbar mantenendo lo scroll funzionante (effetto mobile) */
+.picker-scroll-container {
+    flex: 1;
+    overflow-y: auto;
+    scrollbar-width: none; /* Firefox */
+    -ms-overflow-style: none;  /* IE and Edge */
+    padding: 4px 0;
+}
+
+.picker-scroll-container::-webkit-scrollbar {
+    display: none; /* Chrome, Safari and Opera */
+}
+
+/* Stile degli elementi cliccabili */
+.picker-item {
+    padding: 6px 16px;
+    text-align: left;
+    cursor: pointer;
+    color: var(--mud-palette-text-secondary);
+    transition: all 0.15s ease-in-out;
+    font-size: 0.85rem;
+    border-left: 3px solid transparent;
+}
+
+/* Effetto Hover */
+.picker-item:hover {
+    background-color: var(--mud-palette-primary-hover);
+    opacity: 0.8;
+    color: var(--mud-palette-text-primary);
+}
+
+/* Elemento Selezionato */
+.picker-item.selected {
+    color: var(--mud-palette-primary);
+    font-weight: 600;
+    border-left-color: var(--mud-palette-primary);
+    background-color: var(--mud-palette-primary-hover);
+    opacity: 0.9;
+}
+
+/* Impedisce all'input text di sovrapporsi all'icona della X custom */
+.transition-filter-input input {
+    padding-right: 35px !important;
+}
+
+/* Disabilita il pointer events sull'overlay della X di default del clearable se dovesse mai apparire */
+.transition-filter-input .mud-input-clear-button {
+    display: none !important;
+}
+
+/* I pallini colorati prima del testo */
+.timeline-past::before,
+.timeline-present::before,
+.timeline-future::before {
+    content: '•';
+    margin-right: 8px;
+    font-size: 1.2em;
+}
+
+.timeline-past::before {
+    color: var(--mud-palette-error); /* Rosso/Arancio per il passato */
+}
+
+.timeline-present::before {
+    color: var(--mud-palette-success); /* Verde per il presente */
+}
+
+.timeline-future::before {
+    color: var(--mud-palette-info); /* Blu per il futuro */
+}
+
+/* Rendi il neutro ("None") invisibile/grigio */
+.picker-item:first-child::before {
+    color: transparent;
+}
