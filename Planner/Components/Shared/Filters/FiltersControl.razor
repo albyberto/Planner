@@ -85,12 +85,15 @@
                 Disabled="_isLoading" />
         </MudItem>
         
-        <MudItem xs="12" md="4">
-            <FilterStatusTransitionControl TItem="StatusModel"
-                                           Items="AvailableStatuses"
-                                           Value="_searchCriteria.StatusTransition"
-                                           ValueChanged="OnStatusTransitionChanged"
-                                           Disabled="_isLoading" />
+        <MudItem xs="12" sm="12" md="4" lg="4">
+            <FilterTransitionControl TItem="StatusModel"
+                                     Items="AvailableStatuses"
+                                     Value="@(GetStatusTransition("status"))"
+                                     ValueChanged="OnStatusTransitionChanged"
+                                     LeftColumnHeader="Stato..."
+                                     RightColumnHeader="Periodo..."
+                                     Label="Passaggio di Stato"
+                                     Disabled="_isLoading" />
         </MudItem>
 
         <MudItem xs="12" sm="12" md="4" lg="4" Class="d-flex justify-end pt-2">
@@ -216,9 +219,20 @@
         Emit(_searchCriteria);
     }
     
+    private TransitionFilter<StatusModel> GetStatusTransition(string field)
+    {
+        if (!_searchCriteria.TransitionFilters.TryGetValue(field, out var filter)) return new();
+        
+        var statusModel = AvailableStatuses.FirstOrDefault(s => s.Name == filter.Item);
+        return new(statusModel, filter.Preset);
+
+    }
+
     private void OnStatusTransitionChanged(TransitionFilter<StatusModel> transition)
     {
-        _searchCriteria = _searchCriteria with { StatusTransition = transition };
+        var stringFilter = new TransitionFilter<string>(transition.Item?.Name, transition.Preset);
+        
+        _searchCriteria = _searchCriteria.SetTransitionFilter("status", stringFilter);
         Emit(_searchCriteria);
     }
 

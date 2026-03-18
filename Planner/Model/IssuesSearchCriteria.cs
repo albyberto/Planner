@@ -7,6 +7,8 @@ public record IssuesSearchCriteria
 {
     public static IssuesSearchCriteria Empty => new();
 
+    public static IssuesSearchCriteria Create(string key) => new() { ProjectKey = new(key) };
+    
     public ProjectModel? ProjectKey { get; init; }
 
     public IFilterSelection<TypeModel> Types { get; init; } = FilterSelection<TypeModel>.Empty;
@@ -14,14 +16,17 @@ public record IssuesSearchCriteria
     public IFilterSelection<ComponentModel> Components { get; init; } = FilterSelection<ComponentModel>.Empty;
     public IFilterSelection<LabelModel> Labels { get; init; } = FilterSelection<LabelModel>.Empty;
 
-    public ImmutableDictionary<string, DatePreset> DateFilters { get; private init; } = [];
+    public ImmutableDictionary<string, DatePreset> DateFilters { get; private init; } = ImmutableDictionary<string, DatePreset>.Empty;
     
-    public TransitionFilter<StatusModel> StatusTransition { get; init; } = new();
+    public ImmutableDictionary<string, TransitionFilter<string>> TransitionFilters { get; private init; } = ImmutableDictionary<string, TransitionFilter<string>>.Empty;
     
-    public static IssuesSearchCriteria Create(string key) => new() { ProjectKey = new(key) };
-
     public IssuesSearchCriteria SetDateFilter(string field, DatePreset preset) =>
         preset == DatePreset.None 
             ? this with { DateFilters = DateFilters.Remove(field) } 
             : this with { DateFilters = DateFilters.SetItem(field, preset) };
+
+    public IssuesSearchCriteria SetTransitionFilter(string field, TransitionFilter<string> filter) =>
+        filter.Item is null && filter.Preset == DatePreset.None 
+            ? this with { TransitionFilters = TransitionFilters.Remove(field) } 
+            : this with { TransitionFilters = TransitionFilters.SetItem(field, filter) };
 }
