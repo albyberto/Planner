@@ -19,14 +19,7 @@
                  Required="@Required"
                  RequiredError="Value is required">
     <ItemTemplate>
-        @if (ChildContent is not null)
-        {
-            @ChildContent(context)
-        }
-        else
-        {
-            @($"{context}")
-        }
+        <Avatar Item="context"/>
     </ItemTemplate>
 </MudAutocomplete>
 

@@ -1,20 +1,25 @@
 @using Planner.Model.Abstract
-@typeparam TItem where TItem : IAvatar
+@typeparam TItem
 
 <div class="d-flex align-center" style="gap: 8px;">
-    <MudAvatar 
-               Color="@Color"
-               Variant="Variant.Outlined"
-               Rounded="@Rounded"
-               Square="@Square"
-               Size="@Size">
-        @if (string.IsNullOrWhiteSpace(GetImageUrl()) && !string.IsNullOrWhiteSpace(Name))
+    <MudAvatar
+        Color="@Color"
+        Variant="Variant.Outlined"
+        Rounded="@Rounded"
+        Square="@Square"
+        Size="@Size">
+        
+        @if (Item is not IAvatar)
+        {
+            @Name
+        }
+        else if (string.IsNullOrWhiteSpace(GetImageUrl()) && !string.IsNullOrWhiteSpace(Name))
         {
             @GetInitials()
         }
         else
         {
-            <MudImage Src="@GetImageUrl()" Alt="@($"{Name} Project Icon")"></MudImage>
+            <MudImage Src="@GetImageUrl()" Alt="@($"{Name} Icon")"></MudImage>
         }
     </MudAvatar>
 
@@ -37,7 +42,7 @@
 
     [Parameter] public bool ShowText { get; set; } = true;
     
-    private string Name => $"{Item}".Trim();
+    private string Name => $"{Item}";
     
     private Size Size =>
         SizePx switch
@@ -50,14 +55,15 @@
 
     private string? GetImageUrl()
     {
-        if (Item.Avatars is null) return null;
-        
+        if (Item is not IAvatar item || item.Avatars is null)
+            return null;
+    
         return SizePx switch
         {
-            <= 16 => Item.Avatars._16x16,
-            <= 24 => Item.Avatars._24x24,
-            <= 32 => Item.Avatars._32x32,
-            _ => Item.Avatars._48x48
+            <= 16 => item.Avatars._16x16,
+            <= 24 => item.Avatars._24x24,
+            <= 32 => item.Avatars._32x32,
+            _ => item.Avatars._48x48
         };
     }
 
