@@ -1,4 +1,5 @@
 @using Planner.Components.Shared.Filters.Model
+@using Planner.Extensions
 @typeparam TItem where TItem: Planner.Model.Abstract.IColor
 
 <div class="position-relative w-100">
@@ -150,7 +151,7 @@
         if (!HasFilterActive) return string.Empty;
 
         var itemName = Value.Item is not null ? $"{Value.Item}" : "Qualsiasi";
-        var presetName = Value.Preset != DatePreset.Preset.None ? $"{Value.Preset}" : "Sempre";
+        var presetName = Value.Preset != DatePreset.Preset.None ? $"{Value.Preset.ToTitleCase()}" : "Sempre";
 
         return $"{itemName} ({presetName})";
     }
