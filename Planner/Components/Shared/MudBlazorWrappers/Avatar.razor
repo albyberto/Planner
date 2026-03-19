@@ -9,17 +9,19 @@
         Square="@Square"
         Size="@Size">
         
-        @if (Item is not IAvatar)
+        @{ var imageUrl = GetImageUrl(); }
+
+        @if (Item is not IAvatar and not IIcon)
         {
             @Name
         }
-        else if (string.IsNullOrWhiteSpace(GetImageUrl()) && !string.IsNullOrWhiteSpace(Name))
+        else if (string.IsNullOrWhiteSpace(imageUrl) && !string.IsNullOrWhiteSpace(Name))
         {
             @GetInitials()
         }
-        else
+        else if (!string.IsNullOrWhiteSpace(imageUrl))
         {
-            <MudImage Src="@GetImageUrl()" Alt="@($"{Name} Icon")"></MudImage>
+            <MudImage Src="@imageUrl" Alt="@($"{Name} Icon")"></MudImage>
         }
     </MudAvatar>
 
@@ -53,19 +55,19 @@
             _ => Size.Medium
         };
 
-    private string? GetImageUrl()
-    {
-        if (Item is not IAvatar item || item.Avatars is null)
-            return null;
-    
-        return SizePx switch
+    private string? GetImageUrl() =>
+        Item switch
         {
-            <= 16 => item.Avatars._16x16,
-            <= 24 => item.Avatars._24x24,
-            <= 32 => item.Avatars._32x32,
-            _ => item.Avatars._48x48
+            IIcon icon => icon.IconUrl,
+            IAvatar { Avatars: not null } avatar => SizePx switch
+            {
+                <= 16 => avatar.Avatars._16x16,
+                <= 24 => avatar.Avatars._24x24,
+                <= 32 => avatar.Avatars._32x32,
+                _ => avatar.Avatars._48x48
+            },
+            _ => null
         };
-    }
 
     private string GetInitials() => string.IsNullOrWhiteSpace(Name) 
         ? string.Empty 

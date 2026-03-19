@@ -18,14 +18,7 @@
         @foreach (var item in Items.OrderBy(item => $"{item}"))
         {
             <MudSelectItem T="TItem" Value="@item">
-                @if (ChildContent is not null)
-                {
-                    @ChildContent(item)
-                }
-                else
-                {
-                    @($"{item}");
-                }
+                <Avatar Item="item"/>
             </MudSelectItem>
         }
     </MudSelect>
@@ -33,14 +26,7 @@
     <FilterPillsControl TItem="TItem" 
                         Selection="Selection" 
                         SelectionChanged="SelectionChanged">
-        @if (ChildContent is not null)
-        {
-            @ChildContent(context)
-        }
-        else
-        {
-            @($"{context}")
-        }
+        <Avatar Item="context"/>
     </FilterPillsControl>
 </div>
 
