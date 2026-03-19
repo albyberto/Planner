@@ -1,6 +1,8 @@
+using Planner.Model.Abstract;
+
 namespace Planner.Model;
 
-public record ProjectModel(string Key, AvatarsModel? Avatars = null)
+public record ProjectModel(string Key, AvatarsModel? Avatars = null) : IAvatar
 {
     public string Key { get; init; } = Key.ToUpperInvariant();
     

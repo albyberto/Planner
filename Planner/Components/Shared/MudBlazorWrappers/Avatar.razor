@@ -1,0 +1,44 @@
+@using Planner.Model.Abstract
+@typeparam TItem where TItem : IAvatar
+
+<MudAvatar Image="@GetImageUrl()" 
+           Color="@Color"
+           Variant="Variant.Outlined"
+           Rounded="@Rounded"
+           Square="@Square">
+    @if (string.IsNullOrWhiteSpace(GetImageUrl()) && !string.IsNullOrWhiteSpace(Name))
+    {
+        @GetInitials()
+    }
+</MudAvatar>
+
+@code {
+    [Parameter, EditorRequired] public required TItem Item { get; set; }
+
+    [Parameter] public int SizePx { get; set; } = 24;
+    [Parameter] public Color Color { get; set; } = Color.Transparent;
+    
+    [Parameter] public bool Rounded { get; set; }
+    [Parameter] public bool Square { get; set; }
+    
+    private string Name => $"{Item}".Trim();
+
+    // private string ComputedStyle => $"height: {SizePx}px; width: {SizePx}px; font-size: {Math.Max(9, SizePx / 2 - 2)}px; flex-shrink: 0;";
+
+    private string? GetImageUrl()
+    {
+        if (Item?.Avatars is null) return null;
+        
+        return SizePx switch
+        {
+            <= 16 => Item.Avatars._16x16,
+            <= 24 => Item.Avatars._24x24,
+            <= 32 => Item.Avatars._32x32,
+            _ => Item.Avatars._48x48
+        };
+    }
+
+    private string GetInitials() => string.IsNullOrWhiteSpace(Name) 
+        ? string.Empty 
+        : string.Concat(Name.Take(2)).ToUpper();
+}
