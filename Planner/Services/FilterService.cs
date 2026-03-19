@@ -21,7 +21,7 @@ public class FilterService(IOptions<JiraFilterOptions> options, JiraFilterClient
 
     public async Task<ImmutableArray<TypeModel>> GetTypesAsync(string projectKey, CancellationToken cancellationToken = default)
     {
-        var types = await client.GetTypesAsync(projectKey, cancellationToken);
+        var types = await client.GetTypesAndStatusesAsync(projectKey, cancellationToken);
         return [
             ..types
                 .Select(t => new TypeModel(t))

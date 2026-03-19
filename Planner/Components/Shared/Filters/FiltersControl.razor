@@ -31,7 +31,8 @@
                                Disabled="_isLoading"
                                Items="_types"
                                Selection="_searchCriteria.Types"
-                               SelectionChanged="OnTypesChangedAsync"/>
+                               SelectionChanged="OnTypesChangedAsync"
+                               Square="@true"/>
         </MudItem>
 
         <MudItem xs="12" sm="12" md="4" lg="4">
@@ -238,16 +239,15 @@
 
         await Task.WhenAll(projectsTask, typesTask, componentsTask, labelsTask);
 
-        _projects = projectsTask.Result;
-        _types = typesTask.Result;
-        _components = componentsTask.Result;
-        _labels = labelsTask.Result;
+        _projects = await projectsTask;
+        _types = await typesTask;
+        _components = await componentsTask;
+        _labels = await labelsTask;
 
         _statuses = await FilterService.GetStatusesAsync(projectKey, _searchCriteria.Types.Items);
 
         var project = _projects.Single(project => project.Key.Equals(projectKey, StringComparison.OrdinalIgnoreCase));
         _searchCriteria = IssuesSearchCriteria.Create(project);
-        
     }
 
     public void Dispose() => FilterStore.UnRegister(PageKey);
