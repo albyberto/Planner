@@ -11,7 +11,8 @@
             Color="@Color"
             Rounded="@Rounded"
             Square="@Square"
-            Size="@Size">
+            Size="@Size"
+            Style="background-color: transparent;">
             
             @{ var imageUrl = GetImageUrl(); }
 
@@ -21,7 +22,7 @@
             }
             else if (!string.IsNullOrWhiteSpace(imageUrl))
             {
-                <MudImage Src="@imageUrl" Alt="@($"{Name} Icon")"></MudImage>
+                <MudImage Src="@imageUrl" Alt="@($"{Name} Icon")" ></MudImage>
             }
         </MudAvatar>
     }
