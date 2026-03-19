@@ -34,8 +34,6 @@
     [Parameter] public string Placeholder { get; set; } = "Start typing...";
     [Parameter] public bool Required { get; set; } = true;
     
-    [Parameter] public RenderFragment<TItem>? ChildContent { get; set; }
-
     private Task<IEnumerable<TItem>> SearchFunc(string value, CancellationToken _)
     {
         var result = string.IsNullOrWhiteSpace(value) 
