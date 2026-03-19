@@ -1,33 +1,56 @@
 @using Planner.Model.Abstract
 @typeparam TItem where TItem : IAvatar
 
-<MudAvatar Image="@GetImageUrl()" 
-           Color="@Color"
-           Variant="Variant.Outlined"
-           Rounded="@Rounded"
-           Square="@Square">
-    @if (string.IsNullOrWhiteSpace(GetImageUrl()) && !string.IsNullOrWhiteSpace(Name))
+<div class="d-flex align-center" style="gap: 8px;">
+    <MudAvatar 
+               Color="@Color"
+               Variant="Variant.Outlined"
+               Rounded="@Rounded"
+               Square="@Square"
+               Size="@Size">
+        @if (string.IsNullOrWhiteSpace(GetImageUrl()) && !string.IsNullOrWhiteSpace(Name))
+        {
+            @GetInitials()
+        }
+        else
+        {
+            <MudImage Src="@GetImageUrl()" Alt="@($"{Name} Project Icon")"></MudImage>
+        }
+    </MudAvatar>
+
+    @if (ShowText)
     {
-        @GetInitials()
+        <MudText Typo="Typo.body2" Class="fw-500 mud-text-secondary mb-0" Style="line-height: 1;">
+            @Name
+        </MudText>
     }
-</MudAvatar>
+</div>
 
 @code {
     [Parameter, EditorRequired] public required TItem Item { get; set; }
 
-    [Parameter] public int SizePx { get; set; } = 24;
+    [Parameter] public int SizePx { get; set; } = 16;
     [Parameter] public Color Color { get; set; } = Color.Transparent;
     
     [Parameter] public bool Rounded { get; set; }
     [Parameter] public bool Square { get; set; }
+
+    [Parameter] public bool ShowText { get; set; } = true;
     
     private string Name => $"{Item}".Trim();
-
-    // private string ComputedStyle => $"height: {SizePx}px; width: {SizePx}px; font-size: {Math.Max(9, SizePx / 2 - 2)}px; flex-shrink: 0;";
+    
+    private Size Size =>
+        SizePx switch
+        {
+            <= 16 => Size.Small,
+            <= 24 => Size.Medium,
+            <= 32 => Size.Large,
+            _ => Size.Medium
+        };
 
     private string? GetImageUrl()
     {
-        if (Item?.Avatars is null) return null;
+        if (Item.Avatars is null) return null;
         
         return SizePx switch
         {

@@ -7,7 +7,6 @@
 @using Planner.Options
 @using Planner.Services
 @using Planner.Stores
-
 <MudPaper Elevation="0" Outlined="true" Class="pa-4 mb-4 position-relative overflow-hidden">
 
     @if (_isLoading)
@@ -24,9 +23,7 @@
                                       SelectedValue="_searchCriteria.Project"
                                       SelectedValueChanged="OnProjectChangedAsync"
                                       Required="true">
-        
-                    <Avatar Item="@context" />
-
+                <Avatar Item="@context"/>
             </FilterSingleAutocomplete>
         </MudItem>
 
@@ -71,25 +68,25 @@
                 Label="Data Creazione"
                 Value="@(GetDateFilter("created"))"
                 ValueChanged="@(v => SetDateFilter("created", v))"
-                Disabled="_isLoading" />
+                Disabled="_isLoading"/>
         </MudItem>
 
         <MudItem xs="12" sm="12" md="4" lg="4">
-            <FilterDateControl 
+            <FilterDateControl
                 Label="Data Risoluzione"
                 Value="@(GetDateFilter("resolved"))"
                 ValueChanged="@(v => SetDateFilter("resolved", v))"
-                Disabled="_isLoading" />
+                Disabled="_isLoading"/>
         </MudItem>
 
         <MudItem xs="12" sm="12" md="4" lg="4">
-            <FilterDateControl 
+            <FilterDateControl
                 Label="Due Date"
                 Value="@(GetDateFilter("duedate"))"
                 ValueChanged="@(v => SetDateFilter("duedate", v))"
-                Disabled="_isLoading" />
+                Disabled="_isLoading"/>
         </MudItem>
-        
+
         <MudItem xs="12" sm="12" md="4" lg="4">
             <FilterTransition TItem="StatusModel"
                               Items="_statuses"
@@ -98,7 +95,7 @@
                               LeftColumnHeader="Status..."
                               RightColumnHeader="Period..."
                               Label="Passaggio di Stato"
-                              Disabled="_isLoading" />
+                              Disabled="_isLoading"/>
         </MudItem>
 
         <MudItem xs="12" sm="12" md="4" lg="4" Class="d-flex justify-end pt-2">
@@ -130,10 +127,8 @@
     private IssuesSearchCriteria _searchCriteria = IssuesSearchCriteria.Empty;
     private bool _isLoading = true;
 
-    private DatePreset.Preset GetDateFilter(string field) => 
-        _searchCriteria.DateFilters.TryGetValue(field, out var preset) 
-            ? preset 
-            : DatePreset.Preset.None;
+    private DatePreset.Preset GetDateFilter(string field) =>
+        _searchCriteria.DateFilters.TryGetValue(field, out var preset) ? preset : DatePreset.Preset.None;
 
     private void SetDateFilter(string field, DatePreset.Preset preset)
     {
@@ -147,13 +142,10 @@
         {
             _isLoading = true;
 
-            var options = Options.Value;
-            _searchCriteria = IssuesSearchCriteria.Create(options.DefaultProject);
-
             FilterStore.Register(PageKey);
             Emit(_searchCriteria);
 
-            await BuildAsync(options.DefaultProject);
+            await BuildAsync(Options.Value.DefaultProject);
         }
         catch (Exception)
         {
@@ -167,9 +159,7 @@
 
     private async Task OnProjectChangedAsync(ProjectModel? project)
     {
-        var key = project?.Key;
-
-        if (string.IsNullOrWhiteSpace(key) || !_projects.Any(p => string.Equals(p.Key, key.Trim(), StringComparison.OrdinalIgnoreCase)))
+        if (project is null || !_projects.Any(p => string.Equals(p.Key, project.Key, StringComparison.OrdinalIgnoreCase)))
         {
             return;
         }
@@ -177,10 +167,9 @@
         try
         {
             _isLoading = true;
-            _searchCriteria = IssuesSearchCriteria.Create(key);
 
             Emit(_searchCriteria);
-            await BuildAsync(key);
+            await BuildAsync(project.Key);
         }
         finally
         {
@@ -191,7 +180,7 @@
     private async Task OnTypesChangedAsync(IFilterSelection<TypeModel> types)
     {
         _searchCriteria = _searchCriteria with { Types = types };
-        
+
         try
         {
             _isLoading = true;
@@ -222,20 +211,20 @@
         _searchCriteria = _searchCriteria with { Labels = labels };
         Emit(_searchCriteria);
     }
-    
+
     private TransitionFilter<StatusModel> GetStatusTransition(string field)
     {
         if (!_searchCriteria.TransitionFilters.TryGetValue(field, out var filter)) return new();
-        
+
         var statusModel = _statuses.FirstOrDefault(s => string.Equals(s.Name, filter.Item, StringComparison.OrdinalIgnoreCase));
-        
+
         return new(statusModel, filter.Preset);
     }
 
     private void OnStatusTransitionChanged(TransitionFilter<StatusModel> transition)
     {
         var stringFilter = new TransitionFilter<string>(transition.Item?.Name, transition.Preset);
-        
+
         _searchCriteria = _searchCriteria.SetTransitionFilter("status", stringFilter);
         Emit(_searchCriteria);
     }
@@ -257,6 +246,10 @@
         _labels = labelsTask.Result;
 
         _statuses = await FilterService.GetStatusesAsync(projectKey, _searchCriteria.Types.Items);
+
+        var project = _projects.Single(project => project.Key.Equals(projectKey, StringComparison.OrdinalIgnoreCase));
+        _searchCriteria = IssuesSearchCriteria.Create(project);
+        
     }
 
     public void Dispose() => FilterStore.UnRegister(PageKey);

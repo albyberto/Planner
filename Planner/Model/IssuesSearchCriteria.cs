@@ -7,7 +7,7 @@ public record IssuesSearchCriteria
 {
     public static IssuesSearchCriteria Empty => new();
 
-    public static IssuesSearchCriteria Create(string key) => new() { Project = new(key) };
+    public static IssuesSearchCriteria Create(ProjectModel project) => new() { Project = project };
     
     public ProjectModel? Project { get; init; }
 
