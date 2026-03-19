@@ -7,9 +7,9 @@ public record IssuesSearchCriteria
 {
     public static IssuesSearchCriteria Empty => new();
 
-    public static IssuesSearchCriteria Create(string key) => new() { ProjectKey = new(key) };
+    public static IssuesSearchCriteria Create(string key) => new() { Project = new(key) };
     
-    public ProjectModel? ProjectKey { get; init; }
+    public ProjectModel? Project { get; init; }
 
     public IFilterSelection<TypeModel> Types { get; init; } = FilterSelection<TypeModel>.Empty;
     public IFilterSelection<StatusModel> Statuses { get; init; } = FilterSelection<StatusModel>.Empty;

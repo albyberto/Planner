@@ -11,13 +11,13 @@ public static class JqlBuilderExtensions
 {
     public static string ToJql(this IssuesSearchCriteria criteria)
     {
-        if (string.IsNullOrWhiteSpace(criteria.ProjectKey?.Key))
+        if (string.IsNullOrWhiteSpace(criteria.Project?.Key))
         {
             return string.Empty; // Nessun progetto, nessuna query
         }
 
         // 1. Costruiamo la base tipizzata con JQLBuilder
-        var query = JqlBuilder.Query.Where(f => f.Project == criteria.ProjectKey.Key);
+        var query = JqlBuilder.Query.Where(f => f.Project == criteria.Project.Key);
 
         // Aggiungiamo i filtri in modo sicuro e senza problemi di tipo
         var types = criteria.Types.Items.Select(x => (JqlType)x.Name).ToArray();

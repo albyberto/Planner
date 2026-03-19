@@ -1,4 +1,4 @@
-/* --- Nuove classi estratte dagli inline styles --- */
+/* --- Classi Strutturali --- */
 
 .clickable-input {
     cursor: pointer;
@@ -7,100 +7,79 @@
 .picker-layout {
     height: 250px;
     min-width: 350px;
+    overflow: hidden; /* Evita che le liste sbordino dai bordi arrotondati del popover */
 }
 
-.picker-border-right {
-    border-right: 1px solid var(--mud-palette-lines-default);
-}
-
-.picker-column-header {
-    background-color: var(--mud-palette-background-grey);
-    border-bottom: 1px solid var(--mud-palette-lines-default);
+.harmonized-popover {
+    background-color: var(--mud-palette-surface);
+    margin-top: 2px;
 }
 
 .fw-500 {
     font-weight: 500;
 }
 
-/* --- Classi esistenti ottimizzate --- */
-
-.harmonized-popover {
-    background-color: var(--mud-palette-surface);
-    margin-top: 2px; /* Estratto dallo style inline del popover */
-}
-
-/* Nasconde la scrollbar mantenendo lo scroll funzionante (effetto mobile) */
+/* Nasconde la scrollbar mantenendo lo scroll funzionante */
 .picker-scroll-container {
     flex: 1;
     overflow-y: auto;
     scrollbar-width: none; /* Firefox */
     -ms-overflow-style: none;  /* IE and Edge */
-    padding: 4px 0;
+    padding: 0 !important; /* Resetta il padding nativo di MudList */
 }
 
 .picker-scroll-container::-webkit-scrollbar {
     display: none; /* Chrome, Safari and Opera */
 }
 
-/* Stile degli elementi cliccabili */
-.picker-item {
-    padding: 6px 16px;
-    text-align: left;
-    cursor: pointer;
-    color: var(--mud-palette-text-secondary);
+/* --- Override Stile MudListItem per un look più denso --- */
+
+.custom-list-item,
+.selected-item {
+    padding: 6px 16px !important;
+    font-size: 0.85rem !important;
+    border-left: 3px solid transparent !important;
     transition: all 0.15s ease-in-out;
-    font-size: 0.85rem;
-    border-left: 3px solid transparent;
 }
 
-/* Effetto Hover */
-.picker-item:hover {
-    background-color: var(--mud-palette-primary-hover);
-    opacity: 0.8;
-    color: var(--mud-palette-text-primary);
+.custom-list-item .mud-typography,
+.selected-item .mud-typography {
+    font-size: 0.85rem !important;
 }
 
-/* Elemento Selezionato */
-.picker-item.selected {
-    color: var(--mud-palette-primary);
-    font-weight: 600;
-    border-left-color: var(--mud-palette-primary);
-    background-color: var(--mud-palette-primary-hover);
-    opacity: 0.9;
+.custom-list-item {
+    color: var(--mud-palette-text-secondary) !important;
 }
 
-/* Impedisce all'input text di sovrapporsi all'icona della X custom */
+.custom-list-item:hover {
+    background-color: var(--mud-palette-primary-hover) !important;
+    color: var(--mud-palette-text-primary) !important;
+}
+
+.selected-item {
+    color: var(--mud-palette-primary) !important;
+    font-weight: 600 !important;
+    border-left-color: var(--mud-palette-primary) !important;
+    background-color: var(--mud-palette-primary-hover) !important;
+}
+
+.selected-item .mud-typography {
+    font-weight: 600 !important;
+    color: var(--mud-palette-primary) !important;
+}
+
+/* Fix per allineare correttamente l'icona (pallino colorato) nel MudListItem piccolo */
+.picker-scroll-container .mud-list-item-icon {
+    min-width: 24px !important;
+    margin-inline-end: 8px !important;
+}
+
+/* --- Fix Input --- */
+
 .transition-filter-input input {
     padding-right: 35px !important;
 }
 
-/* Disabilita il pointer events sull'overlay della X di default del clearable se dovesse mai apparire */
 .transition-filter-input .mud-input-clear-button {
     display: none !important;
-}
-
-/* I pallini colorati prima del testo */
-.timeline-past::before,
-.timeline-present::before,
-.timeline-future::before {
-    content: '•';
-    margin-right: 8px;
-    font-size: 1.2em;
-}
-
-.timeline-past::before {
-    color: var(--mud-palette-error); /* Rosso/Arancio per il passato */
-}
-
-.timeline-present::before {
-    color: var(--mud-palette-success); /* Verde per il presente */
-}
-
-.timeline-future::before {
-    color: var(--mud-palette-info); /* Blu per il futuro */
-}
-
-/* Rendi il neutro ("None") invisibile/grigio */
-.picker-item:first-child::before {
-    color: transparent;
 }

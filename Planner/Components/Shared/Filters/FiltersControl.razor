@@ -7,6 +7,7 @@
 @using Planner.Options
 @using Planner.Services
 @using Planner.Stores
+
 <MudPaper Elevation="0" Outlined="true" Class="pa-4 mb-4 position-relative overflow-hidden">
 
     @if (_isLoading)
@@ -20,10 +21,9 @@
                                       Label="Project Key"
                                       Disabled="@_isLoading"
                                       Items="_projects"
-                                      SelectedValue="_searchCriteria.ProjectKey"
+                                      SelectedValue="_searchCriteria.Project"
                                       SelectedValueChanged="OnProjectChangedAsync"
                                       Required="true">
-                
             </FilterSingleAutocomplete>
         </MudItem>
 
@@ -33,14 +33,14 @@
                                Disabled="_isLoading"
                                Items="_types"
                                Selection="_searchCriteria.Types"
-                               SelectionChanged="OnTypesChanged"/>
+                               SelectionChanged="OnTypesChangedAsync"/>
         </MudItem>
 
         <MudItem xs="12" sm="12" md="4" lg="4">
             <FilterMultiSelect TItem="StatusModel"
                                Label="Select Statuses"
                                Disabled="_isLoading"
-                               Items="@AvailableStatuses"
+                               Items="_statuses"
                                Selection="_searchCriteria.Statuses"
                                SelectionChanged="OnStatusesChanged"/>
         </MudItem>
@@ -89,13 +89,13 @@
         
         <MudItem xs="12" sm="12" md="4" lg="4">
             <FilterTransition TItem="StatusModel"
-                                     Items="AvailableStatuses"
-                                     Value="@(GetStatusTransition("status"))"
-                                     ValueChanged="OnStatusTransitionChanged"
-                                     LeftColumnHeader="Stato..."
-                                     RightColumnHeader="Periodo..."
-                                     Label="Passaggio di Stato"
-                                     Disabled="_isLoading" />
+                              Items="_statuses"
+                              Value="@(GetStatusTransition("status"))"
+                              ValueChanged="OnStatusTransitionChanged"
+                              LeftColumnHeader="Status..."
+                              RightColumnHeader="Period..."
+                              Label="Passaggio di Stato"
+                              Disabled="_isLoading" />
         </MudItem>
 
         <MudItem xs="12" sm="12" md="4" lg="4" Class="d-flex justify-end pt-2">
@@ -119,8 +119,8 @@
     [Parameter] public Guid PageKey { get; set; }
 
     private ImmutableArray<ProjectModel> _projects = [];
-
     private ImmutableArray<TypeModel> _types = [];
+    private ImmutableArray<StatusModel> _statuses = [];
     private ImmutableArray<ComponentModel> _components = [];
     private ImmutableArray<LabelModel> _labels = [];
 
@@ -185,21 +185,20 @@
         }
     }
 
-    private void OnTypesChanged(IFilterSelection<TypeModel> types)
+    private async Task OnTypesChangedAsync(IFilterSelection<TypeModel> types)
     {
         _searchCriteria = _searchCriteria with { Types = types };
-        Emit(_searchCriteria);
-    }
-
-    private IEnumerable<StatusModel> AvailableStatuses
-    {
-        get
+        
+        try
         {
-            var selectedTypes = _searchCriteria.Types.Items;
-
-            var types = selectedTypes.Any() ? _types.Where(t => selectedTypes.Contains(t)) : _types;
-
-            return types.SelectMany(t => t.Statuses).Distinct();
+            _isLoading = true;
+            var projectKey = _searchCriteria.Project?.Key ?? Options.Value.DefaultProject;
+            _statuses = await FilterService.GetStatusesAsync(projectKey, _searchCriteria.Types.Items);
+        }
+        finally
+        {
+            _isLoading = false;
+            Emit(_searchCriteria);
         }
     }
 
@@ -225,9 +224,9 @@
     {
         if (!_searchCriteria.TransitionFilters.TryGetValue(field, out var filter)) return new();
         
-        var statusModel = AvailableStatuses.FirstOrDefault(s => s.Name == filter.Item);
+        var statusModel = _statuses.FirstOrDefault(s => string.Equals(s.Name, filter.Item, StringComparison.OrdinalIgnoreCase));
+        
         return new(statusModel, filter.Preset);
-
     }
 
     private void OnStatusTransitionChanged(TransitionFilter<StatusModel> transition)
@@ -250,10 +249,11 @@
         await Task.WhenAll(projectsTask, typesTask, componentsTask, labelsTask);
 
         _projects = projectsTask.Result;
-
         _types = typesTask.Result;
         _components = componentsTask.Result;
         _labels = labelsTask.Result;
+
+        _statuses = await FilterService.GetStatusesAsync(projectKey, _searchCriteria.Types.Items);
     }
 
     public void Dispose() => FilterStore.UnRegister(PageKey);

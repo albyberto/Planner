@@ -1,6 +1,5 @@
 @using Planner.Components.Shared.Filters.Model
-@using Planner.Extensions
-@typeparam TItem
+@typeparam TItem where TItem: Planner.Model.Abstract.IColor
 
 <div class="position-relative w-100">
     <MudTextField T="string"
@@ -21,58 +20,66 @@
                 TransformOrigin="Origin.TopLeft"
                 RelativeWidth="DropdownWidth.Relative"
                 MaxHeight="400"
-                Class="mud-elevation-2 rounded-lg overflow-hidden harmonized-popover">
+                Class="mud-elevation-2 rounded-lg harmonized-popover">
 
-        <div class="d-flex flex-row picker-layout">
-            @* Colonna Sinistra: Stato *@
-            <div class="flex-1 d-flex flex-column w-50 picker-border-right">
-                <div class="pa-2 text-center picker-column-header">
+        @* MudStack ESTERNO per creare la riga (Row="true") *@
+        <MudStack Row="true" Spacing="0" Class="picker-layout">
+            
+            @* COLONNA SINISTRA: Stato (Usa TItem e l'interfaccia IColor) *@
+            <MudStack Spacing="0" Class="flex-1 border-r-solid mud-border-lines-default w-50">
+                <MudPaper Elevation="0" Square="true" Class="pa-2 text-center mud-background-gray border-b-solid mud-border-lines-default">
                     <MudText Typo="Typo.caption" Color="Color.Dark" Class="fw-500">@LeftColumnHeader</MudText>
-                </div>
-                <div class="picker-scroll-container">
-                    <div class="picker-item @(Value.Item is null ? "selected" : "")"
-                         @onclick="@(() => OnItemClickedAsync(default))">
-                        @NullItemLabel
-                    </div>
-                        @foreach (var item in Items)
-                        {
-                            var isSelected = EqualityComparer<TItem>.Default.Equals(Value.Item, item);
-                            <div class="picker-item @(isSelected ? "selected" : "")"
-                                 @onclick="@(() => OnItemClickedAsync(item))">
-                                @($"{item}")
-                            </div>
-                        }
-                </div>
-            </div>
+                </MudPaper>
+                
+                <MudList T="TItem" SelectionMode="SelectionMode.SingleSelection" Class="picker-scroll-container">
+                    
+                    <MudListItem Value="default(TItem)" 
+                                 Text="@NullItemLabel"
+                                 OnClick="@(() => OnItemClickedAsync(default))"
+                                 Class="@(Value.Item is null ? "selected-item" : "custom-list-item")" />
 
-            @* Colonna Destra: Periodo *@
-            <div class="flex-1 d-flex flex-column w-50">
-                <div class="pa-2 text-center picker-column-header">
-                    <MudText Typo="Typo.caption" Color="Color.Dark" Class="fw-500">Period</MudText>
-                </div>
-                <div class="picker-scroll-container">
+                    @foreach (var item in Items)
+                    {
+                        var isSelected = EqualityComparer<TItem>.Default.Equals(Value.Item, item);
+                        
+                        @* Usa direttamente item.Color grazie al vincolo dell'interfaccia *@
+                        <MudListItem Value="@item" 
+                                     Text="@($"{item}")"
+                                     Icon="@(item.Color == Color.Transparent ? null : Icons.Material.Filled.Circle)"
+                                     IconColor="@item.Color"
+                                     IconSize="Size.Small"
+                                     OnClick="@(() => OnItemClickedAsync(item))"
+                                     Class="@(isSelected ? "selected-item" : "custom-list-item")" />
+                    }
+                </MudList>
+            </MudStack>
+
+            @* COLONNA DESTRA: Periodo *@
+            <MudStack Spacing="0" Class="flex-1 w-50">
+                <MudPaper Elevation="0" Square="true" Class="pa-2 text-center mud-background-gray border-b-solid mud-border-lines-default">
+                    <MudText Typo="Typo.caption" Color="Color.Dark" Class="fw-500">@RightColumnHeader</MudText>
+                </MudPaper>
+                
+                <MudList T="DatePreset.Preset" SelectionMode="SelectionMode.SingleSelection" Class="picker-scroll-container">
                     @foreach (var option in DatePreset.Options)
                     {
                         var isSelected = Value?.Preset == option.Value;
-            
-                        var timelineClass = option.Category switch {
-                            DatePreset.Category.Past => "timeline-past",
-                            DatePreset.Category.Present => "timeline-present",
-                            DatePreset.Category.Future => "timeline-future",
-                            _ => "timeline-none"
-                        };
-
-                        <div class="picker-item @(isSelected ? "selected" : "") @timelineClass" @onclick="@(() => OnPresetClickedAsync(option.Value))">
-                            @option.Value.ToTitleCase()
-                        </div>
+                        
+                        <MudListItem Value="@option.Value" 
+                                     Text="@option.Name"
+                                     Icon="@Icons.Material.Filled.Circle"
+                                     IconColor="@option.IconColor"
+                                     IconSize="Size.Small"
+                                     OnClick="@(() => OnPresetClickedAsync(option.Value))"
+                                     Class="@(isSelected ? "selected-item" : "custom-list-item")" />
                     }
-                </div>
-            </div>
-        </div>
+                </MudList>
+            </MudStack>
+            
+        </MudStack>
     </MudPopover>
 
-    @* L'overlay che chiude il popover cliccando fuori *@
-    <MudOverlay Visible="@_isOpen" OnClick="ClosePopover" ZIndex="666" AutoClose="true" />
+    <MudOverlay Visible="@_isOpen" OnClick="@ClosePopover" ZIndex="666" AutoClose="true" />
 </div>
 
 @code {
@@ -93,13 +100,10 @@
 
     private bool HasFilterActive => Value.Item is not null || Value.Preset != DatePreset.Preset.None;
 
-    private string GetAdornmentIcon()
-    {
-        if (HasFilterActive && Clearable && !Disabled)
-            return Icons.Material.Filled.Clear;
-
-        return _isOpen ? Icons.Material.Filled.ArrowDropUp : Icons.Material.Filled.ArrowDropDown;
-    }
+    private string GetAdornmentIcon() =>
+        HasFilterActive && Clearable && !Disabled
+            ?  Icons.Material.Filled.Clear
+            : _isOpen ? Icons.Material.Filled.ArrowDropUp : Icons.Material.Filled.ArrowDropDown;
 
     private async Task HandleAdornmentClick()
     {
@@ -135,10 +139,10 @@
         return ValueChanged.InvokeAsync(newState);
     }
 
-    private async Task ClearSelectionAsync()
+    private Task ClearSelectionAsync()
     {
         _isOpen = false;
-        await ValueChanged.InvokeAsync(new TransitionFilter<TItem>());
+        return ValueChanged.InvokeAsync(new());
     }
 
     private string GetDisplayValue()

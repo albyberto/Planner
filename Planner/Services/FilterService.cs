@@ -1,10 +1,13 @@
 using System.Collections.Immutable;
+using Microsoft.Extensions.Options;
+using Planner.Extensions;
 using Planner.Infrastructure.Clients;
 using Planner.Model;
+using Planner.Options;
 
 namespace Planner.Services;
 
-public class FilterService(JiraFilterClient client)
+public class FilterService(IOptions<JiraFilterOptions> options, JiraFilterClient client)
 {
     public async Task<ImmutableArray<ProjectModel>> GetProjectsAsync(CancellationToken cancellationToken = default)
     {
@@ -26,16 +29,18 @@ public class FilterService(JiraFilterClient client)
         ];
     }
 
-    public async Task<ImmutableArray<StatusModel>> GetStatusesAsync(string projectKey, CancellationToken cancellationToken = default)
+    public async Task<ImmutableArray<StatusModel>> GetStatusesAsync(string projectKey, ImmutableHashSet<TypeModel> selectedTypes, CancellationToken cancellationToken = default)
     {
-        var types = await client.GetTypesAsync(projectKey, cancellationToken);
-        return [
-            ..types
-                .SelectMany(type => type.Statuses)
-                .DistinctBy(status => status.Name)
-                .Select(s => new StatusModel(s))
-                .OrderBy(s => s.Name)
-        ];
+        var allTypes = await GetTypesAsync(projectKey, cancellationToken);
+        var activeTypes = selectedTypes.IsEmpty ? allTypes : allTypes.Intersect(selectedTypes);
+
+        var statuses = activeTypes
+            .SelectMany(type => type.Statuses)
+            .DistinctBy(status => status.Name);
+        
+        return string.Equals(projectKey, options.Value.DefaultProject, StringComparison.OrdinalIgnoreCase)
+            ? [..statuses.Sort()]
+            : [..statuses.OrderBy(s => s.Name)];
     }
 
     public async Task<ImmutableArray<UserModel>> GetAssigneesAsync(string projectKey, CancellationToken cancellationToken = default)
