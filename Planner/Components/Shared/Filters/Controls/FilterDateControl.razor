@@ -1,18 +1,50 @@
 @using Planner.Components.Shared.Filters.Model
+@using Planner.Extensions
 
-<MudSelect T="DatePreset.Preset" 
-           Label="@Label"
-           Value="@Value"
-           ValueChanged="OnValueChangedAsync"
-           Variant="Variant.Outlined" 
-           Margin="Margin.Dense" 
-           Disabled="@Disabled" 
-           Clearable="true">
-    @foreach (DatePreset.Preset preset in Enum.GetValues(typeof(DatePreset.Preset)))
-    {
-        <MudSelectItem T="DatePreset.Preset" Value="@preset">@($"{preset}")</MudSelectItem>
-    }
-</MudSelect>
+<div class="position-relative w-100">
+    <MudTextField T="string"
+                  Label="@Label"
+                  Text="@GetDisplayValue()"
+                  Variant="Variant.Outlined"
+                  Margin="Margin.Dense"
+                  ReadOnly="true"
+                  Disabled="@Disabled"
+                  Adornment="Adornment.End"
+                  AdornmentIcon="@GetAdornmentIcon()"
+                  OnAdornmentClick="HandleAdornmentClick"
+                  @onclick="ToggleOpen"
+                  Class="w-100 clickable-input transition-filter-input" />
+
+    <MudPopover Open="@_isOpen"
+                AnchorOrigin="Origin.BottomLeft"
+                TransformOrigin="Origin.TopLeft"
+                RelativeWidth="DropdownWidth.Relative"
+                MaxHeight="300"
+                Class="mud-elevation-2 rounded-lg harmonized-popover">
+
+        @* Layout a colonna singola, eredita le stesse classi del Transition Filter *@
+        <MudStack Spacing="0" Class="picker-layout-single">
+            
+            <MudList T="DatePreset.Preset" SelectionMode="SelectionMode.SingleSelection" Class="picker-scroll-container">
+                @foreach (var option in DatePreset.Options)
+                {
+                    var isSelected = Value == option.Value;
+                    
+                    <MudListItem Value="@option.Value" 
+                                 Text="@option.Value.ToTitleCase()"
+                                 Icon="@(option.Value == DatePreset.Preset.None ? null : Icons.Material.Filled.Circle)"
+                                 IconColor="@option.IconColor"
+                                 IconSize="Size.Small"
+                                 OnClick="@(() => OnPresetClickedAsync(option.Value))"
+                                 Class="@(isSelected ? "selected-item" : "custom-list-item")" />
+                }
+            </MudList>
+
+        </MudStack>
+    </MudPopover>
+
+    <MudOverlay Visible="@_isOpen" OnClick="@ClosePopover" ZIndex="666" AutoClose="true" />
+</div>
 
 @code {
     [Parameter] public string Label { get; set; } = "Periodo...";
@@ -20,7 +52,52 @@
     [Parameter] public DatePreset.Preset Value { get; set; } = DatePreset.Preset.None;
     [Parameter] public EventCallback<DatePreset.Preset> ValueChanged { get; set; }
 
-    [Parameter] public bool Disabled { get; set; } = true;
+    [Parameter] public bool Disabled { get; set; }
+    [Parameter] public bool Clearable { get; set; } = true;
 
-    private Task OnValueChangedAsync(DatePreset.Preset preset) => ValueChanged.InvokeAsync(preset);
+    private bool _isOpen;
+
+    private bool HasFilterActive => Value != DatePreset.Preset.None;
+
+    private string GetAdornmentIcon() =>
+        HasFilterActive && Clearable && !Disabled
+            ? Icons.Material.Filled.Clear
+            : _isOpen ? Icons.Material.Filled.ArrowDropUp : Icons.Material.Filled.ArrowDropDown;
+
+    private async Task HandleAdornmentClick()
+    {
+        if (Disabled) return;
+
+        if (HasFilterActive && Clearable)
+        {
+            await ClearSelectionAsync();
+        }
+        else
+        {
+            ToggleOpen();
+        }
+    }
+
+    private void ToggleOpen()
+    {
+        if (!Disabled) _isOpen = !_isOpen;
+    }
+
+    private void ClosePopover() => _isOpen = false;
+
+    private Task OnPresetClickedAsync(DatePreset.Preset newPreset)
+    {
+        _isOpen = false; 
+        return ValueChanged.InvokeAsync(newPreset);
+    }
+
+    private Task ClearSelectionAsync()
+    {
+        _isOpen = false;
+        return ValueChanged.InvokeAsync(DatePreset.Preset.None);
+    }
+
+    private string GetDisplayValue() => HasFilterActive 
+        ? Value.ToTitleCase() 
+        : string.Empty;
 }
