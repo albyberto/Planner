@@ -4,7 +4,7 @@ using Microsoft.Extensions.Logging;
 using Planner.Domain;
 using Planner.Domain.Responses;
 
-namespace Planner.Infrastructure.Clients;
+namespace Planner.Clients;
 
 /// <summary>
 ///     Client responsible for reading issues and their available transitions from Jira.
@@ -45,10 +45,10 @@ public class JiraReadClient(HttpClient client, ILogger<JiraReadClient> logger)
                     ["fields"] = requestedFields
                 };
 
-                if (requestedExpand is { Length: > 0 }) 
+                if (requestedExpand is { Length: > 0 })
                     request["expand"] = requestedExpand;
 
-                if (!string.IsNullOrEmpty(nextPageToken)) 
+                if (!string.IsNullOrEmpty(nextPageToken))
                     request["nextPageToken"] = nextPageToken;
 
                 var response = await client.PostAsJsonAsync("search/jql", request, cancellationToken);
@@ -65,9 +65,9 @@ public class JiraReadClient(HttpClient client, ILogger<JiraReadClient> logger)
                 if (result is null || result.Issues.Length == 0) break;
 
                 accumulator.AddRange(result.Issues);
-                
+
                 nextPageToken = result.NextPageToken;
-                
+
             } while (!string.IsNullOrEmpty(nextPageToken));
 
             return accumulator.ToImmutableHashSet();
@@ -78,7 +78,7 @@ public class JiraReadClient(HttpClient client, ILogger<JiraReadClient> logger)
             throw;
         }
     }
-    
+
     public async Task<IReadOnlyList<Transition>> GetAvailableTransitionsAsync(string issueKey, CancellationToken cancellationToken = default)
     {
         try

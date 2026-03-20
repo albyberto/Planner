@@ -8,7 +8,7 @@ public static class DatePreset
 {
     public enum Preset
     {
-        None, Today, Yesterday, LastWeek, LastMonth, ThisWeek, 
+        None, Today, Yesterday, LastWeek, LastMonth, ThisWeek, ThisMonth, 
         Last7Days, Tomorrow, Next7Days, NextWeek, NextMonth
     }
     
@@ -27,6 +27,7 @@ public static class DatePreset
         // Present (Success = Verde)
         new(Preset.Today, $"{Preset.Today.ToTitleCase()}", Color.Success),
         new(Preset.ThisWeek, $"{Preset.ThisWeek.ToTitleCase()}", Color.Success),
+        new(Preset.ThisMonth, $"{Preset.ThisWeek.ToTitleCase()}", Color.Success),
 
         // Future (Info = Azzurro)
         new(Preset.Tomorrow, $"{Preset.Tomorrow.ToTitleCase()}", Color.Info),

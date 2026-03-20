@@ -1,9 +1,10 @@
 using Planner.Domain;
 using Planner.Extensions;
+using Planner.Model.Abstract;
 
 namespace Planner.Model;
 
-public record UserModel
+public record UserModel : IAvatar
 {
     public string AccountId { get; init; }
     public string EmailAddress { get; init; }
@@ -13,8 +14,10 @@ public record UserModel
     public UserModel(User user)
     {
         AccountId = user.AccountId;
-        EmailAddress = user.EmailAddress.ToLowerInvariant(); 
+        EmailAddress = user.EmailAddress?.ToLowerInvariant() ?? string.Empty; 
         DisplayName = string.IsNullOrWhiteSpace(user.DisplayName) ? EmailAddress : user.DisplayName.ToTitleCase();
         Avatars = new(user.AvatarUrls);
     }
+    
+    public override string ToString() => DisplayName;
 }

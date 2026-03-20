@@ -1,5 +1,4 @@
 using System.Collections.Immutable;
-using Planner.Domain;
 using Planner.Extensions;
 using Planner.Model.Abstract;
 using Type = Planner.Domain.Type;

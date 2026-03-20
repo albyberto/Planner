@@ -2,33 +2,35 @@
 @typeparam TItem
 
 <div class="d-flex align-center" style="gap: 8px;">
-    
-    @* 1. Mostra l'Avatar SOLO se l'elemento è un IAvatar o un IIcon *@
-    @if (Item is IAvatar or IIcon)
-    {
-        <MudAvatar
-            
-            Color="@Color"
-            Rounded="@Rounded"
-            Square="@Square"
-            Size="@Size"
-            Style="background-color: transparent;">
-            
-            @{ var imageUrl = GetImageUrl(); }
 
-            @if (string.IsNullOrWhiteSpace(imageUrl) && !string.IsNullOrWhiteSpace(Name))
-            {
-                @GetInitials()
-            }
-            else if (!string.IsNullOrWhiteSpace(imageUrl))
-            {
-                <MudImage Src="@imageUrl" Alt="@($"{Name} Icon")" ></MudImage>
-            }
-        </MudAvatar>
+    @switch (Item)
+    {
+        case IAvatar or IIcon:
+            <MudAvatar
+                Color="@Color"
+                Rounded="@Rounded"
+                Square="@Square"
+                Size="@Size"
+                Style="background-color: transparent;">
+                @{
+                    if (string.IsNullOrWhiteSpace(ImageUrl) && !string.IsNullOrWhiteSpace(Name))
+                    {
+                        @GetInitials()
+                    }
+                    else {if (!string.IsNullOrWhiteSpace(ImageUrl))
+                        {
+                            <MudImage Src="@ImageUrl" Alt="@($"{Name} Icon")" ></MudImage>
+                        }
+                    }
+                }
+            </MudAvatar>
+            break;
+        case IColor:
+            <MudIcon Icon="@Icons.Material.Filled.Circle" Color="@IconColor" Size="Size.Small" />
+            break;
     }
 
-    @* 2. Mostra il Testo se richiesto, OPPURE in modo forzato se non c'è l'avatar *@
-    @if (ShowText || Item is not IAvatar and not IIcon)
+    @if (ShowText || Item is not IAvatar and not IIcon and not IColor)
     {
         <MudText Typo="Typo.body2" Class="fw-500 mud-text-secondary mb-0" Style="line-height: 1;">
             @Name
@@ -58,7 +60,7 @@
             _ => Size.Medium
         };
 
-    private string? GetImageUrl() =>
+    private string? ImageUrl =>
         Item switch
         {
             IIcon icon => icon.IconUrl,
@@ -71,6 +73,11 @@
             },
             _ => null
         };
+
+    
+    private Color IconColor => Item is IColor item 
+        ? item.Color 
+        : Color.Transparent;
 
     private string GetInitials() => string.IsNullOrWhiteSpace(Name) 
         ? string.Empty 

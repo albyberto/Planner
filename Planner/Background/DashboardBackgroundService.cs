@@ -2,7 +2,7 @@ using System.Collections.Immutable;
 using System.Reactive;
 using System.Reactive.Linq;
 using Planner.Builders;
-using Planner.Infrastructure.Clients;
+using Planner.Clients;
 using Planner.Model;
 using Planner.Stores;
 

@@ -7,6 +7,7 @@
         <MudChip T="TItem"
                  Value="@(item)"
                  Size="Size.Small"
+                 Variant="Variant.Outlined"
                  Color="@(included ? Color.Success : Color.Error)"
                  Icon="@(included ? Icons.Material.Outlined.Check : Icons.Material.Outlined.Block)"
                  OnClick="@(() => OnToggleAsync(item))"

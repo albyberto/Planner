@@ -1,6 +1,3 @@
-using Planner.Domain;
-using Planner.Model;
-
 namespace Planner.Extensions;
 
 public static class GroupByExtensions

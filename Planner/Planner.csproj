@@ -21,7 +21,8 @@
     </ItemGroup>
 
     <ItemGroup>
-      <ProjectReference Include="..\Planner.Infrastructure\Planner.Infrastructure.csproj" />
+      <ProjectReference Include="..\Planner.Clients\Planner.Clients.csproj" />
+      <ProjectReference Include="..\Planner.Infrastructure\Planner.Clients.csproj" />
     </ItemGroup>
 
 </Project>

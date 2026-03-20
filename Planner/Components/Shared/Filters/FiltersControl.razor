@@ -13,6 +13,23 @@
     {
         <MudProgressLinear Color="Color.Secondary" Indeterminate="true" Size="Size.Small"/>
     }
+    
+    <MudStack Row="true" AlignItems="AlignItems.Center" Justify="Justify.SpaceBetween" Class="@(_isExpanded ? "mb-4" : "")">
+        
+        <MudText Typo="Typo.h6" Class="d-flex align-center gap-2">
+            <MudIcon Icon="@Icons.Material.Filled.FilterAlt" Size="Size.Small" />
+            Filtri di Ricerca
+        </MudText>
+
+        <MudIconButton Icon="@(_isExpanded ? Icons.Material.Filled.ExpandLess : Icons.Material.Filled.ExpandMore)"
+                       OnClick="@(() => _isExpanded = !_isExpanded)"
+                       Size="Size.Medium"
+                       Color="Color.Default"
+                       AriaLabel="Mostra/Nascondi Filtri" />
+    </MudStack>
+
+    @* Il contenitore collassabile *@
+    <MudCollapse Expanded="_isExpanded">
 
     <MudGrid>
         <MudItem xs="12" sm="12" md="4" lg="4">
@@ -43,6 +60,26 @@
                                Selection="_searchCriteria.Statuses"
                                SelectionChanged="OnStatusesChanged"/>
         </MudItem>
+        
+        <MudItem xs="12" sm="12" md="4" lg="4">
+            <div class="d-flex flex-column gap-1">
+                <FilterMultiSelect TItem="UserModel"
+                                   Label="Select Assignees"
+                                   Disabled="_isLoading"
+                                   Items="_assignees"
+                                   Selection="_searchCriteria.Assignees"
+                                   SelectionChanged="OnAssigneesChanged"/>
+                    
+                <MudSwitch T="bool" 
+                           Label="Include unassigned" 
+                           Color="Color.Primary" 
+                           Size="Size.Medium"
+                           Disabled="_isLoading"
+                           Value="_searchCriteria.IncludeUnassigned"
+                           ValueChanged="OnIncludeUnassignedChanged"
+                           Class="ml-1" />
+            </div>
+        </MudItem>
 
         <MudItem xs="12" sm="12" md="4" lg="4">
             <FilterMultiSelect TItem="ComponentModel"
@@ -63,7 +100,7 @@
         </MudItem>
 
         <MudItem xs="12" sm="12" md="4" lg="4">
-            <FilterDateControl
+            <FilterDate
                 Label="Data Creazione"
                 Value="@(GetDateFilter("created"))"
                 ValueChanged="@(v => SetDateFilter("created", v))"
@@ -71,7 +108,7 @@
         </MudItem>
 
         <MudItem xs="12" sm="12" md="4" lg="4">
-            <FilterDateControl
+            <FilterDate
                 Label="Data Risoluzione"
                 Value="@(GetDateFilter("resolved"))"
                 ValueChanged="@(v => SetDateFilter("resolved", v))"
@@ -79,7 +116,23 @@
         </MudItem>
 
         <MudItem xs="12" sm="12" md="4" lg="4">
-            <FilterDateControl
+            <FilterDate
+                Label="Start Date"
+                Value="@(GetDateFilter("Start date"))"
+                ValueChanged="@(v => SetDateFilter("Start date", v))"
+                Disabled="_isLoading"/>
+        </MudItem>
+        
+        <MudItem xs="12" sm="12" md="4" lg="4">
+            <FilterDate
+                Label="End Date"
+                Value="@(GetDateFilter("End date"))"
+                ValueChanged="@(v => SetDateFilter("End date", v))"
+                Disabled="_isLoading"/>
+        </MudItem>
+        
+        <MudItem xs="12" sm="12" md="4" lg="4">
+            <FilterDate
                 Label="Due Date"
                 Value="@(GetDateFilter("duedate"))"
                 ValueChanged="@(v => SetDateFilter("duedate", v))"
@@ -89,7 +142,7 @@
         <MudItem xs="12" sm="12" md="4" lg="4">
             <FilterTransition TItem="StatusModel"
                               Items="_statuses"
-                              Value="@(GetStatusTransition("status"))"
+                              Value="_searchCriteria.StatusTransition" 
                               ValueChanged="OnStatusTransitionChanged"
                               LeftColumnHeader="Status..."
                               RightColumnHeader="Period..."
@@ -97,7 +150,7 @@
                               Disabled="_isLoading"/>
         </MudItem>
 
-        <MudItem xs="12" sm="12" md="4" lg="4" Class="d-flex justify-end pt-2">
+        <MudItem xs="12" sm="12" md="12" lg="12" Class="d-flex justify-end pt-2">
             @if (!_isLoading)
             {
                 <MudText Typo="Typo.caption">
@@ -106,7 +159,7 @@
             }
         </MudItem>
     </MudGrid>
-
+</MudCollapse>
 </MudPaper>
 
 @code {
@@ -116,15 +169,18 @@
     [Inject] public required ISnackbar Snackbar { get; set; }
 
     [Parameter] public Guid PageKey { get; set; }
+    [Parameter] public bool ShowAssignees { get; set; } = true;
 
     private ImmutableArray<ProjectModel> _projects = [];
     private ImmutableArray<TypeModel> _types = [];
     private ImmutableArray<StatusModel> _statuses = [];
+    private ImmutableArray<UserModel> _assignees = [];
     private ImmutableArray<ComponentModel> _components = [];
     private ImmutableArray<LabelModel> _labels = [];
 
     private IssuesSearchCriteria _searchCriteria = IssuesSearchCriteria.Empty;
     private bool _isLoading = true;
+    private bool _isExpanded = true;
 
     private DatePreset.Preset GetDateFilter(string field) =>
         _searchCriteria.DateFilters.TryGetValue(field, out var preset) ? preset : DatePreset.Preset.None;
@@ -199,6 +255,18 @@
         Emit(_searchCriteria);
     }
 
+    private void OnAssigneesChanged(IFilterSelection<UserModel> assignees)
+    {
+        _searchCriteria = _searchCriteria with { Assignees = assignees };
+        Emit(_searchCriteria);
+    }
+    
+    private void OnIncludeUnassignedChanged(bool newValue)
+    {
+        _searchCriteria = _searchCriteria with { IncludeUnassigned = newValue };
+        Emit(_searchCriteria);
+    }
+    
     private void OnComponentsChanged(IFilterSelection<ComponentModel> components)
     {
         _searchCriteria = _searchCriteria with { Components = components };
@@ -211,20 +279,9 @@
         Emit(_searchCriteria);
     }
 
-    private TransitionFilter<StatusModel> GetStatusTransition(string field)
-    {
-        if (!_searchCriteria.TransitionFilters.TryGetValue(field, out var filter)) return new();
-
-        var statusModel = _statuses.FirstOrDefault(s => string.Equals(s.Name, filter.Item, StringComparison.OrdinalIgnoreCase));
-
-        return new(statusModel, filter.Preset);
-    }
-
     private void OnStatusTransitionChanged(TransitionFilter<StatusModel> transition)
     {
-        var stringFilter = new TransitionFilter<string>(transition.Item?.Name, transition.Preset);
-
-        _searchCriteria = _searchCriteria.SetTransitionFilter("status", stringFilter);
+        _searchCriteria = _searchCriteria.SetStatusTransition(transition);
         Emit(_searchCriteria);
     }
 
@@ -234,13 +291,15 @@
     {
         var projectsTask = FilterService.GetProjectsAsync(CancellationToken.None);
         var typesTask = FilterService.GetTypesAsync(projectKey);
+        var assigneesTask = FilterService.GetAssigneesAsync(projectKey);
         var componentsTask = FilterService.GetComponentsAsync(projectKey);
         var labelsTask = FilterService.GetLabelsAsync();
 
-        await Task.WhenAll(projectsTask, typesTask, componentsTask, labelsTask);
+        await Task.WhenAll(projectsTask, typesTask, assigneesTask, componentsTask, labelsTask);
 
         _projects = await projectsTask;
         _types = await typesTask;
+        _assignees = await assigneesTask;
         _components = await componentsTask;
         _labels = await labelsTask;
 

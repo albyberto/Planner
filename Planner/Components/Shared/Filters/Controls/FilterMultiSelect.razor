@@ -15,7 +15,7 @@
                Variant="Variant.Outlined"
                Margin="Margin.Dense">
                
-        @foreach (var item in Items.OrderBy(item => $"{item}"))
+        @foreach (var item in Items)
         {
             <MudSelectItem T="TItem" Value="@item">
                 <Avatar Item="item" Square="@Square"/>

@@ -1,7 +1,7 @@
 using System.Collections.Immutable;
 using Microsoft.Extensions.Options;
+using Planner.Clients;
 using Planner.Extensions;
-using Planner.Infrastructure.Clients;
 using Planner.Model;
 using Planner.Options;
 
@@ -32,7 +32,7 @@ public class FilterService(IOptions<JiraFilterOptions> options, JiraFilterClient
     public async Task<ImmutableArray<StatusModel>> GetStatusesAsync(string projectKey, ImmutableHashSet<TypeModel> selectedTypes, CancellationToken cancellationToken = default)
     {
         var allTypes = await GetTypesAsync(projectKey, cancellationToken);
-        var activeTypes = selectedTypes.IsEmpty ? allTypes : allTypes.Intersect(selectedTypes);
+        var activeTypes = selectedTypes.IsEmpty ? allTypes : allTypes.Where(type => selectedTypes.Select(t => t.Name).Contains(type.Name));
 
         var statuses = activeTypes
             .SelectMany(type => type.Statuses)

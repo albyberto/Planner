@@ -1,8 +1,8 @@
 using System.Text;
 using Microsoft.Extensions.Options;
-using Planner.Infrastructure.Options;
+using Planner.Clients.Options;
 
-namespace Planner.Infrastructure.Handlers;
+namespace Planner.Clients.Handlers;
 
 /// <summary>
 /// A delegating handler that automatically attaches the Basic Authentication header 

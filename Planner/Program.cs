@@ -1,6 +1,5 @@
 using Planner;
 using Planner.Components;
-using Planner.Services;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -12,7 +11,7 @@ builder.Services
     .AddStores()
     .AddPlannerServices()
     .AddBackgroundServices()
-    .AddInfrastructure();
+    .AddClients();
 
 var app = builder.Build();
 

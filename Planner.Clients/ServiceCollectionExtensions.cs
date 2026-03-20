@@ -1,7 +1,7 @@
 using Microsoft.Extensions.Options;
-using Planner.Infrastructure.Clients;
-using Planner.Infrastructure.Handlers;
-using Planner.Infrastructure.Options;
+using Planner.Clients;
+using Planner.Clients.Handlers;
+using Planner.Clients.Options;
 using Polly;
 using Polly.Extensions.Http;
 using ZiggyCreatures.Caching.Fusion;
@@ -16,16 +16,16 @@ public static class Bootstrapper
 {
     extension(IServiceCollection services)
     {
-        public IServiceCollection AddInfrastructure()
+        public IServiceCollection AddClients()
         {
-            services.AddInfrastructureOptions();
+            services.AddClientsOptions();
             services.AddJiraClients();
             services.AddCache();
 
             return services;
         }
 
-        private void AddInfrastructureOptions()
+        private void AddClientsOptions()
         {
             services.AddOptions<JiraApiOptions>()
                 .BindConfiguration(JiraApiOptions.SectionName)

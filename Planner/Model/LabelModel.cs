@@ -1,4 +1,3 @@
-using Planner.Components.Shared.Filters.Model;
 using Planner.Extensions;
 
 namespace Planner.Model;

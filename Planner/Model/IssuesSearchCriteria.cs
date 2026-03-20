@@ -13,20 +13,26 @@ public record IssuesSearchCriteria
 
     public IFilterSelection<TypeModel> Types { get; init; } = FilterSelection<TypeModel>.Empty;
     public IFilterSelection<StatusModel> Statuses { get; init; } = FilterSelection<StatusModel>.Empty;
+    public IFilterSelection<UserModel> Assignees { get; init; } = FilterSelection<UserModel>.Empty;
+    public bool IncludeUnassigned { get; init; } = false;
     public IFilterSelection<ComponentModel> Components { get; init; } = FilterSelection<ComponentModel>.Empty;
     public IFilterSelection<LabelModel> Labels { get; init; } = FilterSelection<LabelModel>.Empty;
 
     public ImmutableDictionary<string, DatePreset.Preset> DateFilters { get; private init; } = ImmutableDictionary<string, DatePreset.Preset>.Empty;
     
-    public ImmutableDictionary<string, TransitionFilter<string>> TransitionFilters { get; private init; } = ImmutableDictionary<string, TransitionFilter<string>>.Empty;
+    // NUOVO: Proprietà tipizzate per le transizioni, abbandonando il Dictionary
+    public TransitionFilter<StatusModel> StatusTransition { get; init; } = new();
+    public TransitionFilter<UserModel> AssigneeTransition { get; init; } = new();
     
     public IssuesSearchCriteria SetDateFilter(string field, DatePreset.Preset preset) =>
         preset == DatePreset.Preset.None 
             ? this with { DateFilters = DateFilters.Remove(field) } 
             : this with { DateFilters = DateFilters.SetItem(field, preset) };
 
-    public IssuesSearchCriteria SetTransitionFilter(string field, TransitionFilter<string> filter) =>
-        filter.Item is null && filter.Preset == DatePreset.Preset.None 
-            ? this with { TransitionFilters = TransitionFilters.Remove(field) } 
-            : this with { TransitionFilters = TransitionFilters.SetItem(field, filter) };
+    // NUOVO: Metodi helper specifici per le transizioni
+    public IssuesSearchCriteria SetStatusTransition(TransitionFilter<StatusModel> filter) =>
+        this with { StatusTransition = filter };
+
+    public IssuesSearchCriteria SetAssigneeTransition(TransitionFilter<UserModel> filter) =>
+        this with { AssigneeTransition = filter };
 }

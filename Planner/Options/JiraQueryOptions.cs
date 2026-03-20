@@ -1,6 +1,6 @@
 using System.ComponentModel.DataAnnotations;
 
-namespace Planner.Models;
+namespace Planner.Options;
 
 public class JiraQueryOptions
 {

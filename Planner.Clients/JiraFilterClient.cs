@@ -2,13 +2,13 @@ using System.Collections.Immutable;
 using System.Net.Http.Json;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
+using Planner.Clients.Options;
 using Planner.Domain;
 using Planner.Domain.Responses;
-using Planner.Infrastructure.Options;
 using ZiggyCreatures.Caching.Fusion;
 using Type = Planner.Domain.Type;
 
-namespace Planner.Infrastructure.Clients;
+namespace Planner.Clients;
 
 public class JiraFilterClient(HttpClient httpClient, IFusionCache cache, IOptions<CacheOptions> cacheOptions, ILogger<JiraFilterClient> logger)
 {

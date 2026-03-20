@@ -1,4 +1,4 @@
-namespace Planner.Infrastructure.Options;
+namespace Planner.Clients.Options;
 
 public class CacheOptions
 {
