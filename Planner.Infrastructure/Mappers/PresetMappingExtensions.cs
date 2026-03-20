@@ -7,11 +7,11 @@ namespace Planner.Infrastructure.Mappers;
 
 public static class PresetMappingExtensions
 {
-    private static FilterSelectionDocument MapToSelection(this (IEnumerable<string> Included, IEnumerable<string> Excluded) tuple) =>
+    private static FilterSelectionDocument MapToSelection(this (IEnumerable<string>? Included, IEnumerable<string>? Excluded) tuple) =>
         new()
         {
-            Included = tuple.Included.ToImmutableHashSet(),
-            Excluded = tuple.Excluded.ToImmutableHashSet()
+            Included = (tuple.Included ?? []).ToImmutableHashSet(),
+            Excluded = (tuple.Excluded ?? []).ToImmutableHashSet()
         };
 
     extension(PresetItem item)
