@@ -34,9 +34,7 @@ public static class PresetMappingExtensions
 
                 DateFilters = item.DateFilters.ToDictionary(filterEntry => filterEntry.Key, filterEntry => $"{filterEntry.Value}"),
 
-                StatusTransition = item.StatusTransition is not null ? (item.StatusTransition.Field, $"{item.StatusTransition.Preset}") : (string.Empty, nameof(Preset.None)),
-
-                AssigneeTransition = item.AssigneeTransition is not null ? (item.AssigneeTransition.Field, $"{item.AssigneeTransition.Preset}") : (string.Empty, nameof(Preset.None))
+                StatusTransition = item.StatusTransition is not null ? (item.StatusTransition.Field, $"{item.StatusTransition.Preset}") : (string.Empty, nameof(Preset.None))
             };
     }
 
@@ -67,14 +65,6 @@ public static class PresetMappingExtensions
                     {
                         Field = existingDocument.Criteria.StatusTransition.Field,
                         Preset = Enum.TryParse<Preset>(existingDocument.Criteria.StatusTransition.Preset, true, out var parsedStatusPreset) ? parsedStatusPreset : Preset.None
-                    }
-                    : null,
-
-                AssigneeTransition = !string.IsNullOrWhiteSpace(existingDocument.Criteria.AssigneeTransition.Field)
-                    ? new TransitionFilterDocument
-                    {
-                        Field = existingDocument.Criteria.AssigneeTransition.Field,
-                        Preset = Enum.TryParse<Preset>(existingDocument.Criteria.AssigneeTransition.Preset, true, out var parsedAssigneePreset) ? parsedAssigneePreset : Preset.None
                     }
                     : null
             };

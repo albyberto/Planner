@@ -20,5 +20,4 @@ public record PresetItem
     public Dictionary<string, Preset> DateFilters { get; init; } = new();
     
     public TransitionFilterDocument? StatusTransition { get; init; }
-    public TransitionFilterDocument? AssigneeTransition { get; init; }
 }

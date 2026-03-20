@@ -1,16 +1,16 @@
 @page "/presets"
+@using System.Collections.Immutable
 @using Planner.Infrastructure.Core
 @using Planner.Infrastructure.Domain
 
 <MudContainer MaxWidth="MaxWidth.ExtraLarge" Class="mt-6">
     <MudText Typo="Typo.h5" Class="mb-4">Gestione Preset Filtri</MudText>
 
-    <MudTable Items="@_presets" Dense="true" Hover="true" Loading="@_isLoading" Elevation="0" Outlined="true">
+    <MudTable Items="@Presets" Dense="true" Hover="true" Loading="@_isLoading" Elevation="0" Outlined="true">
         <ToolBarContent>
             <MudSpacer />
-            @* Tasto per testare la creazione rapida di un nuovo preset vuoto *@
-            <MudButton Color="Color.Primary" Variant="Variant.Filled" StartIcon="@Icons.Material.Filled.Add" OnClick="@OpenCreateDialogAsync">
-                Nuovo Preset
+            <MudButton Color="Color.Primary" Variant="Variant.Outlined" StartIcon="@Icons.Material.Outlined.Add" OnClick="@OpenCreateDialogAsync">
+                New Preset
             </MudButton>
         </ToolBarContent>
         <HeaderContent>
@@ -26,8 +26,8 @@
                 <MudText Typo="Typo.body2" Class="fw-bold">@context.Name</MudText>
             </MudTd>
             <MudTd DataLabel="Azioni" Style="text-align: center;">
-                <MudIconButton Icon="@Icons.Material.Outlined.Edit" Size="Size.Small" Color="Color.Default" OnClick="@(() => OpenEditDialogAsync(context))" />
-                <MudIconButton Icon="@Icons.Material.Outlined.Delete" Size="Size.Small" Color="Color.Error" OnClick="@(() => DeleteAsync(context))" />
+                <MudIconButton Variant="Variant.Outlined" Icon="@Icons.Material.Outlined.Edit" Size="Size.Small" Color="Color.Default" OnClick="@(() => OpenEditDialogAsync(context))" />
+                <MudIconButton Variant="Variant.Outlined" Icon="@Icons.Material.Outlined.Delete" Size="Size.Small" Color="Color.Error" OnClick="@(() => DeleteAsync(context))" />
             </MudTd>
         </RowTemplate>
         <NoRecordsContent>
@@ -41,7 +41,9 @@
     [Inject] public required IDialogService DialogService { get; set; }
     [Inject] public required ISnackbar Snackbar { get; set; }
 
-    private List<PresetItem> _presets = [];
+    private ImmutableArray<PresetItem> Presets => [.._presets.OrderBy(preset => preset.Name)];
+    
+    private ImmutableArray<PresetItem> _presets = [];
     private bool _isLoading = true;
 
     protected override async Task OnInitializedAsync()
@@ -54,12 +56,11 @@
         _isLoading = true;
         try
         {
-            var data = await PresetService.GetAllAsync();
-            _presets = data.ToList();
+            _presets = await PresetService.GetAllAsync();
         }
-        catch (Exception)
+        catch (Exception exception)
         {
-            Snackbar.Add("Errore nel caricamento dei preset.", Severity.Error);
+            Snackbar.Add($"Errore nel caricamento dei preset. {exception.Message}", Severity.Error);
         }
         finally
         {
@@ -100,9 +101,15 @@
     {
         try
         {
-            await PresetService.SaveAsync(item);
+            var preset = await PresetService.SaveAsync(item);
+
+            if (preset is null) {
+                Snackbar.Add($"Errore: il preset non è stato salvato.", Severity.Error);
+                return;
+            }
+            
             Snackbar.Add("Preset salvato con successo!", Severity.Success);
-            await LoadDataAsync(); // Ricarica la tabella
+            _presets = [.._presets.Append(preset)];
         }
         catch (Exception ex)
         {

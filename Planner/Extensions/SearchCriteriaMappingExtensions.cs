@@ -31,14 +31,6 @@ public static class SearchCriteriaMappingExtensions
                     Field = criteria.StatusTransition.Item?.Name ?? string.Empty,
                     Preset = criteria.StatusTransition.Preset
                 }
-                : null,
-
-            AssigneeTransition = criteria.AssigneeTransition.Item is not null || criteria.AssigneeTransition.Preset != Preset.None
-                ? new TransitionFilterDocument
-                {
-                    Field = criteria.AssigneeTransition.Item?.EmailAddress ?? string.Empty,
-                    Preset = criteria.AssigneeTransition.Preset
-                }
                 : null
         };
 
