@@ -1,6 +1,7 @@
 using JQLBuilder;
 using JQLBuilder.Types.JqlTypes;
 using Planner.Components.Shared.Filters.Model;
+using Planner.Infrastructure.Domain.Enums;
 using Planner.Model;
 
 namespace Planner.Builders;
@@ -68,7 +69,7 @@ public static class JqlBuilderExtensions
             query = query.And(f => (f.Date.Only[field] >= start) & (f.Date.Only[field] <= end));
         }
 
-        if (criteria.StatusTransition.Preset != DatePreset.Preset.None || criteria.StatusTransition.Item is not null)
+        if (criteria.StatusTransition.Preset != Preset.None || criteria.StatusTransition.Item is not null)
         {
             var filter = criteria.StatusTransition;
             var range = GetDateRange(filter.Preset);
@@ -96,31 +97,31 @@ public static class JqlBuilderExtensions
         return query.ToString();
     }
 
-    private static (DateTime Start, DateTime End)? GetDateRange(DatePreset.Preset preset)
+    private static (DateTime Start, DateTime End)? GetDateRange(Preset preset)
     {
-        if (preset == DatePreset.Preset.None) return null;
+        if (preset == Preset.None) return null;
 
         var today = DateTime.UtcNow.Date;
         var firstDayOfThisMonth = new DateTime(today.Year, today.Month, 1);
 
         return preset switch
         {
-            DatePreset.Preset.Today => (today, today),
-            DatePreset.Preset.Yesterday => (today.AddDays(-1), today.AddDays(-1)),
-            DatePreset.Preset.Tomorrow => (today.AddDays(1), today.AddDays(1)),
+            Preset.Today => (today, today),
+            Preset.Yesterday => (today.AddDays(-1), today.AddDays(-1)),
+            Preset.Tomorrow => (today.AddDays(1), today.AddDays(1)),
 
-            DatePreset.Preset.ThisWeek => (StartOfWeek(today), StartOfWeek(today).AddDays(6)),
-            DatePreset.Preset.LastWeek => (StartOfWeek(today).AddDays(-7), StartOfWeek(today).AddDays(-1)),
-            DatePreset.Preset.NextWeek => (StartOfWeek(today).AddDays(7), StartOfWeek(today).AddDays(13)),
+            Preset.ThisWeek => (StartOfWeek(today), StartOfWeek(today).AddDays(6)),
+            Preset.LastWeek => (StartOfWeek(today).AddDays(-7), StartOfWeek(today).AddDays(-1)),
+            Preset.NextWeek => (StartOfWeek(today).AddDays(7), StartOfWeek(today).AddDays(13)),
 
             // Dal primo all'ultimo giorno del mese precedente
-            DatePreset.Preset.LastMonth => (firstDayOfThisMonth.AddMonths(-1), firstDayOfThisMonth.AddDays(-1)),
+            Preset.LastMonth => (firstDayOfThisMonth.AddMonths(-1), firstDayOfThisMonth.AddDays(-1)),
 
             // Dal primo all'ultimo giorno del mese successivo
-            DatePreset.Preset.NextMonth => (firstDayOfThisMonth.AddMonths(1), firstDayOfThisMonth.AddMonths(2).AddDays(-1)),
+            Preset.NextMonth => (firstDayOfThisMonth.AddMonths(1), firstDayOfThisMonth.AddMonths(2).AddDays(-1)),
 
-            DatePreset.Preset.Last7Days => (today.AddDays(-7), today),
-            DatePreset.Preset.Next7Days => (today, today.AddDays(7)),
+            Preset.Last7Days => (today.AddDays(-7), today),
+            Preset.Next7Days => (today, today.AddDays(7)),
 
             _ => null
         };

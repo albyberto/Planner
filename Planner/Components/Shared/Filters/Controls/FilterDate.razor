@@ -1,5 +1,6 @@
 @using Planner.Components.Shared.Filters.Model
 @using Planner.Extensions
+@using Planner.Infrastructure.Domain.Enums
 
 <div class="position-relative w-100">
     <MudTextField T="string"
@@ -25,14 +26,14 @@
         @* Layout a colonna singola, eredita le stesse classi del Transition Filter *@
         <MudStack Spacing="0" Class="picker-layout-single">
             
-            <MudList T="DatePreset.Preset" SelectionMode="SelectionMode.SingleSelection" Class="picker-scroll-container">
+            <MudList T="Preset" SelectionMode="SelectionMode.SingleSelection" Class="picker-scroll-container">
                 @foreach (var option in DatePreset.Options)
                 {
                     var isSelected = Value == option.Value;
                     
                     <MudListItem Value="@option.Value" 
                                  Text="@option.Value.ToTitleCase()"
-                                 Icon="@(option.Value == DatePreset.Preset.None ? null : Icons.Material.Filled.Circle)"
+                                 Icon="@(option.Value == Preset.None ? null : Icons.Material.Filled.Circle)"
                                  IconColor="@option.IconColor"
                                  IconSize="Size.Small"
                                  OnClick="@(() => OnPresetClickedAsync(option.Value))"
@@ -49,15 +50,15 @@
 @code {
     [Parameter] public string Label { get; set; } = "Periodo...";
     
-    [Parameter] public DatePreset.Preset Value { get; set; } = DatePreset.Preset.None;
-    [Parameter] public EventCallback<DatePreset.Preset> ValueChanged { get; set; }
+    [Parameter] public Preset Value { get; set; } = Preset.None;
+    [Parameter] public EventCallback<Preset> ValueChanged { get; set; }
 
     [Parameter] public bool Disabled { get; set; }
     [Parameter] public bool Clearable { get; set; } = true;
 
     private bool _isOpen;
 
-    private bool HasFilterActive => Value != DatePreset.Preset.None;
+    private bool HasFilterActive => Value != Preset.None;
 
     private string GetAdornmentIcon() =>
         HasFilterActive && Clearable && !Disabled
@@ -85,7 +86,7 @@
 
     private void ClosePopover() => _isOpen = false;
 
-    private Task OnPresetClickedAsync(DatePreset.Preset newPreset)
+    private Task OnPresetClickedAsync(Preset newPreset)
     {
         _isOpen = false; 
         return ValueChanged.InvokeAsync(newPreset);
@@ -94,7 +95,7 @@
     private Task ClearSelectionAsync()
     {
         _isOpen = false;
-        return ValueChanged.InvokeAsync(DatePreset.Preset.None);
+        return ValueChanged.InvokeAsync(Preset.None);
     }
 
     private string GetDisplayValue() => HasFilterActive 

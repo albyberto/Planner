@@ -1,5 +1,6 @@
 @using Planner.Components.Shared.Filters.Model
 @using Planner.Extensions
+@using Planner.Infrastructure.Domain.Enums
 @typeparam TItem where TItem: Planner.Model.Abstract.IColor
 
 <div class="position-relative w-100">
@@ -61,7 +62,7 @@
                     <MudText Typo="Typo.caption" Color="Color.Dark" Class="fw-500">@RightColumnHeader</MudText>
                 </MudPaper>
                 
-                <MudList T="DatePreset.Preset" SelectionMode="SelectionMode.SingleSelection" Class="picker-scroll-container">
+                <MudList T="Preset" SelectionMode="SelectionMode.SingleSelection" Class="picker-scroll-container">
                     @foreach (var option in DatePreset.Options)
                     {
                         var isSelected = Value?.Preset == option.Value;
@@ -99,7 +100,7 @@
 
     private bool _isOpen;
 
-    private bool HasFilterActive => Value.Item is not null || Value.Preset != DatePreset.Preset.None;
+    private bool HasFilterActive => Value.Item is not null || Value.Preset != Preset.None;
 
     private string GetAdornmentIcon() =>
         HasFilterActive && Clearable && !Disabled
@@ -133,7 +134,7 @@
         return ValueChanged.InvokeAsync(newState);
     }
 
-    private Task OnPresetClickedAsync(DatePreset.Preset newPreset)
+    private Task OnPresetClickedAsync(Preset newPreset)
     {
         var newState = Value with { Preset = newPreset };
         _isOpen = false; 
@@ -151,7 +152,7 @@
         if (!HasFilterActive) return string.Empty;
 
         var itemName = Value.Item is not null ? $"{Value.Item}" : "Qualsiasi";
-        var presetName = Value.Preset != DatePreset.Preset.None ? $"{Value.Preset.ToTitleCase()}" : "Sempre";
+        var presetName = Value.Preset != Preset.None ? $"{Value.Preset.ToTitleCase()}" : "Sempre";
 
         return $"{itemName} ({presetName})";
     }

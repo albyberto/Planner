@@ -1,0 +1,142 @@
+@page "/presets"
+@using Planner.Infrastructure.Core
+@using Planner.Infrastructure.Domain
+
+<MudContainer MaxWidth="MaxWidth.ExtraLarge" Class="mt-6">
+    <MudText Typo="Typo.h5" Class="mb-4">Gestione Preset Filtri</MudText>
+
+    <MudTable Items="@_presets" Dense="true" Hover="true" Loading="@_isLoading" Elevation="0" Outlined="true">
+        <ToolBarContent>
+            <MudSpacer />
+            @* Tasto per testare la creazione rapida di un nuovo preset vuoto *@
+            <MudButton Color="Color.Primary" Variant="Variant.Filled" StartIcon="@Icons.Material.Filled.Add" OnClick="OpenCreateDialogAsync">
+                Nuovo Preset
+            </MudButton>
+        </ToolBarContent>
+        <HeaderContent>
+            <MudTh>ID</MudTh>
+            <MudTh>Nome</MudTh>
+            <MudTh Style="width: 120px; text-align: center;">Azioni</MudTh>
+        </HeaderContent>
+        <RowTemplate>
+            <MudTd DataLabel="ID">
+                <MudText Typo="Typo.caption" Class="mud-text-secondary">@context.Id</MudText>
+            </MudTd>
+            <MudTd DataLabel="Nome">
+                <MudText Typo="Typo.body2" Class="fw-bold">@context.Name</MudText>
+            </MudTd>
+            <MudTd DataLabel="Azioni" Style="text-align: center;">
+                <MudIconButton Icon="@Icons.Material.Outlined.Edit" Size="Size.Small" Color="Color.Default" OnClick="@(() => OpenEditDialogAsync(context))" />
+                <MudIconButton Icon="@Icons.Material.Outlined.Delete" Size="Size.Small" Color="Color.Error" OnClick="@(() => DeleteAsync(context))" />
+            </MudTd>
+        </RowTemplate>
+        <NoRecordsContent>
+            <MudText>Nessun preset salvato.</MudText>
+        </NoRecordsContent>
+    </MudTable>
+</MudContainer>
+
+@code {
+    [Inject] public required IPresetService PresetService { get; set; }
+    [Inject] public required IDialogService DialogService { get; set; }
+    [Inject] public required ISnackbar Snackbar { get; set; }
+
+    private List<PresetItem> _presets = [];
+    private bool _isLoading = true;
+
+    protected override async Task OnInitializedAsync()
+    {
+        await LoadDataAsync();
+    }
+
+    private async Task LoadDataAsync()
+    {
+        _isLoading = true;
+        try
+        {
+            var data = await PresetService.GetAllAsync();
+            _presets = data.ToList();
+        }
+        catch (Exception)
+        {
+            Snackbar.Add("Errore nel caricamento dei preset.", Severity.Error);
+        }
+        finally
+        {
+            _isLoading = false;
+        }
+    }
+
+    private async Task OpenCreateDialogAsync()
+    {
+        var newItem = new PresetItem { Name = string.Empty }; // Un nuovo item con ID vuoto
+        await ShowDialogAsync("Nuovo Preset", newItem);
+    }
+
+    private async Task OpenEditDialogAsync(PresetItem item)
+    {
+        // Cloniamo l'item usando il record 'with' per non sporcare la griglia se l'utente annulla
+        var clone = item with { }; 
+        await ShowDialogAsync("Modifica Preset", clone);
+    }
+
+    private async Task ShowDialogAsync(string title, PresetItem model)
+    {
+        var parameters = new DialogParameters<PresetEditDialog>
+        {
+            { x => x.Model, model }
+        };
+
+        var options = new DialogOptions { CloseOnEscapeKey = true, MaxWidth = MaxWidth.Small, FullWidth = true };
+        var dialog = await DialogService.ShowAsync<PresetEditDialog>(title, parameters, options);
+        var result = await dialog.Result;
+
+        if (result is not null && !result.Canceled && result.Data is PresetItem savedModel)
+        {
+            await SaveAsync(savedModel);
+        }
+    }
+
+    private async Task SaveAsync(PresetItem item)
+    {
+        try
+        {
+            await PresetService.SaveAsync(item);
+            Snackbar.Add("Preset salvato con successo!", Severity.Success);
+            await LoadDataAsync(); // Ricarica la tabella
+        }
+        catch (Exception ex)
+        {
+            Snackbar.Add($"Errore durante il salvataggio: {ex.Message}", Severity.Error);
+        }
+    }
+
+    private async Task DeleteAsync(PresetItem item)
+    {
+        var parameters = new DialogParameters
+        {
+            { "ContentText", $"Sei sicuro di voler eliminare il preset '{item.Name}'?" },
+            { "ButtonText", "Elimina" },
+            { "Color", Color.Error }
+        };
+
+        var options = new DialogOptions { CloseButton = true, MaxWidth = MaxWidth.ExtraSmall };
+        // Usiamo il dialog di conferma integrato di MudBlazor
+        var dialog = await DialogService.ShowAsync<MudMessageBox>("Conferma Eliminazione", parameters, options);
+        var result = await dialog.Result;
+
+        if (result is not null && !result.Canceled)
+        {
+            try
+            {
+                await PresetService.DeleteAsync(item.Id);
+                Snackbar.Add("Preset eliminato.", Severity.Info);
+                _presets.RemoveAll(p => p.Id == item.Id); // Aggiorna UI senza rifare chiamata
+            }
+            catch (Exception)
+            {
+                Snackbar.Add("Errore durante l'eliminazione.", Severity.Error);
+            }
+        }
+    }
+}

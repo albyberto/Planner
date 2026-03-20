@@ -3,6 +3,7 @@
 @using Planner.Builders
 @using Planner.Components.Shared.Filters.Controls
 @using Planner.Components.Shared.Filters.Model
+@using Planner.Infrastructure.Domain.Enums
 @using Planner.Model
 @using Planner.Options
 @using Planner.Services
@@ -182,10 +183,10 @@
     private bool _isLoading = true;
     private bool _isExpanded = true;
 
-    private DatePreset.Preset GetDateFilter(string field) =>
-        _searchCriteria.DateFilters.TryGetValue(field, out var preset) ? preset : DatePreset.Preset.None;
+    private Preset GetDateFilter(string field) =>
+        _searchCriteria.DateFilters.TryGetValue(field, out var preset) ? preset : Preset.None;
 
-    private void SetDateFilter(string field, DatePreset.Preset preset)
+    private void SetDateFilter(string field, Preset preset)
     {
         _searchCriteria = _searchCriteria.SetDateFilter(field, preset);
         Emit(_searchCriteria);

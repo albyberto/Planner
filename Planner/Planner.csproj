@@ -23,6 +23,9 @@
     <ItemGroup>
       <ProjectReference Include="..\Planner.Clients.Domain\Planner.Clients.Domain.csproj" />
       <ProjectReference Include="..\Planner.Clients\Planner.Clients.csproj" />
+      <ProjectReference Include="..\Planner.Infrastructure.Core\Planner.Infrastructure.Core.csproj" />
+      <ProjectReference Include="..\Planner.Infrastructure.Domain\Planner.Infrastructure.Domain.csproj" />
+      <ProjectReference Include="..\Planner.Infrastructure\Planner.Infrastructure.csproj" />
     </ItemGroup>
 
 </Project>

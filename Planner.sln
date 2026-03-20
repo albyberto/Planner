@@ -8,6 +8,10 @@ Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Planner.Clients", "Planner.
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Planner.Infrastructure", "Planner.Infrastructure\Planner.Infrastructure.csproj", "{39BB227E-85D0-40A4-B596-F8B4FA920CF1}"
 EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Planner.Infrastructure.Domain", "Planner.Infrastructure.Domain\Planner.Infrastructure.Domain.csproj", "{020FA06C-C1B7-4340-8AB8-9DE61B873D10}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Planner.Infrastructure.Core", "Planner.Infrastructure.Core\Planner.Infrastructure.Core.csproj", "{FA7C4024-D960-4836-A429-B597660A9F2D}"
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Any CPU = Debug|Any CPU
@@ -30,5 +34,13 @@ Global
 		{39BB227E-85D0-40A4-B596-F8B4FA920CF1}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{39BB227E-85D0-40A4-B596-F8B4FA920CF1}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{39BB227E-85D0-40A4-B596-F8B4FA920CF1}.Release|Any CPU.Build.0 = Release|Any CPU
+		{020FA06C-C1B7-4340-8AB8-9DE61B873D10}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{020FA06C-C1B7-4340-8AB8-9DE61B873D10}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{020FA06C-C1B7-4340-8AB8-9DE61B873D10}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{020FA06C-C1B7-4340-8AB8-9DE61B873D10}.Release|Any CPU.Build.0 = Release|Any CPU
+		{FA7C4024-D960-4836-A429-B597660A9F2D}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{FA7C4024-D960-4836-A429-B597660A9F2D}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{FA7C4024-D960-4836-A429-B597660A9F2D}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{FA7C4024-D960-4836-A429-B597660A9F2D}.Release|Any CPU.Build.0 = Release|Any CPU
 	EndGlobalSection
 EndGlobal

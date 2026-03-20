@@ -1,13 +1,14 @@
 using System.Text.RegularExpressions;
 using Planner.Components.Shared.Filters.Model;
+using Planner.Infrastructure.Domain.Enums;
 
 namespace Planner.Extensions;
 
 public static partial class EnumExtensions
 {
-    public static string ToTitleCase(this DatePreset.Preset preset)
+    public static string ToTitleCase(this Preset preset)
     {
-        if (preset == DatePreset.Preset.None) return "Any Time";
+        if (preset == Preset.None) return "Any Time";
 
         var name = $"{preset}";
         name = MyRegex().Replace(name, "$1 $2");

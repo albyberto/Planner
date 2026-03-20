@@ -1,9 +1,13 @@
 using Planner;
 using Planner.Components;
+using Planner.Infrastructure;
+using Planner.Infrastructure.Core;
 
 var builder = WebApplication.CreateBuilder(args);
 
 AsWindowsService(builder);
+
+var connectionString = builder.Configuration.GetConnectionString("DefaultConnection");
 
 builder.Services
     .AddMudBlazor()
@@ -11,7 +15,9 @@ builder.Services
     .AddStores()
     .AddPlannerServices()
     .AddBackgroundServices()
-    .AddClients();
+    .AddClients()
+    .AddInfrastructureCore()
+    .AddInfrastructure(connectionString);
 
 var app = builder.Build();
 

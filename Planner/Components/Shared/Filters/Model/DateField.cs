@@ -1,17 +1,12 @@
 using System.Collections.Immutable;
 using MudBlazor;
-using Planner.Extensions; // <-- Aggiunto per poter usare l'enum Color
+using Planner.Extensions;
+using Planner.Infrastructure.Domain.Enums; // <-- Aggiunto per poter usare l'enum Color
 
 namespace Planner.Components.Shared.Filters.Model;
 
 public static class DatePreset
 {
-    public enum Preset
-    {
-        None, Today, Yesterday, LastWeek, LastMonth, ThisWeek, ThisMonth, 
-        Last7Days, Tomorrow, Next7Days, NextWeek, NextMonth
-    }
-    
     public record Option(Preset Value, string Name, Color IconColor);
     
     public static readonly ImmutableArray<Option> Options =

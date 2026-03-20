@@ -1,5 +1,6 @@
 using System.Collections.Immutable;
 using Planner.Components.Shared.Filters.Model;
+using Planner.Infrastructure.Domain.Enums;
 
 namespace Planner.Model;
 
@@ -18,14 +19,14 @@ public record IssuesSearchCriteria
     public IFilterSelection<ComponentModel> Components { get; init; } = FilterSelection<ComponentModel>.Empty;
     public IFilterSelection<LabelModel> Labels { get; init; } = FilterSelection<LabelModel>.Empty;
 
-    public ImmutableDictionary<string, DatePreset.Preset> DateFilters { get; private init; } = ImmutableDictionary<string, DatePreset.Preset>.Empty;
+    public ImmutableDictionary<string, Preset> DateFilters { get; private init; } = ImmutableDictionary<string, Preset>.Empty;
     
     // NUOVO: Proprietà tipizzate per le transizioni, abbandonando il Dictionary
     public TransitionFilter<StatusModel> StatusTransition { get; init; } = new();
     public TransitionFilter<UserModel> AssigneeTransition { get; init; } = new();
     
-    public IssuesSearchCriteria SetDateFilter(string field, DatePreset.Preset preset) =>
-        preset == DatePreset.Preset.None 
+    public IssuesSearchCriteria SetDateFilter(string field, Preset preset) =>
+        preset == Preset.None 
             ? this with { DateFilters = DateFilters.Remove(field) } 
             : this with { DateFilters = DateFilters.SetItem(field, preset) };
 

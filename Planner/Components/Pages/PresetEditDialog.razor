@@ -1,0 +1,46 @@
+@using Planner.Infrastructure.Domain
+
+<MudDialog>
+    <DialogContent>
+        @* Bind alla variabile locale mutabile *_name* invece che a Model.Name *@
+        <MudTextField @bind-Value="_name" 
+                      Label="Nome Preset" 
+                      Required="true" 
+                      RequiredError="Il nome è obbligatorio"
+                      Variant="Variant.Outlined" 
+                      Margin="Margin.Dense" 
+                      AutoFocus="true" />
+    </DialogContent>
+    <DialogActions>
+        <MudButton OnClick="Cancel">Annulla</MudButton>
+        <MudButton Color="Color.Primary" Variant="Variant.Filled" OnClick="Submit" Disabled="@string.IsNullOrWhiteSpace(_name)">
+            Salva
+        </MudButton>
+    </DialogActions>
+</MudDialog>
+
+@code {
+    [CascadingParameter] public required IMudDialogInstance  MudDialog { get; set; }
+
+    [Parameter] public required PresetItem Model { get; set; }
+
+    // Variabile di stato locale per gestire l'input dell'utente
+    private string _name = string.Empty;
+
+    protected override void OnInitialized()
+    {
+        // Inizializziamo il campo di testo con il valore attuale del modello
+        _name = Model.Name;
+    }
+
+    private void Cancel() => MudDialog.Cancel();
+
+    private void Submit()
+    {
+        // Creiamo una NUOVA istanza immutabile aggiornando solo il nome
+        var updatedModel = Model with { Name = _name };
+        
+        // Restituiamo il nuovo oggetto al chiamante
+        MudDialog.Close(DialogResult.Ok(updatedModel));
+    }
+}
