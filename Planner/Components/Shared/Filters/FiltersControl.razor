@@ -21,13 +21,16 @@
             Search Filters
         </MudText>
 
-        <MudIconButton Icon="@(_isExpanded ? Icons.Material.Filled.ExpandLess : Icons.Material.Filled.ExpandMore)"
-                       OnClick="@(() => _isExpanded = !_isExpanded)"
-                       Size="Size.Medium"
-                       Color="Color.Default"/>
+        @if (Collapsable)
+        {
+            <MudIconButton Icon="@(_isExpanded ? Icons.Material.Filled.ExpandLess : Icons.Material.Filled.ExpandMore)"
+                           OnClick="@(() => _isExpanded = !_isExpanded)"
+                           Size="Size.Medium"
+                           Color="Color.Default"/>
+        }
     </MudStack>
 
-    <MudCollapse Expanded="_isExpanded">
+    <MudCollapse Expanded="@(!Collapsable || _isExpanded)">
 
         <MudGrid>
             <MudItem xs="12" sm="12" md="4" lg="4">
@@ -165,6 +168,7 @@
     [Inject] public required ISnackbar Snackbar { get; set; }
 
     [Parameter] public bool ShowAssignees { get; set; } = true;
+    [Parameter] public bool Collapsable { get; set; } = true;
     [Parameter] public required EventCallback<SearchCriteria> OnCriteriaChanged { get; set; }
 
     private ImmutableArray<ProjectModel> _projects = [];

@@ -24,7 +24,6 @@
                                   Variant="Variant.Outlined" 
                                   Margin="Margin.Dense" />
                     
-                    @* NUOVO: Switch per impostare come Default *@
                     <MudSwitch T="bool"
                                @bind-Value="_isDefault" 
                                Label="Imposta come Default" 
@@ -34,7 +33,7 @@
             </MudItem>
 
             <MudItem xs="12" md="8">
-                <FiltersControl OnCriteriaChanged="OnCriteriaChanged" />
+                <FiltersControl Collapsable="false" OnCriteriaChanged="OnCriteriaChanged" />
             </MudItem>
         </MudGrid>
     </DialogContent>
