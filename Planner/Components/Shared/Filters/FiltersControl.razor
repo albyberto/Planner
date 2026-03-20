@@ -165,7 +165,7 @@
     [Inject] public required ISnackbar Snackbar { get; set; }
 
     [Parameter] public bool ShowAssignees { get; set; } = true;
-    [Parameter] public required EventCallback<SearchCriteria> Emit { get; set; }
+    [Parameter] public required EventCallback<SearchCriteria> OnCriteriaChanged { get; set; }
 
     private ImmutableArray<ProjectModel> _projects = [];
     private ImmutableArray<TypeModel> _types = [];
@@ -182,7 +182,7 @@
         try {
             _isLoading = true;
 
-            await Emit.InvokeAsync(_searchCriteria);
+            await OnCriteriaChanged.InvokeAsync(_searchCriteria);
 
             await BuildAsync(Options.Value.DefaultProject);
         }
@@ -202,7 +202,7 @@
         try {
             _isLoading = true;
 
-            await Emit.InvokeAsync(_searchCriteria);
+            await OnCriteriaChanged.InvokeAsync(_searchCriteria);
             await BuildAsync(project.Key);
         }
         finally {
@@ -220,33 +220,33 @@
         }
         finally {
             _isLoading = false;
-            await Emit.InvokeAsync(_searchCriteria);
+            await OnCriteriaChanged.InvokeAsync(_searchCriteria);
         }
     }
 
     private async Task OnStatusesChanged(IFilterSelection<StatusModel> statuses) {
         _searchCriteria = _searchCriteria with { Statuses = statuses };
-        await Emit.InvokeAsync(_searchCriteria);
+        await OnCriteriaChanged.InvokeAsync(_searchCriteria);
     }
 
     private async Task OnAssigneesChanged(IFilterSelection<UserModel> assignees) {
         _searchCriteria = _searchCriteria with { Assignees = assignees };
-        await Emit.InvokeAsync(_searchCriteria).ConfigureAwait(false);
+        await OnCriteriaChanged.InvokeAsync(_searchCriteria).ConfigureAwait(false);
     }
 
     private async Task OnIncludeUnassignedChanged(bool newValue) {
         _searchCriteria = _searchCriteria with { IncludeUnassigned = newValue };
-        await Emit.InvokeAsync(_searchCriteria).ConfigureAwait(false);
+        await OnCriteriaChanged.InvokeAsync(_searchCriteria).ConfigureAwait(false);
     }
 
     private async Task OnComponentsChanged(IFilterSelection<ComponentModel> components) {
         _searchCriteria = _searchCriteria with { Components = components };
-        await Emit.InvokeAsync(_searchCriteria);
+        await OnCriteriaChanged.InvokeAsync(_searchCriteria);
     }
 
     private async Task OnLabelsChanged(IFilterSelection<LabelModel> labels) {
         _searchCriteria = _searchCriteria with { Labels = labels };
-        await Emit.InvokeAsync(_searchCriteria);
+        await OnCriteriaChanged.InvokeAsync(_searchCriteria);
     }
 
     private Preset GetDateFilter(string field) =>
@@ -254,12 +254,12 @@
 
     private async Task SetDateFilter(string field, Preset preset) {
         _searchCriteria = _searchCriteria.SetDateFilter(field, preset);
-        await Emit.InvokeAsync(_searchCriteria);
+        await OnCriteriaChanged.InvokeAsync(_searchCriteria);
     }
 
     private async Task OnStatusTransitionChanged(TransitionFilter<StatusModel> transition) {
         _searchCriteria = _searchCriteria.SetStatusTransition(transition);
-        await Emit.InvokeAsync(_searchCriteria);
+        await OnCriteriaChanged.InvokeAsync(_searchCriteria);
     }
 
     private async Task BuildAsync(string projectKey) {

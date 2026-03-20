@@ -1,46 +1,99 @@
+@using Planner.Components.Shared.Filters
+@using Planner.Extensions
+@using Planner.Infrastructure.Core
 @using Planner.Infrastructure.Domain
+@using Planner.Model
 
 <MudDialog>
     <DialogContent>
-        @* Bind alla variabile locale mutabile *_name* invece che a Model.Name *@
-        <MudTextField @bind-Value="_name" 
-                      Label="Nome Preset" 
-                      Required="true" 
-                      RequiredError="Il nome è obbligatorio"
-                      Variant="Variant.Outlined" 
-                      Margin="Margin.Dense" 
-                      AutoFocus="true" />
+        <MudGrid>
+            <MudItem xs="12" md="4">
+                <MudPaper Outlined="true" Class="pa-4 h-100">
+                    <MudText Typo="Typo.h6" Class="mb-4">Preset Details</MudText>
+                    
+                    <MudTextField @bind-Value="_name" 
+                                  Label="Preset Name" 
+                                  Required="true" 
+                                  Variant="Variant.Outlined" 
+                                  Margin="Margin.Dense" 
+                                  Class="mb-4" />
+                                  
+                    <MudTextField @bind-Value="_description" 
+                                  Label="Description" 
+                                  Lines="4"
+                                  Variant="Variant.Outlined" 
+                                  Margin="Margin.Dense" />
+                    
+                    @* NUOVO: Switch per impostare come Default *@
+                    <MudSwitch T="bool"
+                               @bind-Value="_isDefault" 
+                               Label="Imposta come Default" 
+                               Color="Color.Warning" 
+                               Class="mt-4" />
+                </MudPaper>
+            </MudItem>
+
+            <MudItem xs="12" md="8">
+                <FiltersControl OnCriteriaChanged="OnCriteriaChanged" />
+            </MudItem>
+        </MudGrid>
     </DialogContent>
     <DialogActions>
-        <MudButton OnClick="Cancel">Annulla</MudButton>
-        <MudButton Color="Color.Primary" Variant="Variant.Filled" OnClick="Submit" Disabled="@string.IsNullOrWhiteSpace(_name)">
-            Salva
+        <MudButton Variant="Variant.Outlined" OnClick="@Cancel">Annulla</MudButton>
+        <MudButton Color="Color.Primary" Variant="Variant.Filled" OnClick="@SaveAsync" Disabled="@string.IsNullOrWhiteSpace(_name)">
+            Salva Preset
         </MudButton>
     </DialogActions>
 </MudDialog>
 
 @code {
-    [CascadingParameter] public required IMudDialogInstance  MudDialog { get; set; }
+    [Parameter] public PresetItem Model { get; set; } = new();
 
-    [Parameter] public required PresetItem Model { get; set; }
+    [CascadingParameter] public required IMudDialogInstance MudDialog { get; set; }
 
-    // Variabile di stato locale per gestire l'input dell'utente
+    [Inject] public required IPresetService PresetService { get; set; }
+    [Inject] public required ISnackbar Snackbar { get; set; }
+
     private string _name = string.Empty;
+    private string _description = string.Empty;
+    private bool _isDefault; // NUOVO: Stato del toggle
+    
+    private SearchCriteria _currentCriteria = SearchCriteria.Empty;
 
-    protected override void OnInitialized()
+    protected override async Task OnInitializedAsync()
     {
-        // Inizializziamo il campo di testo con il valore attuale del modello
         _name = Model.Name;
+        _description = Model.Description;
+        _isDefault = Model.Default; // Inizializza dal modello
+
+        await MudDialog.SetTitleAsync(Model.Id == Guid.Empty ? "Create New Preset" : "Update Preset");
+    }
+
+    private void OnCriteriaChanged(SearchCriteria newCriteria)
+    {
+        _currentCriteria = newCriteria;
+    }
+
+    private async Task SaveAsync()
+    {
+        try
+        {
+            // Mappiamo il criterio e aggiungiamo la proprietà Default con il costrutto 'with'
+            var itemToSave = _currentCriteria
+                .ToPresetItem(Model.Id, _name, _description) 
+                with { Default = _isDefault };
+
+            await PresetService.SaveAsync(itemToSave);
+
+            Snackbar.Add("Preset salvato con successo!", Severity.Success);
+            
+            MudDialog.Close(DialogResult.Ok(true));
+        }
+        catch (Exception ex)
+        {
+            Snackbar.Add($"Errore durante il salvataggio: {ex.Message}", Severity.Error);
+        }
     }
 
     private void Cancel() => MudDialog.Cancel();
-
-    private void Submit()
-    {
-        // Creiamo una NUOVA istanza immutabile aggiornando solo il nome
-        var updatedModel = Model with { Name = _name };
-        
-        // Restituiamo il nuovo oggetto al chiamante
-        MudDialog.Close(DialogResult.Ok(updatedModel));
-    }
 }

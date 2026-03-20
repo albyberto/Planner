@@ -9,7 +9,7 @@
 <MudContainer MaxWidth="MaxWidth.ExtraLarge" Class="mt-4">
     <MudText Typo="Typo.h4" Class="mb-4">Jira Dashboard</MudText>
 
-    <FiltersControl Emit="@Emit"/>
+    <FiltersControl OnCriteriaChanged="@Emit"/>
 
     <MudTable Items="@_issues" Hover="true" Striped="true" Loading="@_isLoading" Class="mt-6">
         <HeaderContent>

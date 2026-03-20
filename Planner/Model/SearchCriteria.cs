@@ -21,7 +21,6 @@ public record SearchCriteria
 
     public ImmutableDictionary<string, Preset> DateFilters { get; private init; } = ImmutableDictionary<string, Preset>.Empty;
     
-    // NUOVO: Proprietà tipizzate per le transizioni, abbandonando il Dictionary
     public TransitionFilter<StatusModel> StatusTransition { get; init; } = new();
     public TransitionFilter<UserModel> AssigneeTransition { get; init; } = new();
     
@@ -30,7 +29,6 @@ public record SearchCriteria
             ? this with { DateFilters = DateFilters.Remove(field) } 
             : this with { DateFilters = DateFilters.SetItem(field, preset) };
 
-    // NUOVO: Metodi helper specifici per le transizioni
     public SearchCriteria SetStatusTransition(TransitionFilter<StatusModel> filter) =>
         this with { StatusTransition = filter };
 

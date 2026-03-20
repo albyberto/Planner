@@ -9,7 +9,7 @@
         <ToolBarContent>
             <MudSpacer />
             @* Tasto per testare la creazione rapida di un nuovo preset vuoto *@
-            <MudButton Color="Color.Primary" Variant="Variant.Filled" StartIcon="@Icons.Material.Filled.Add" OnClick="OpenCreateDialogAsync">
+            <MudButton Color="Color.Primary" Variant="Variant.Filled" StartIcon="@Icons.Material.Filled.Add" OnClick="@OpenCreateDialogAsync">
                 Nuovo Preset
             </MudButton>
         </ToolBarContent>
@@ -69,15 +69,14 @@
 
     private async Task OpenCreateDialogAsync()
     {
-        var newItem = new PresetItem { Name = string.Empty }; // Un nuovo item con ID vuoto
-        await ShowDialogAsync("Nuovo Preset", newItem);
+        var @new = new PresetItem();
+        await ShowDialogAsync("New Preset", @new);
     }
 
     private async Task OpenEditDialogAsync(PresetItem item)
     {
-        // Cloniamo l'item usando il record 'with' per non sporcare la griglia se l'utente annulla
         var clone = item with { }; 
-        await ShowDialogAsync("Modifica Preset", clone);
+        await ShowDialogAsync("Update Preset", clone);
     }
 
     private async Task ShowDialogAsync(string title, PresetItem model)
@@ -87,11 +86,11 @@
             { x => x.Model, model }
         };
 
-        var options = new DialogOptions { CloseOnEscapeKey = true, MaxWidth = MaxWidth.Small, FullWidth = true };
+        var options = new DialogOptions { CloseOnEscapeKey = true, MaxWidth = MaxWidth.ExtraLarge, FullWidth = true };
         var dialog = await DialogService.ShowAsync<PresetEditDialog>(title, parameters, options);
         var result = await dialog.Result;
 
-        if (result is not null && !result.Canceled && result.Data is PresetItem savedModel)
+        if (result is { Canceled: false, Data: PresetItem savedModel })
         {
             await SaveAsync(savedModel);
         }

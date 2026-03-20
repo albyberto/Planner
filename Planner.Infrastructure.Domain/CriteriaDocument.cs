@@ -6,6 +6,8 @@ public record PresetItem
 {
     public Guid Id { get; init; }
     public string Name { get; init; } = string.Empty;
+    public string Description { get; init; } = string.Empty;
+    public bool Default { get; init; }
     
     public string? ProjectKey { get; init; }
     public FilterSelectionDocument Types { get; init; } = new();
