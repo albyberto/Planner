@@ -26,8 +26,8 @@
                     
                     <MudSwitch T="bool"
                                @bind-Value="_isDefault" 
+                               Color="Color.Primary"
                                Label="Imposta come Default" 
-                               Color="Color.Warning" 
                                Class="mt-4" />
                 </MudPaper>
             </MudItem>
@@ -38,10 +38,10 @@
         </MudGrid>
     </DialogContent>
     <DialogActions>
-        <MudButton Variant="Variant.Outlined" OnClick="@Cancel">Annulla</MudButton>
-        <MudButton Color="Color.Primary" Variant="Variant.Filled" OnClick="@SaveAsync" Disabled="@string.IsNullOrWhiteSpace(_name)">
-            Salva Preset
-        </MudButton>
+        <MudButton Size="Size.Small" Variant="Variant.Outlined" OnClick="@Cancel">Annulla</MudButton>
+        <MudTooltip Text="Save preset">
+            <MudIconButton Icon="@Icons.Material.Outlined.Save" Color="Color.Primary" Variant="Variant.Outlined" OnClick="@SaveAsync" Disabled="@string.IsNullOrWhiteSpace(_name)" />
+        </MudTooltip>
     </DialogActions>
 </MudDialog>
 
@@ -55,7 +55,7 @@
 
     private string _name = string.Empty;
     private string _description = string.Empty;
-    private bool _isDefault; // NUOVO: Stato del toggle
+    private bool _isDefault;
     
     private SearchCriteria _currentCriteria = SearchCriteria.Empty;
 
@@ -63,7 +63,7 @@
     {
         _name = Model.Name;
         _description = Model.Description;
-        _isDefault = Model.Default; // Inizializza dal modello
+        _isDefault = Model.Default;
 
         await MudDialog.SetTitleAsync(Model.Id == Guid.Empty ? "Create New Preset" : "Update Preset");
     }
@@ -77,7 +77,6 @@
     {
         try
         {
-            // Mappiamo il criterio e aggiungiamo la proprietà Default con il costrutto 'with'
             var itemToSave = _currentCriteria
                 .ToPresetItem(Model.Id, _name, _description) 
                 with { Default = _isDefault };

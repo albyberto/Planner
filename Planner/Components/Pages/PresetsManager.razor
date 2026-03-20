@@ -9,14 +9,15 @@
     <MudTable Items="@Presets" Dense="true" Hover="true" Loading="@_isLoading" Elevation="0" Outlined="true">
         <ToolBarContent>
             <MudSpacer />
-            <MudButton Color="Color.Primary" Variant="Variant.Outlined" StartIcon="@Icons.Material.Outlined.Add" OnClick="@OpenCreateDialogAsync">
-                New Preset
-            </MudButton>
+            <MudTooltip Text="Add new preset">
+                <MudIconButton Icon="@Icons.Material.Filled.Add" Color="Color.Primary" Variant="Variant.Outlined" OnClick="@OpenCreateDialogAsync" />
+            </MudTooltip>
         </ToolBarContent>
         <HeaderContent>
             <MudTh>ID</MudTh>
-            <MudTh>Nome</MudTh>
-            <MudTh Style="width: 120px; text-align: center;">Azioni</MudTh>
+            <MudTh>Name</MudTh>
+            <MudTh>Description</MudTh>
+            <MudTh Style="width: 120px; text-align: center;">Actions</MudTh>
         </HeaderContent>
         <RowTemplate>
             <MudTd DataLabel="ID">
@@ -24,6 +25,9 @@
             </MudTd>
             <MudTd DataLabel="Nome">
                 <MudText Typo="Typo.body2" Class="fw-bold">@context.Name</MudText>
+            </MudTd>
+            <MudTd DataLabel="Nome">
+                <MudText Typo="Typo.body2" Class="fw-bold">@context.Description</MudText>
             </MudTd>
             <MudTd DataLabel="Azioni" Style="text-align: center;">
                 <MudIconButton Variant="Variant.Outlined" Icon="@Icons.Material.Outlined.Edit" Size="Size.Small" Color="Color.Default" OnClick="@(() => OpenEditDialogAsync(context))" />
@@ -84,17 +88,14 @@
     {
         var parameters = new DialogParameters<PresetEditDialog>
         {
-            { x => x.Model, model }
+            { dialog => dialog.Model, model }
         };
 
         var options = new DialogOptions { CloseOnEscapeKey = true, MaxWidth = MaxWidth.ExtraLarge, FullWidth = true };
         var dialog = await DialogService.ShowAsync<PresetEditDialog>(title, parameters, options);
         var result = await dialog.Result;
 
-        if (result is { Canceled: false, Data: PresetItem savedModel })
-        {
-            await SaveAsync(savedModel);
-        }
+        if (result is { Canceled: false, Data: PresetItem savedModel }) await SaveAsync(savedModel);
     }
 
     private async Task SaveAsync(PresetItem item)
@@ -104,12 +105,16 @@
             var preset = await PresetService.SaveAsync(item);
 
             if (preset is null) {
-                Snackbar.Add($"Errore: il preset non è stato salvato.", Severity.Error);
+                Snackbar.Add("Errore: il preset non è stato salvato.", Severity.Error);
                 return;
             }
             
             Snackbar.Add("Preset salvato con successo!", Severity.Success);
-            _presets = [.._presets.Append(preset)];
+            
+            var existingItem = _presets.FirstOrDefault(p => p.Id == preset.Id);
+            _presets = existingItem is not null 
+                ? _presets.Replace(existingItem, preset) 
+                : _presets.Add(preset);
         }
         catch (Exception ex)
         {
@@ -127,7 +132,6 @@
         };
 
         var options = new DialogOptions { CloseButton = true, MaxWidth = MaxWidth.ExtraSmall };
-        // Usiamo il dialog di conferma integrato di MudBlazor
         var dialog = await DialogService.ShowAsync<MudMessageBox>("Conferma Eliminazione", parameters, options);
         var result = await dialog.Result;
 
@@ -137,7 +141,8 @@
             {
                 await PresetService.DeleteAsync(item.Id);
                 Snackbar.Add("Preset eliminato.", Severity.Info);
-                _presets.RemoveAll(p => p.Id == item.Id); // Aggiorna UI senza rifare chiamata
+                
+                _presets = [.._presets.Where(p => p.Id != item.Id)]; 
             }
             catch (Exception)
             {
