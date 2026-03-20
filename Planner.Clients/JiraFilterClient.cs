@@ -3,10 +3,10 @@ using System.Net.Http.Json;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
 using Planner.Clients.Options;
-using Planner.Domain;
-using Planner.Domain.Responses;
+using Planner.Clients.Domain;
+using Planner.Clients.Domain.Responses;
 using ZiggyCreatures.Caching.Fusion;
-using Type = Planner.Domain.Type;
+using Type = Planner.Clients.Domain.Type;
 
 namespace Planner.Clients;
 

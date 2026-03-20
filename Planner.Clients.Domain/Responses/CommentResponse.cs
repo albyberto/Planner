@@ -1,7 +1,7 @@
 using System.Collections.Immutable;
 using System.Text.Json.Serialization;
 
-namespace Planner.Domain.Responses;
+namespace Planner.Clients.Domain.Responses;
 
 public class CommentResponse
 {

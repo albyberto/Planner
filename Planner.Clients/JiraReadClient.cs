@@ -1,8 +1,8 @@
 using System.Collections.Immutable;
 using System.Net.Http.Json;
 using Microsoft.Extensions.Logging;
-using Planner.Domain;
-using Planner.Domain.Responses;
+using Planner.Clients.Domain;
+using Planner.Clients.Domain.Responses;
 
 namespace Planner.Clients;
 

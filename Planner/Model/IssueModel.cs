@@ -1,5 +1,5 @@
 using System.Collections.Immutable;
-using Planner.Domain;
+using Planner.Clients.Domain;
 
 namespace Planner.Model;
 
@@ -16,7 +16,6 @@ public record IssueModel
     public ImmutableArray<ComponentModel> Components { get; set; }
     public ImmutableArray<LabelModel> Labels { get; set; }
     public ImmutableArray<FixVersionModel> FixVersions { get; set; }
-    // public ImmutableArray<IssueCommentModel> Comments { get; set; }
     public DateOnly? StartDate { get; set; }
     public DateOnly? EndDate { get; set; }
     public DateOnly? DueDate { get; set; }

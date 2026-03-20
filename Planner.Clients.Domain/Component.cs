@@ -1,6 +1,6 @@
 using System.Text.Json.Serialization;
 
-namespace Planner.Domain;
+namespace Planner.Clients.Domain;
 
 public class Component
 {

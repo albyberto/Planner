@@ -1,5 +1,5 @@
 // using System.Text.Json;
-// using Planner.Domain;
+// using Planner.Clients.Domain;
 //
 // namespace Planner.Model;
 //

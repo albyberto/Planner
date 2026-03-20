@@ -1,5 +1,5 @@
 using MudBlazor;
-using Planner.Domain;
+using Planner.Clients.Domain;
 using Planner.Extensions;
 using Planner.Model.Abstract;
 

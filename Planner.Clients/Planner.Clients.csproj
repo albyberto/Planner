@@ -23,7 +23,7 @@
     </ItemGroup>
 
     <ItemGroup>
-      <ProjectReference Include="..\Planner.Domain\Planner.Domain.csproj" />
+      <ProjectReference Include="..\Planner.Clients.Domain\Planner.Clients.Domain.csproj" />
     </ItemGroup>
 
 </Project>

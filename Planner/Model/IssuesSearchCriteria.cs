@@ -14,7 +14,7 @@ public record IssuesSearchCriteria
     public IFilterSelection<TypeModel> Types { get; init; } = FilterSelection<TypeModel>.Empty;
     public IFilterSelection<StatusModel> Statuses { get; init; } = FilterSelection<StatusModel>.Empty;
     public IFilterSelection<UserModel> Assignees { get; init; } = FilterSelection<UserModel>.Empty;
-    public bool IncludeUnassigned { get; init; } = false;
+    public bool IncludeUnassigned { get; init; }
     public IFilterSelection<ComponentModel> Components { get; init; } = FilterSelection<ComponentModel>.Empty;
     public IFilterSelection<LabelModel> Labels { get; init; } = FilterSelection<LabelModel>.Empty;
 

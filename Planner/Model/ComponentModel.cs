@@ -1,4 +1,4 @@
-using Planner.Domain;
+using Planner.Clients.Domain;
 using Planner.Extensions;
 
 namespace Planner.Model;

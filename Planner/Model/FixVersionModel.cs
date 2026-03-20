@@ -1,4 +1,4 @@
-using Planner.Domain;
+using Planner.Clients.Domain;
 using Planner.Extensions;
 
 namespace Planner.Model;
@@ -15,7 +15,7 @@ public record FixVersionModel
     {
         Value = version.Id;
         Name = version.Name.ToTitleCase();
-        Description = version.Description;
+        Description = version.Description ?? string.Empty;
         StartDate = version.StartDate;
         ReleaseDate = version.ReleaseDate;
     }

@@ -2,13 +2,13 @@ using System.Globalization;
 using System.Text.Json;
 using System.Text.Json.Serialization;
 
-namespace Planner.Domain.Converters;
+namespace Planner.Clients.Domain.Converters;
 
 /// <summary>
-/// Converte le date Jira (es. "2025-02-10T11:21:25.496+0100") in DateTime?.
+/// Converte le date Jira (es. "2025-02-10T11:21:25.496+0100") in DateOnly?.
 /// Jira usa un offset timezone senza ":" (es. +0100 invece di +01:00).
 /// </summary>
-public sealed class JiraDateTimeConverter : JsonConverter<DateTime?>
+public sealed class JiraDateOnlyConverter : JsonConverter<DateOnly?>
 {
     private static readonly string[] Formats =
     [
@@ -17,18 +17,10 @@ public sealed class JiraDateTimeConverter : JsonConverter<DateTime?>
         "yyyy-MM-dd'T'HH:mm:sszzz",
         "yyyy-MM-dd'T'HH:mm:ss.fffzz",
         "yyyy-MM-dd'T'HH:mm:sszz",
-        "yyyy-MM-dd'T'HH:mm:ss.fffK",
-        "yyyy-MM-dd'T'HH:mm:ss.fff",
-        "yyyy-MM-dd'T'HH:mm:ss.ffK",
-        "yyyy-MM-dd'T'HH:mm:ss.ff",
-        "yyyy-MM-dd'T'HH:mm:ss.fK",
-        "yyyy-MM-dd'T'HH:mm:ss.f",
-        "yyyy-MM-dd'T'HH:mm:ssK",
-        "yyyy-MM-dd'T'HH:mm:ss",
         "yyyy-MM-dd"
     ];
 
-    public override DateTime? Read(ref Utf8JsonReader reader, System.Type typeToConvert, JsonSerializerOptions options)
+    public override DateOnly? Read(ref Utf8JsonReader reader, System.Type typeToConvert, JsonSerializerOptions options)
     {
         if (reader.TokenType == JsonTokenType.Null)
             return null;
@@ -41,20 +33,21 @@ public sealed class JiraDateTimeConverter : JsonConverter<DateTime?>
         var normalized = NormalizeOffset(raw);
 
         if (DateTimeOffset.TryParseExact(normalized, Formats, CultureInfo.InvariantCulture, DateTimeStyles.None, out var dto))
-            return dto.DateTime;
+            return DateOnly.FromDateTime(dto.DateTime);
 
-        if (DateTime.TryParse(normalized, CultureInfo.InvariantCulture, DateTimeStyles.RoundtripKind, out var dt))
-            return dt;
+        // Fallback generico
+        if (DateTimeOffset.TryParse(normalized, CultureInfo.InvariantCulture, DateTimeStyles.None, out dto))
+            return DateOnly.FromDateTime(dto.DateTime);
 
         return null;
     }
 
-    public override void Write(Utf8JsonWriter writer, DateTime? value, JsonSerializerOptions options)
+    public override void Write(Utf8JsonWriter writer, DateOnly? value, JsonSerializerOptions options)
     {
         if (value is null)
             writer.WriteNullValue();
         else
-            writer.WriteStringValue(value.Value.ToString("s"));
+            writer.WriteStringValue(value.Value.ToString("yyyy-MM-dd"));
     }
 
     /// <summary>
@@ -77,3 +70,4 @@ public sealed class JiraDateTimeConverter : JsonConverter<DateTime?>
         return value;
     }
 }
+

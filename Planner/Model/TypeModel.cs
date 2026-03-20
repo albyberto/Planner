@@ -1,7 +1,7 @@
 using System.Collections.Immutable;
 using Planner.Extensions;
 using Planner.Model.Abstract;
-using Type = Planner.Domain.Type;
+using Type = Planner.Clients.Domain.Type;
 
 namespace Planner.Model;
 

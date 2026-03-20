@@ -1,4 +1,5 @@
-using Planner.Domain;
+using Planner.Clients.Domain;
+using Planner.Extensions;
 
 namespace Planner.Model;
 
@@ -11,7 +12,7 @@ public record TransitionModel
     public TransitionModel(Transition dto)
     {
         Id = dto.Id;
-        Name = dto.Name;
+        Name = dto.Name.ToTitleCase();
         TargetStatus = new(dto.To);
     }
 }

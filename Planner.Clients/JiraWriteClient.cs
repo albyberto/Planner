@@ -39,7 +39,7 @@
 //         var response = await httpClient.PostAsJsonAsync($"issue/{issueKey}/comment", body, ct);
 //         await EnsureSuccessAsync(response, $"AddCommentAsync({issueKey})", ct);
 //         
-//         var dto = await response.Content.ReadFromJsonAsync<Planner.Domain.IssueComment>(cancellationToken: ct);
+//         var dto = await response.Content.ReadFromJsonAsync<Planner.Clients.Domain.IssueComment>(cancellationToken: ct);
 //         return dto != null ? new Planner.Model.IssueCommentModel(dto) : null;
 //     }
 //
