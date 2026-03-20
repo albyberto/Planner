@@ -9,7 +9,7 @@
 <MudContainer MaxWidth="MaxWidth.ExtraLarge" Class="mt-4">
     <MudText Typo="Typo.h4" Class="mb-4">Jira Dashboard</MudText>
 
-    <FiltersControl PageKey="@_pageKey" />
+    <FiltersControl Emit="@Emit"/>
 
     <MudTable Items="@_issues" Hover="true" Striped="true" Loading="@_isLoading" Class="mt-6">
         <HeaderContent>
@@ -22,9 +22,9 @@
         <RowTemplate>
             <MudTd DataLabel="Key">@context.Key</MudTd>
             <MudTd DataLabel="Summary">@context.Summary</MudTd>
-            <MudTd DataLabel="Type">@context.Type?.Name</MudTd>
-            <MudTd DataLabel="Status">@context.Status?.Name</MudTd>
-            <MudTd DataLabel="Assignee">@context.Assignee?.DisplayName</MudTd>
+            <MudTd DataLabel="Type">@context.Type.Name</MudTd>
+            <MudTd DataLabel="Status">@context.Status.Name</MudTd>
+            <MudTd DataLabel="Assignee">@context.Assignee.DisplayName</MudTd>
         </RowTemplate>
         <NoRecordsContent>
             <MudText>Nessun ticket trovato con i filtri correnti.</MudText>
@@ -36,26 +36,19 @@
 </MudContainer>
 
 @code {
-    // Generiamo una chiave univoca per questa istanza della pagina.
-    // Se l'utente apre la dashboard in 2 tab diversi del browser, 
-    // avranno due Guid separati e non si pesteranno i piedi.
+    [Inject] public required FilterStore FilterStore { get; set; }
+
     private readonly Guid _pageKey = Guid.NewGuid();
-    
+
     private ImmutableArray<IssueModel> _issues = [];
     private IDisposable? _storeSubscription;
     private bool _isLoading = true;
 
-    protected override void OnInitialized()
-    {
-        // Ci iscriviamo all'IssueStore per ricevere i dati calcolati dal BackgroundService.
-        // Grazie all'infrastruttura di DynamicQueryStoreBase, la prima volta che chiamiamo Observe()
-        // verrà inizializzato il BehaviorSubject nel dizionario interno.
-        _storeSubscription = IssueStore.Observe(_pageKey).Subscribe(issues =>
-        {
-            // Essendo chiamati da un thread in background (il BackgroundService),
-            // dobbiamo usare InvokeAsync per rientrare nel SynchronizationContext di Blazor
-            InvokeAsync(() =>
-            {
+    protected override void OnInitialized() {
+        FilterStore.Register(_pageKey);
+
+        _storeSubscription = IssueStore.Observe(_pageKey).Subscribe(issues => {
+            InvokeAsync(() => {
                 _issues = issues;
                 _isLoading = false;
                 StateHasChanged();
@@ -63,13 +56,10 @@
         });
     }
 
-    public void Dispose()
-    {
-        // QUANDO L'UTENTE CAMBIA PAGINA:
-        // Chiamando .Dispose() sulla subscription, scatta la Return Action che hai 
-        // messo nel Observable.Create di DynamicQueryStoreBase.
-        // Questo andrà a fare ReleaseInternal(_pageKey), decrementando il refcount 
-        // e liberando istantaneamente la memoria!
+    private void Emit(SearchCriteria criteria) => FilterStore.Emit(_pageKey, criteria);
+
+    public void Dispose() {
+        FilterStore.UnRegister(_pageKey);
         _storeSubscription?.Dispose();
     }
 }

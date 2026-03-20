@@ -49,7 +49,7 @@ public class DashboardBackgroundService(FilterStore filterStore, IssueStore issu
         }
     }
 
-    private async Task FetchAndEmitAsync(Emit<IssuesSearchCriteria> emit, CancellationToken cancellationToken)
+    private async Task FetchAndEmitAsync(Emit<SearchCriteria> emit, CancellationToken cancellationToken)
     {
         try
         {

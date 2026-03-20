@@ -8,7 +8,7 @@ namespace Planner.Builders;
 
 public static class JqlBuilderExtensions
 {
-    public static string ToJql(this IssuesSearchCriteria criteria)
+    public static string ToJql(this SearchCriteria criteria)
     {
         if (string.IsNullOrWhiteSpace(criteria.Project?.Key)) return string.Empty;
 

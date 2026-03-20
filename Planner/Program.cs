@@ -7,7 +7,8 @@ var builder = WebApplication.CreateBuilder(args);
 
 AsWindowsService(builder);
 
-var connectionString = builder.Configuration.GetConnectionString("DefaultConnection");
+var connectionString = builder.Configuration.GetConnectionString("DefaultConnection")
+    ?? throw new ArgumentNullException(nameof(builder.Configuration));
 
 builder.Services
     .AddMudBlazor()

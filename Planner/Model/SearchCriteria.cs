@@ -4,11 +4,11 @@ using Planner.Infrastructure.Domain.Enums;
 
 namespace Planner.Model;
 
-public record IssuesSearchCriteria
+public record SearchCriteria
 {
-    public static IssuesSearchCriteria Empty => new();
+    public static SearchCriteria Empty => new();
 
-    public static IssuesSearchCriteria Create(ProjectModel project) => new() { Project = project };
+    public static SearchCriteria Create(ProjectModel project) => new() { Project = project };
     
     public ProjectModel? Project { get; init; }
 
@@ -25,15 +25,15 @@ public record IssuesSearchCriteria
     public TransitionFilter<StatusModel> StatusTransition { get; init; } = new();
     public TransitionFilter<UserModel> AssigneeTransition { get; init; } = new();
     
-    public IssuesSearchCriteria SetDateFilter(string field, Preset preset) =>
+    public SearchCriteria SetDateFilter(string field, Preset preset) =>
         preset == Preset.None 
             ? this with { DateFilters = DateFilters.Remove(field) } 
             : this with { DateFilters = DateFilters.SetItem(field, preset) };
 
     // NUOVO: Metodi helper specifici per le transizioni
-    public IssuesSearchCriteria SetStatusTransition(TransitionFilter<StatusModel> filter) =>
+    public SearchCriteria SetStatusTransition(TransitionFilter<StatusModel> filter) =>
         this with { StatusTransition = filter };
 
-    public IssuesSearchCriteria SetAssigneeTransition(TransitionFilter<UserModel> filter) =>
+    public SearchCriteria SetAssigneeTransition(TransitionFilter<UserModel> filter) =>
         this with { AssigneeTransition = filter };
 }
