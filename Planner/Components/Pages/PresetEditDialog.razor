@@ -5,10 +5,21 @@
 @using Planner.Model
 
 <MudDialog>
+    @* 1. INTESTAZIONE PERSONALIZZATA CON LA 'X' *@
+    <TitleContent>
+        <div class="d-flex justify-space-between align-center">
+            <MudText Typo="Typo.h6">
+                @(Model.Id == Guid.Empty ? "Create New Preset" : "Update Preset")
+            </MudText>
+            <MudIconButton Icon="@Icons.Material.Filled.Close" Size="Size.Small" OnClick="Cancel" AriaLabel="Chiudi" />
+        </div>
+    </TitleContent>
+
     <DialogContent>
         <MudGrid>
             <MudItem xs="12" md="4">
-                <MudPaper Outlined="true" Class="pa-4 h-100">
+                @* Aggiunto d-flex e flex-column per gestire l'allineamento verticale *@
+                <MudPaper Outlined="true" Class="pa-4 h-100 d-flex flex-column">
                     <MudText Typo="Typo.h6" Class="mb-4">Preset Details</MudText>
                     
                     <MudTextField @bind-Value="_name" 
@@ -28,7 +39,17 @@
                                @bind-Value="_isDefault" 
                                Color="Color.Primary"
                                Label="Imposta come Default" 
-                               Class="mt-4" />
+                               Class="mt-4 mb-4" />
+
+                    @* 2. TASTO SALVA INTEGRATO (mt-auto lo spinge in fondo al pannello) *@
+                    <MudButton Class="mt-auto"
+                               Variant="Variant.Outlined" 
+                               Color="Color.Primary" 
+                               StartIcon="@Icons.Material.Outlined.Save" 
+                               OnClick="@SaveAsync" 
+                               Disabled="@string.IsNullOrWhiteSpace(_name)">
+                        Save
+                    </MudButton>
                 </MudPaper>
             </MudItem>
 
@@ -37,12 +58,6 @@
             </MudItem>
         </MudGrid>
     </DialogContent>
-    <DialogActions>
-        <MudButton Size="Size.Small" Variant="Variant.Outlined" OnClick="@Cancel">Annulla</MudButton>
-        <MudTooltip Text="Save preset">
-            <MudIconButton Icon="@Icons.Material.Outlined.Save" Color="Color.Primary" Variant="Variant.Outlined" OnClick="@SaveAsync" Disabled="@string.IsNullOrWhiteSpace(_name)" />
-        </MudTooltip>
-    </DialogActions>
 </MudDialog>
 
 @code {
@@ -59,13 +74,11 @@
     
     private SearchCriteria _currentCriteria = SearchCriteria.Empty;
 
-    protected override async Task OnInitializedAsync()
+    protected override void OnInitialized()
     {
         _name = Model.Name;
         _description = Model.Description;
         _isDefault = Model.Default;
-
-        await MudDialog.SetTitleAsync(Model.Id == Guid.Empty ? "Create New Preset" : "Update Preset");
     }
 
     private void OnCriteriaChanged(SearchCriteria newCriteria)
