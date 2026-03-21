@@ -3,10 +3,10 @@
 @using Planner.Builders
 @using Planner.Components.Shared.Filters.Controls
 @using Planner.Components.Shared.Filters.Model
+@using Planner.Facades
 @using Planner.Infrastructure.Domain.Enums
 @using Planner.Model
 @using Planner.Options
-@using Planner.Services
 <MudPaper Elevation="0" Outlined="true" Class="pa-4 mb-4 position-relative overflow-hidden">
 
     @if (_isLoading) {
@@ -164,7 +164,7 @@
 
 @code {
     [Inject] public required IOptions<JiraFilterOptions> Options { get; set; }
-    [Inject] public required FilterService FilterService { get; set; }
+    [Inject] public required FilterFacade FilterFacade { get; set; }
     [Inject] public required ISnackbar Snackbar { get; set; }
 
     [Parameter] public bool ShowAssignees { get; set; } = true;
@@ -220,7 +220,7 @@
         try {
             _isLoading = true;
             var projectKey = _searchCriteria.Project?.Key ?? Options.Value.DefaultProject;
-            _statuses = await FilterService.GetStatusesAsync(projectKey, _searchCriteria.Types.Items);
+            _statuses = await FilterFacade.GetStatusesAsync(projectKey, _searchCriteria.Types.Items);
         }
         finally {
             _isLoading = false;
@@ -267,11 +267,11 @@
     }
 
     private async Task BuildAsync(string projectKey) {
-        var projectsTask = FilterService.GetProjectsAsync(CancellationToken.None);
-        var typesTask = FilterService.GetTypesAsync(projectKey);
-        var assigneesTask = FilterService.GetAssigneesAsync(projectKey);
-        var componentsTask = FilterService.GetComponentsAsync(projectKey);
-        var labelsTask = FilterService.GetLabelsAsync();
+        var projectsTask = FilterFacade.GetProjectsAsync(CancellationToken.None);
+        var typesTask = FilterFacade.GetTypesAsync(projectKey);
+        var assigneesTask = FilterFacade.GetAssigneesAsync(projectKey);
+        var componentsTask = FilterFacade.GetComponentsAsync(projectKey);
+        var labelsTask = FilterFacade.GetLabelsAsync();
 
         await Task.WhenAll(projectsTask, typesTask, assigneesTask, componentsTask, labelsTask);
 
@@ -281,7 +281,7 @@
         _components = await componentsTask;
         _labels = await labelsTask;
 
-        _statuses = await FilterService.GetStatusesAsync(projectKey, _searchCriteria.Types.Items);
+        _statuses = await FilterFacade.GetStatusesAsync(projectKey, _searchCriteria.Types.Items);
 
         var project = _projects.Single(project => project.Key.Equals(projectKey, StringComparison.OrdinalIgnoreCase));
         _searchCriteria = SearchCriteria.Create(project);

@@ -1,7 +1,7 @@
 ﻿using System.Collections.Immutable;
 using Planner.Infrastructure.Domain;
 
-namespace Planner.Infrastructure.Core;
+namespace Planner.Infrastructure.Core.Abstract;
 
 public interface IPresetService
 {

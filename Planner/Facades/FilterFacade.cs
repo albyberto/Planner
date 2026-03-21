@@ -5,9 +5,9 @@ using Planner.Extensions;
 using Planner.Model;
 using Planner.Options;
 
-namespace Planner.Services;
+namespace Planner.Facades;
 
-public class FilterService(IOptions<JiraFilterOptions> options, ProjectService client)
+public class FilterFacade(IOptions<JiraFilterOptions> options, ProjectService client)
 {
     public async Task<ImmutableArray<ProjectModel>> GetProjectsAsync(CancellationToken cancellationToken = default)
     {

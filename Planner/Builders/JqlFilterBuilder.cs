@@ -51,12 +51,12 @@ public static class JqlBuilderExtensions
             query = query.And(f => f.User.Assignee.In(includedAssignees) | f.User.Assignee.Is(v => v.Empty));
         else if (includedAssignees.Length > 0)
             query = query.And(f => f.User.Assignee.In(includedAssignees));
-        else if (criteria.IncludeUnassigned) query = query.And(f => f.User.Assignee.Is(v => v.Empty));
+        else if (criteria.IncludeUnassigned) 
+            query = query.And(f => f.User.Assignee.Is(v => v.Empty));
 
-        if (excludedAssignees.Length > 0) query = query.And(f => f.User.Assignee.NotIn(excludedAssignees));
-
-        if (excludedAssignees.Length > 0) query = query.And(f => f.User.Assignee.NotIn(excludedAssignees));
-
+        if (excludedAssignees.Length > 0)
+            query = query.And(f => f.User.Assignee.NotIn(excludedAssignees));
+        
         // --- GESTIONE FILTRI DATA ---
         foreach (var (field, preset) in criteria.DateFilters)
         {

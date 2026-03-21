@@ -1,7 +1,7 @@
 using MudBlazor.Services;
 using Planner.Background;
+using Planner.Facades;
 using Planner.Options;
-using Planner.Services;
 using Planner.Stores;
 
 namespace Planner;
@@ -43,7 +43,7 @@ public static class Bootstrapper
 
     public IServiceCollection AddPlannerServices()
     {
-        services.AddScoped<FilterService>();
+        services.AddScoped<FilterFacade>();
 
         return services;
     }

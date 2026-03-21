@@ -1,4 +1,5 @@
 using System.Collections.Immutable;
+using Planner.Infrastructure.Core.Abstract;
 using Planner.Infrastructure.Domain;
 using Planner.Infrastructure.Domain.Abstract;
 

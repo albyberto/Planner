@@ -1,7 +1,7 @@
 @using Microsoft.Extensions.Options
+@using Planner.Facades
 @using Planner.Model
 @using Planner.Options
-@using Planner.Services
 
 <MudNavMenu>
     <MudNavLink Href="/gantt" Match="NavLinkMatch.All" Icon="@Icons.Material.Filled.ViewTimeline">
@@ -33,7 +33,7 @@
     </MudNavGroup>
 </MudNavMenu>
 
-@inject FilterService FilterService
+@inject FilterFacade FilterFacade
 @inject IOptions<JiraFilterOptions> FilterOptions
 
 @code {

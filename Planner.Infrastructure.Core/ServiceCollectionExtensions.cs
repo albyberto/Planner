@@ -1,4 +1,5 @@
 using Microsoft.Extensions.DependencyInjection;
+using Planner.Infrastructure.Core.Abstract;
 
 namespace Planner.Infrastructure.Core;
 
