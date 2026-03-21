@@ -1,13 +1,13 @@
 using System.Collections.Immutable;
 using Microsoft.Extensions.Options;
-using Planner.Clients;
+using Planner.Clients.Core;
 using Planner.Extensions;
 using Planner.Model;
 using Planner.Options;
 
 namespace Planner.Services;
 
-public class FilterService(IOptions<JiraFilterOptions> options, JiraFilterClient client)
+public class FilterService(IOptions<JiraFilterOptions> options, ProjectService client)
 {
     public async Task<ImmutableArray<ProjectModel>> GetProjectsAsync(CancellationToken cancellationToken = default)
     {

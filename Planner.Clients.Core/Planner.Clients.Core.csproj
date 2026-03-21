@@ -7,14 +7,15 @@
     </PropertyGroup>
 
     <ItemGroup>
-      <ProjectReference Include="..\Planner.Infrastructure.Domain\Planner.Infrastructure.Domain.csproj" />
-      <ProjectReference Include="..\Planner.Infrastructure\Planner.Infrastructure.csproj" />
-    </ItemGroup>
-
-    <ItemGroup>
+        <PackageReference Include="ZiggyCreatures.FusionCache" Version="2.4.0" />
       <Reference Include="Microsoft.Extensions.DependencyInjection.Abstractions">
         <HintPath>..\Planner\bin\Debug\net10.0\win-x64\Microsoft.Extensions.DependencyInjection.Abstractions.dll</HintPath>
       </Reference>
+    </ItemGroup>
+
+    <ItemGroup>
+      <ProjectReference Include="..\Planner.Clients.Domain\Planner.Clients.Domain.csproj" />
+      <ProjectReference Include="..\Planner.Clients\Planner.Clients.csproj" />
     </ItemGroup>
 
 </Project>

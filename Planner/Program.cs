@@ -16,9 +16,8 @@ builder.Services
     .AddStores()
     .AddPlannerServices()
     .AddBackgroundServices()
-    .AddClients()
-    .AddInfrastructureCore()
-    .AddInfrastructure(connectionString);
+    .AddClientsCore()
+    .AddInfrastructureCore(connectionString);
 
 var app = builder.Build();
 
