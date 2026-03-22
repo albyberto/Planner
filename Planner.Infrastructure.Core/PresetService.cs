@@ -7,7 +7,12 @@ namespace Planner.Infrastructure.Core;
 
 public class PresetService(IPresetRepository repository) : IPresetService
 {
-    public Task<ImmutableArray<PresetItem>> GetAllAsync() => repository.GetAllAsync();
+    public async Task<ImmutableArray<PresetItem>> GetAllAsync() => 
+        [
+            ..(await repository.GetAllAsync())
+            .OrderBy(preset => preset.Default ? 0 : 1)
+            .ThenBy(preset => preset.Name, StringComparer.OrdinalIgnoreCase)
+        ];
 
     public async Task<PresetItem?> SaveAsync(PresetItem item) =>
         item.Id == Guid.Empty ? await repository.CreateAsync(item) : await repository.UpdateAsync(item.Id, item);

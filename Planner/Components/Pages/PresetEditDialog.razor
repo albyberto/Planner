@@ -1,6 +1,7 @@
 @using Planner.Components.Shared.Filters
 @using Planner.Extensions
 @using Planner.Infrastructure.Domain
+@using Planner.Mappers
 @using Planner.Model
 <MudDialog>
     <TitleContent>
@@ -85,7 +86,7 @@
 
     private void Submit() {
         // Ricostruisce l'Item in memoria
-        var itemToReturn = _currentCriteria.ToPresetItem(Model.Id, _name, _description) with { Default = _isDefault };
+        var itemToReturn = _currentCriteria.ToDomain(Model.Id, _name, _description) with { Default = _isDefault };
 
         // Passa l'Item alla pagina chiamante, la quale si occuperà di salvare su DB e notificare lo Snackbar
         MudDialog.Close(DialogResult.Ok(itemToReturn));

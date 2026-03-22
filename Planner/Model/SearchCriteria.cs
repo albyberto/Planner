@@ -17,7 +17,7 @@ public record SearchCriteria
     public IFilterSelection<ComponentModel> Components { get; init; } = FilterSelection<ComponentModel>.Empty;
     public IFilterSelection<LabelModel> Labels { get; init; } = FilterSelection<LabelModel>.Empty;
 
-    public ImmutableDictionary<string, Preset> DateFilters { get; private init; } = ImmutableDictionary<string, Preset>.Empty;
+    public ImmutableDictionary<string, Preset> DateFilters { get; init; } = ImmutableDictionary<string, Preset>.Empty;
 
     public TransitionFilter<StatusModel> StatusTransition { get; init; } = new();
 
