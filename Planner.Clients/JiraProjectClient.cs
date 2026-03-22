@@ -1,14 +1,13 @@
 using System.Collections.Immutable;
 using System.Net.Http.Json;
 using Microsoft.Extensions.Logging;
-using Planner.Clients.Abstract;
 using Planner.Clients.Domain;
 using Planner.Clients.Domain.Responses;
 using Type = Planner.Clients.Domain.Type;
 
 namespace Planner.Clients;
 
-public class JiraProjectClient(HttpClient httpClient, ILogger<JiraProjectClient> logger) : IJiraProjectClient
+public class JiraProjectClient(HttpClient httpClient, ILogger<JiraProjectClient> logger)
 {
     public async Task<ImmutableArray<Project>> GetProjectsAsync(CancellationToken cancellationToken = default)
     {

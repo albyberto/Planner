@@ -1,6 +1,5 @@
 using Microsoft.Extensions.Options;
 using Planner.Clients;
-using Planner.Clients.Abstract;
 using Planner.Clients.Handlers;
 using Planner.Clients.Options;
 using Polly;
@@ -29,11 +28,13 @@ public static class Bootstrapper
     {
         public IServiceCollection AddClients()
         {
+            services.AddOptions<JiraApiOptions>().BindConfiguration(JiraApiOptions.SectionName).ValidateDataAnnotations().ValidateOnStart();
+            
             // Register the DelegatingHandler as a Transient service
             services.AddTransient<JiraAuthenticationHandler>();
 
             // Register Filter Client
-            services.AddHttpClient<IJiraProjectClient, JiraProjectClient>(ConfigureJiraClient).AddHttpMessageHandler<JiraAuthenticationHandler>().AddPolicyHandler(GetRetryPolicy()).AddPolicyHandler(GetCircuitBreakerPolicy());
+            services.AddHttpClient<JiraProjectClient>(ConfigureJiraClient).AddHttpMessageHandler<JiraAuthenticationHandler>().AddPolicyHandler(GetRetryPolicy()).AddPolicyHandler(GetCircuitBreakerPolicy());
 
             // Register Read Client
             services.AddHttpClient<JiraReadClient>(ConfigureJiraClient).AddHttpMessageHandler<JiraAuthenticationHandler>().AddPolicyHandler(GetRetryPolicy()).AddPolicyHandler(GetCircuitBreakerPolicy());

@@ -2,12 +2,11 @@
 @using Planner.Facades
 @using Planner.Model
 @using Planner.Options
-
 <MudNavMenu>
     <MudNavLink Href="/gantt" Match="NavLinkMatch.All" Icon="@Icons.Material.Filled.ViewTimeline">
         Gantt View
     </MudNavLink>
-    
+
     <MudNavLink Href="/jira-chat" Match="NavLinkMatch.All" Icon="@Icons.Material.Filled.Chat">
         Jira Chat
     </MudNavLink>
@@ -16,18 +15,21 @@
         Test
     </MudNavLink>
 
-    <MudNavGroup Title="Dashboard" Icon="@Icons.Material.Filled.Dashboard" Expanded="true">
-        <MudNavLink Href="/dashboard" Match="NavLinkMatch.All" Icon="@Icons.Material.Filled.Groups">
+    <MudNavLink Href="/presets" Match="NavLinkMatch.All" Icon="@Icons.Material.Outlined.Preview">
+        Presets
+    </MudNavLink>
+
+    <MudNavGroup Title="Dashboard" Icon="@Icons.Material.Outlined.Dashboard" Expanded="true">
+        <MudNavLink Href="/dashboard" Match="NavLinkMatch.All" Icon="@Icons.Material.Outlined.Groups">
             Team
         </MudNavLink>
-        @foreach (var user in _members)
-        {
+        @foreach (var user in _members) {
             <MudNavLink Href="@($"/dashboard/{Uri.EscapeDataString(user.EmailAddress)}")"
                         Match="NavLinkMatch.All">
-                <UserAvatar User="@user" Size="Size.Small" />
+                <UserAvatar User="@user" Size="Size.Small"/>
             </MudNavLink>
         }
-        <MudNavLink Href="@UnassignedHref" Match="NavLinkMatch.All" Icon="@Icons.Material.Filled.PersonOff">
+        <MudNavLink Href="@UnassignedHref" Match="NavLinkMatch.All" Icon="@Icons.Material.Outlined.PersonOff">
             Non Assegnate
         </MudNavLink>
     </MudNavGroup>
@@ -38,22 +40,19 @@
 
 @code {
     private const string UnassignedHref = $"/dashboard/{Constants.Unassigned}";
-    private List<UserModel> _members = [];
+    private readonly List<UserModel> _members = [];
 
-    protected override async Task OnInitializedAsync()
-    {
-        try
-        {
+    protected override async Task OnInitializedAsync() {
+        try {
             var options = FilterOptions.Value;
-            
+
             // var emails = options.TeamMembers
             //     .Select(m => m.Email)
             //     .ToArray();
             //
             // var users = await ProjectsService.GetAsync(options.DefaultProject);
         }
-        catch
-        {
+        catch {
             // fallback: mostra solo Team e Non Assegnate
         }
     }

@@ -1,20 +1,11 @@
 using Planner;
 using Planner.Components;
-using Planner.Infrastructure;
-using Planner.Infrastructure.Core;
 
 var builder = WebApplication.CreateBuilder(args);
 
 AsWindowsService(builder);
 
-builder.Services
-    .AddMudBlazor()
-    .AddPlannerOptions()
-    .AddStores()
-    .AddPlannerServices()
-    .AddBackgroundServices()
-    .AddClientsCore()
-    .AddInfrastructureCore();
+builder.Services.AddMudBlazor().AddPlanner().AddBackgroundServices().AddClientsCore().AddInfrastructureCore();
 
 var app = builder.Build();
 
@@ -31,8 +22,7 @@ app.UseStatusCodePagesWithReExecute("/not-found", createScopeForStatusCodePages:
 app.UseAntiforgery();
 
 app.MapStaticAssets();
-app.MapRazorComponents<App>()
-    .AddInteractiveServerRenderMode();
+app.MapRazorComponents<App>().AddInteractiveServerRenderMode();
 
 await app.RunAsync();
 return;

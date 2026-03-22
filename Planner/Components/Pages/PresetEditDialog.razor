@@ -1,53 +1,48 @@
 @using Planner.Components.Shared.Filters
 @using Planner.Extensions
-@using Planner.Infrastructure.Core
-@using Planner.Infrastructure.Core.Abstract
 @using Planner.Infrastructure.Domain
 @using Planner.Model
-
 <MudDialog>
-    @* 1. INTESTAZIONE PERSONALIZZATA CON LA 'X' *@
     <TitleContent>
         <div class="d-flex justify-space-between align-center">
             <MudText Typo="Typo.h6">
                 @(Model.Id == Guid.Empty ? "Create New Preset" : "Update Preset")
             </MudText>
-            <MudIconButton Icon="@Icons.Material.Filled.Close" Size="Size.Small" OnClick="Cancel" AriaLabel="Chiudi" />
+            <MudIconButton Icon="@Icons.Material.Filled.Close" Size="Size.Small" OnClick="Cancel" AriaLabel="Chiudi"/>
         </div>
     </TitleContent>
 
     <DialogContent>
         <MudGrid>
             <MudItem xs="12" md="4">
-                @* Aggiunto d-flex e flex-column per gestire l'allineamento verticale *@
                 <MudPaper Outlined="true" Class="pa-4 h-100 d-flex flex-column">
                     <MudText Typo="Typo.h6" Class="mb-4">Preset Details</MudText>
-                    
-                    <MudTextField @bind-Value="_name" 
-                                  Label="Preset Name" 
-                                  Required="true" 
-                                  Variant="Variant.Outlined" 
-                                  Margin="Margin.Dense" 
-                                  Class="mb-4" />
-                                  
-                    <MudTextField @bind-Value="_description" 
-                                  Label="Description" 
-                                  Lines="4"
-                                  Variant="Variant.Outlined" 
-                                  Margin="Margin.Dense" />
-                    
-                    <MudSwitch T="bool"
-                               @bind-Value="_isDefault" 
-                               Color="Color.Primary"
-                               Label="Imposta come Default" 
-                               Class="mt-4 mb-4" />
 
-                    @* 2. TASTO SALVA INTEGRATO (mt-auto lo spinge in fondo al pannello) *@
+                    <MudTextField @bind-Value="_name"
+                                  Label="Preset Name"
+                                  Required="true"
+                                  Variant="Variant.Outlined"
+                                  Margin="Margin.Dense"
+                                  Class="mb-4"/>
+
+                    <MudTextField @bind-Value="_description"
+                                  Label="Description"
+                                  Lines="4"
+                                  Variant="Variant.Outlined"
+                                  Margin="Margin.Dense"/>
+
+                    <MudSwitch T="bool"
+                               @bind-Value="_isDefault"
+                               Color="Color.Primary"
+                               Label="Imposta come Default"
+                               Class="mt-4 mb-4"/>
+
+                    @* Il tasto ora chiama "Submit" in modo sincrono, non salva sul DB *@
                     <MudButton Class="mt-auto"
-                               Variant="Variant.Outlined" 
-                               Color="Color.Primary" 
-                               StartIcon="@Icons.Material.Outlined.Save" 
-                               OnClick="@SaveAsync" 
+                               Variant="Variant.Outlined"
+                               Color="Color.Primary"
+                               StartIcon="@Icons.Material.Outlined.Save"
+                               OnClick="Submit"
                                Disabled="@string.IsNullOrWhiteSpace(_name)">
                         Save
                     </MudButton>
@@ -55,7 +50,9 @@
             </MudItem>
 
             <MudItem xs="12" md="8">
-                <FiltersControl Collapsable="false" OnCriteriaChanged="OnCriteriaChanged" />
+                @* Assicurati che FiltersControl accetti il Criteria iniziale se stai modificando un preset esistente! *@
+                <FiltersControl Collapsable="false"
+                                OnCriteriaChanged="OnCriteriaChanged"/>
             </MudItem>
         </MudGrid>
     </DialogContent>
@@ -66,45 +63,32 @@
 
     [CascadingParameter] public required IMudDialogInstance MudDialog { get; set; }
 
-    [Inject] public required IPresetService PresetService { get; set; }
-    [Inject] public required ISnackbar Snackbar { get; set; }
-
     private string _name = string.Empty;
     private string _description = string.Empty;
     private bool _isDefault;
-    
+
     private SearchCriteria _currentCriteria = SearchCriteria.Empty;
 
-    protected override void OnInitialized()
-    {
+    protected override void OnInitialized() {
         _name = Model.Name;
         _description = Model.Description;
         _isDefault = Model.Default;
+
+        // ATTENZIONE: Se stai modificando un Preset esistente, devi caricare i suoi filtri!
+        // Presumo tu abbia un mapper inverso (es. Model.ToSearchCriteria()) per estrarre i criteri.
+        // Se Model.Criteria è già popolato, convertilo e assegnalo a _currentCriteria qui.
     }
 
-    private void OnCriteriaChanged(SearchCriteria newCriteria)
-    {
+    private void OnCriteriaChanged(SearchCriteria newCriteria) {
         _currentCriteria = newCriteria;
     }
 
-    private async Task SaveAsync()
-    {
-        try
-        {
-            var itemToSave = _currentCriteria
-                .ToPresetItem(Model.Id, _name, _description) 
-                with { Default = _isDefault };
+    private void Submit() {
+        // Ricostruisce l'Item in memoria
+        var itemToReturn = _currentCriteria.ToPresetItem(Model.Id, _name, _description) with { Default = _isDefault };
 
-            await PresetService.SaveAsync(itemToSave);
-
-            Snackbar.Add("Preset salvato con successo!", Severity.Success);
-            
-            MudDialog.Close(DialogResult.Ok(true));
-        }
-        catch (Exception ex)
-        {
-            Snackbar.Add($"Errore durante il salvataggio: {ex.Message}", Severity.Error);
-        }
+        // Passa l'Item alla pagina chiamante, la quale si occuperà di salvare su DB e notificare lo Snackbar
+        MudDialog.Close(DialogResult.Ok(itemToReturn));
     }
 
     private void Cancel() => MudDialog.Cancel();

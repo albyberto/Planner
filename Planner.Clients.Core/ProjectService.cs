@@ -1,6 +1,5 @@
 using System.Collections.Immutable;
 using Microsoft.Extensions.Options;
-using Planner.Clients.Abstract;
 using Planner.Clients.Core.Options;
 using Planner.Clients.Domain;
 using ZiggyCreatures.Caching.Fusion;
@@ -9,7 +8,7 @@ using Type = Planner.Clients.Domain.Type;
 
 namespace Planner.Clients.Core;
 
-public class ProjectService(IJiraProjectClient jiraClient, IFusionCache cache, IOptions<CacheOptions> cacheOptions)
+public class ProjectService(JiraProjectClient jiraClient, IFusionCache cache, IOptions<CacheOptions> cacheOptions)
 {
     private readonly CacheOptions _cacheOptions = cacheOptions.Value;
 

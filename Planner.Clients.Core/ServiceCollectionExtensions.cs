@@ -28,6 +28,8 @@ public static class Bootstrapper
                 .AsSelfWithInterfaces()
                 .WithScopedLifetime());
 
+            services.AddClients();
+
             return services;
         }
     }

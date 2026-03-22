@@ -1,3 +1,4 @@
+using System.Reflection;
 using MudBlazor.Services;
 using Planner.Background;
 using Planner.Facades;
@@ -11,48 +12,32 @@ public static class Bootstrapper
     extension(IServiceCollection services)
     {
         public IServiceCollection AddMudBlazor()
-    {
-        // Blazor
-        services
-            .AddRazorComponents()
-            .AddInteractiveServerComponents();
+        {
+            // Blazor
+            services.AddRazorComponents().AddInteractiveServerComponents();
 
-        // MudBlazor
-        services.AddMudServices();
+            // MudBlazor
+            services.AddMudServices();
 
-        return services;
+            return services;
+        }
+
+        public IServiceCollection AddPlanner()
+        {
+            services.AddOptions<JiraFilterOptions>().BindConfiguration(JiraFilterOptions.SectionName).ValidateDataAnnotations().ValidateOnStart();
+
+            services.Scan(scan => scan.FromAssemblies(Assembly.GetExecutingAssembly()).AddClasses(classes => classes.InExactNamespaceOf<FilterStore>()).AsSelfWithInterfaces().WithSingletonLifetime());
+
+            services.Scan(scan => scan.FromAssemblies(Assembly.GetExecutingAssembly()).AddClasses(classes => classes.InExactNamespaceOf<FilterFacade>()).AsSelfWithInterfaces().WithScopedLifetime());
+
+            return services;
+        }
+
+        public IServiceCollection AddBackgroundServices()
+        {
+            services.AddHostedService<DashboardBackgroundService>();
+
+            return services;
+        }
     }
-
-    public IServiceCollection AddPlannerOptions()
-    {
-        services.AddOptions<JiraFilterOptions>()
-            .BindConfiguration(JiraFilterOptions.SectionName)
-            .ValidateDataAnnotations()
-            .ValidateOnStart();
-
-        return services;
-    }
-
-    public IServiceCollection AddStores()
-    {
-        services.AddSingleton<FilterStore>();
-        services.AddSingleton<IssueStore>();
-
-        return services;
-    }
-
-    public IServiceCollection AddPlannerServices()
-    {
-        services.AddScoped<FilterFacade>();
-
-        return services;
-    }
-
-    public IServiceCollection AddBackgroundServices()
-    {
-        services.AddHostedService<DashboardBackgroundService>();
-
-        return services;
-    }
-}
 }
