@@ -29,19 +29,6 @@ public static class Bootstrapper
     {
         public IServiceCollection AddClients()
         {
-            services.AddClientsOptions();
-            services.AddJiraClients();
-
-            return services;
-        }
-
-        private void AddClientsOptions()
-        {
-            services.AddOptions<JiraApiOptions>().BindConfiguration(JiraApiOptions.SectionName).ValidateDataAnnotations().ValidateOnStart();
-        }
-
-        private void AddJiraClients()
-        {
             // Register the DelegatingHandler as a Transient service
             services.AddTransient<JiraAuthenticationHandler>();
 
@@ -56,6 +43,8 @@ public static class Bootstrapper
             //     .AddHttpMessageHandler<JiraAuthenticationHandler>()
             //     .AddPolicyHandler(GetRetryPolicy())
             //     .AddPolicyHandler(GetCircuitBreakerPolicy());
+
+            return services;
         }
     }
 }

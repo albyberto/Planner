@@ -1,3 +1,5 @@
+using System.Reflection;
+using Planner.Clients.Core;
 using Planner.Clients.Core.Options;
 using ZiggyCreatures.Caching.Fusion;
 
@@ -10,29 +12,23 @@ public static class Bootstrapper
     {
         public IServiceCollection AddClientsCore()
         {
-            services.AddCacheOptions();
-            services.AddCache();
-            services.AddClients();
+            services.AddOptions<CacheOptions>().BindConfiguration(CacheOptions.SectionName).ValidateDataAnnotations().ValidateOnStart();
+
+            services.AddFusionCache().WithOptions(options =>
+            {
+                options.DefaultEntryOptions = new()
+                {
+                    Duration = TimeSpan.FromMinutes(30)
+                };
+            });
+
+            services.Scan(scan => scan
+                .FromAssemblies(Assembly.GetExecutingAssembly())
+                .AddClasses(classes => classes.InExactNamespaceOf<ProjectService>())
+                .AsSelfWithInterfaces()
+                .WithScopedLifetime());
 
             return services;
         }
-
-        private void AddCacheOptions()
-        {
-            services.AddOptions<CacheOptions>()
-                .BindConfiguration(CacheOptions.SectionName)
-                .ValidateDataAnnotations()
-                .ValidateOnStart();
-        }
-        
-        private void AddCache() =>
-            services.AddFusionCache()
-                .WithOptions(options =>
-                {
-                    options.DefaultEntryOptions = new()
-                    {
-                        Duration = TimeSpan.FromMinutes(30)
-                    };
-                });
     }
 }
