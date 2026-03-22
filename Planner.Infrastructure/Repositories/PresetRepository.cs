@@ -38,7 +38,7 @@ public class PresetRepository(IDatabaseContext context) : IPresetRepository
 
             await context.SaveChangesAsync(documents);
 
-            return item;
+            return item with{ Id = document.Id };
         }
         catch
         {
