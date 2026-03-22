@@ -285,27 +285,39 @@
     private async Task BuildAsync(string projectKey) {
         if (string.IsNullOrEmpty(projectKey)) return;
 
-        var projectsTask = FilterFacade.GetProjectsAsync(CancellationToken.None);
+        // 1. Ottimizzazione: carichiamo i progetti solo la prima volta
+        if (_projects.IsDefaultOrEmpty) {
+            _projects = await FilterFacade.GetProjectsAsync(CancellationToken.None);
+        }
+
         var typesTask = FilterFacade.GetTypesAsync(projectKey);
         var assigneesTask = FilterFacade.GetAssigneesAsync(projectKey);
         var componentsTask = FilterFacade.GetComponentsAsync(projectKey);
         var labelsTask = FilterFacade.GetLabelsAsync();
 
-        await Task.WhenAll(projectsTask, typesTask, assigneesTask, componentsTask, labelsTask);
+        await Task.WhenAll(typesTask, assigneesTask, componentsTask, labelsTask);
 
-        _projects = await projectsTask;
         _types = await typesTask;
         _assignees = await assigneesTask;
         _components = await componentsTask;
         _labels = await labelsTask;
 
+        // Identifichiamo il progetto corrente richiesto
+        var currentProject = _projects.FirstOrDefault(p => p.Key.Equals(projectKey, StringComparison.OrdinalIgnoreCase));
+
         if (_selectedPreset is not null) {
             _searchCriteria = _selectedPreset.ToModel(_projects, _types, _assignees, _components, _labels);
+        
+            // FIX 1: Se il preset non aveva un progetto esplicito o l'utente lo ha appena cambiato,
+            // forziamo l'aggiornamento del Project in base al projectKey passato alla funzione.
+            if (_searchCriteria.Project?.Key != projectKey && currentProject is not null) {
+                _searchCriteria = _searchCriteria with { Project = currentProject };
+            }
+
             _statuses = await FilterFacade.GetStatusesAsync(projectKey, _searchCriteria.Types.Items);
             _searchCriteria = _searchCriteria.HydrateStatuses(_selectedPreset, _statuses);
         } else {
-            var project = _projects.FirstOrDefault(p => p.Key.Equals(projectKey, StringComparison.OrdinalIgnoreCase));
-            _searchCriteria = SearchCriteria.Create(project);
+            _searchCriteria = SearchCriteria.Create(currentProject);
             _statuses = await FilterFacade.GetStatusesAsync(projectKey, _searchCriteria.Types.Items);
         }
     }

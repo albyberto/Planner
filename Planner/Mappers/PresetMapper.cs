@@ -65,7 +65,8 @@ public static class PresetMapper
     {
         var criteria = preset.Criteria;
 
-        var project = projects.FirstOrDefault(p => string.Equals(p.Key, criteria.ProjectKey, StringComparison.OrdinalIgnoreCase));
+        var project = projects.FirstOrDefault(p => 
+            string.Equals(p.Key?.Trim(), criteria.ProjectKey?.Trim(), StringComparison.OrdinalIgnoreCase));
 
         return new()
         {
