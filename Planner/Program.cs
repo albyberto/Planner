@@ -7,9 +7,6 @@ var builder = WebApplication.CreateBuilder(args);
 
 AsWindowsService(builder);
 
-var connectionString = builder.Configuration.GetConnectionString("DefaultConnection")
-    ?? throw new ArgumentNullException(nameof(builder.Configuration));
-
 builder.Services
     .AddMudBlazor()
     .AddPlannerOptions()
@@ -17,7 +14,7 @@ builder.Services
     .AddPlannerServices()
     .AddBackgroundServices()
     .AddClientsCore()
-    .AddInfrastructureCore(connectionString);
+    .AddInfrastructureCore();
 
 var app = builder.Build();
 
