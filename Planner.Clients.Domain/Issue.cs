@@ -9,6 +9,7 @@ public class Issue
     [JsonPropertyName("key")] public required string Key { get; init; }
     [JsonPropertyName("self")] public string? Self { get; init; }
     [JsonPropertyName("expand")] public string? Expand { get; init; }
+    [JsonPropertyName("transitions")] public ImmutableArray<Transition> Transitions { get; init; } = [];
     [JsonPropertyName("fields")] public Fields? Fields { get; init; }
 }
 

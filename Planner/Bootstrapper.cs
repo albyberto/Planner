@@ -28,7 +28,7 @@ public static class Bootstrapper
 
             services.Scan(scan => scan.FromAssemblies(Assembly.GetExecutingAssembly()).AddClasses(classes => classes.InExactNamespaceOf<FilterStore>()).AsSelfWithInterfaces().WithSingletonLifetime());
 
-            services.Scan(scan => scan.FromAssemblies(Assembly.GetExecutingAssembly()).AddClasses(classes => classes.InExactNamespaceOf<FilterFacade>()).AsSelfWithInterfaces().WithScopedLifetime());
+            services.Scan(scan => scan.FromAssemblies(Assembly.GetExecutingAssembly()).AddClasses(classes => classes.InExactNamespaceOf<ProjectFacade>()).AsSelfWithInterfaces().WithScopedLifetime());
 
             return services;
         }

@@ -2,23 +2,30 @@ using System.Collections.Immutable;
 using System.Reactive;
 using System.Reactive.Linq;
 using Planner.Builders;
-using Planner.Clients;
+using Planner.Clients.Core;
+using Planner.Mappers;
 using Planner.Model;
 using Planner.Stores;
+using Microsoft.Extensions.DependencyInjection;
 
 namespace Planner.Background;
 
-public class DashboardBackgroundService(FilterStore filterStore, IssueStore issueStore, JiraReadClient readClient, ILogger<DashboardBackgroundService> logger) : BackgroundServiceBase(1, logger)
+public class DashboardBackgroundService(
+    FilterStore filterStore, 
+    IssueStore issueStore, 
+    IServiceScopeFactory scopeFactory, 
+    ILogger<DashboardBackgroundService> logger) 
+    : BackgroundServiceBase(10, logger) // 10 secondi passati al costruttore base
 {
     protected override async Task ExecuteAsync(CancellationToken stoppingToken)
     {
-        var instantSubscription = filterStore.ObserveGlobal()
+        using var instantSubscription = filterStore.ObserveUpdates()
             .GroupBy(emit => emit.Key)
             .SelectMany(group => group
                 .Throttle(TimeSpan.FromMilliseconds(500))
                 .SelectMany(async emit =>
                 {
-                    await FetchAndEmitAsync(emit, stoppingToken);
+                    await FetchAndEmitAsync(emit.Key, emit.Criteria, stoppingToken);
                     return Unit.Default;
                 })
             )
@@ -27,55 +34,44 @@ public class DashboardBackgroundService(FilterStore filterStore, IssueStore issu
                 ex => logger.LogError(ex, "Errore nello stream istantaneo")
             );
 
-        try
-        {
-            await base.ExecuteAsync(stoppingToken);
-        }
-        finally
-        {
-            instantSubscription.Dispose();
-        }
+        await base.ExecuteAsync(stoppingToken);
     }
 
     protected override async Task RunAsync(CancellationToken stoppingToken)
     {
-        var activeTabs = filterStore.GetFiltersForPolling(TimeSpan.FromSeconds(60));
-
-        foreach (var emit in activeTabs)
+        var activeFilters = filterStore.GetActiveFilters();
+                
+        foreach (var (key, criteria) in activeFilters)
         {
             if (stoppingToken.IsCancellationRequested) break;
-
-            await FetchAndEmitAsync(emit, stoppingToken);
+            await FetchAndEmitAsync(key, criteria, stoppingToken);
         }
     }
 
-    private async Task FetchAndEmitAsync(Emit<SearchCriteria> emit, CancellationToken cancellationToken)
+    private async Task FetchAndEmitAsync(Guid key, SearchCriteria criteria, CancellationToken cancellationToken)
     {
         try
         {
-            var jql = emit.Value.ToJql();
+            var jql = criteria.ToJql();
 
             if (string.IsNullOrWhiteSpace(jql))
             {
-                issueStore.Emit(emit.Key, []);
+                issueStore.Emit(key, ImmutableArray<DashboardIssueModel>.Empty);
                 return;
             }
 
-            ImmutableHashSet<string> fields = ["summary", "status", "assignee", "fixVersions", "issuetype", "components", "labels", "project"];
-            var issues = await readClient.GetIssuesAsync(jql, fields, cancellationToken: cancellationToken);
+            using var scope = scopeFactory.CreateScope();
+            var service = scope.ServiceProvider.GetRequiredService<IssueReadService>();
 
-            filterStore.MarkAsFetched(emit.Key);
+            var issues = await service.GetDashboardIssuesAsync(jql, cancellationToken);
+            issueStore.Emit(key, [..issues.Select(issue => issue.ToDashboardModel())]);
 
-            issueStore.Emit(emit.Key, [..issues.Select(issue => new IssueModel(issue, () => readClient.GetAvailableTransitionsAsync(issue.Key, CancellationToken.None)))]);
-
-            logger.LogInformation("Recuperate {Count} issue per la Key: {Key}", issues.Count, emit.Key);
+            logger.LogInformation("Recuperate {Count} issue per la Key: {Key}", issues.Count, key);
         }
-        catch (OperationCanceledException)
-        {
-        }
+        catch (OperationCanceledException) { }
         catch (Exception ex)
         {
-            logger.LogError(ex, "Errore di comunicazione con Jira per la Key {Key}", emit.Key);
+            logger.LogError(ex, "Errore di comunicazione con Jira per la Key {Key}", key);
         }
     }
 }

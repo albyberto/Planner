@@ -1,23 +1,26 @@
 namespace Planner.Model;
 
-public record TimeStats(int OriginalEstimate, int TimeSpent, int? ExplicitRemaining = null)
+public record TimeStats(int OriginalEstimate, int TotalTimeSpent, int AssigneeTimeSpent, int? ExplicitRemaining = null)
 {
-    public int CalculatedRemaining => Math.Max(OriginalEstimate - TimeSpent, 0);
+    public static TimeStats Empty => new(0, 0, 0);
+    
+    public int CalculatedRemaining => Math.Max(OriginalEstimate - TotalTimeSpent, 0);
     public int Remaining => ExplicitRemaining ?? CalculatedRemaining;
-    public int OverBudgetAmount => Math.Max(TimeSpent - OriginalEstimate, 0);
-    public bool IsOverBudget => OriginalEstimate > 0 && TimeSpent > OriginalEstimate;
-    public double ProgressPercent => OriginalEstimate > 0 ? Math.Min((double)TimeSpent / OriginalEstimate * 100, 100) : 0;
+    public int OverBudgetAmount => Math.Max(TotalTimeSpent - OriginalEstimate, 0);
+    public bool IsOverBudget => OriginalEstimate > 0 && TotalTimeSpent > OriginalEstimate;
+    
+    public double ProgressPercent => OriginalEstimate > 0 ? Math.Min((double)TotalTimeSpent / OriginalEstimate * 100, 100) : 0;
 
     public string FormattedEstimate => FormatTime(OriginalEstimate);
-    public string FormattedSpent => FormatTime(TimeSpent);
-    public string FormattedCalculatedRemaining => FormatTime(CalculatedRemaining);
+    public string FormattedTotalSpent => FormatTime(TotalTimeSpent);
+    public string FormattedAssigneeSpent => FormatTime(AssigneeTimeSpent);
     public string FormattedRemaining => IsOverBudget ? $"-{FormatTime(OverBudgetAmount)}" : FormatTime(Remaining);
 
     public static int ParseTime(string time)
     {
         if (string.IsNullOrWhiteSpace(time)) return 0;
-        int seconds = 0;
-        var parts = time.Split(new[] { ' ' }, StringSplitOptions.RemoveEmptyEntries);
+        var seconds = 0;
+        var parts = time.Split([' '], StringSplitOptions.RemoveEmptyEntries);
         foreach (var part in parts)
         {
             if (part.EndsWith("w") && int.TryParse(part[..^1], out int w)) seconds += w * 5 * 8 * 3600;
@@ -49,5 +52,19 @@ public record TimeStats(int OriginalEstimate, int TimeSpent, int? ExplicitRemain
                 _ => $"{minutes}m"
             }
         };
+    }
+    
+    public static TimeStats operator +(TimeStats a, TimeStats b)
+    {
+        int? newExplicitRemaining = a.ExplicitRemaining.HasValue || b.ExplicitRemaining.HasValue
+            ? (a.ExplicitRemaining ?? 0) + (b.ExplicitRemaining ?? 0)
+            : null;
+
+        return new(
+            OriginalEstimate: a.OriginalEstimate + b.OriginalEstimate,
+            TotalTimeSpent: a.TotalTimeSpent + b.TotalTimeSpent,
+            AssigneeTimeSpent: a.AssigneeTimeSpent + b.AssigneeTimeSpent,
+            ExplicitRemaining: newExplicitRemaining
+        );
     }
 }

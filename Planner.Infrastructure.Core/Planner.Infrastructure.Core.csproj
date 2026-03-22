@@ -12,6 +12,7 @@
         <PackageReference Include="Microsoft.Extensions.Options.ConfigurationExtensions" Version="11.0.0-preview.2.26159.112"/>
         <PackageReference Include="Microsoft.Extensions.Options.DataAnnotations" Version="11.0.0-preview.2.26159.112"/>
         <PackageReference Include="Scrutor" Version="7.0.0"/>
+        <PackageReference Include="ZiggyCreatures.FusionCache" Version="2.6.0" />
     </ItemGroup>
 
     <ItemGroup>

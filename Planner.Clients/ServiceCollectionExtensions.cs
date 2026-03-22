@@ -1,5 +1,7 @@
+using System.Text.Json;
 using Microsoft.Extensions.Options;
 using Planner.Clients;
+using Planner.Clients.Domain.Converters;
 using Planner.Clients.Handlers;
 using Planner.Clients.Options;
 using Polly;
@@ -29,6 +31,13 @@ public static class Bootstrapper
         public IServiceCollection AddClients()
         {
             services.AddOptions<JiraApiOptions>().BindConfiguration(JiraApiOptions.SectionName).ValidateDataAnnotations().ValidateOnStart();
+            
+            services.Configure<JsonSerializerOptions>("JiraSerializer", options =>
+            {
+                options.PropertyNameCaseInsensitive = true;
+                options.Converters.Add(new JiraDateOnlyConverter());
+                options.Converters.Add(new JiraDateTimeConverter());
+            });
             
             // Register the DelegatingHandler as a Transient service
             services.AddTransient<JiraAuthenticationHandler>();

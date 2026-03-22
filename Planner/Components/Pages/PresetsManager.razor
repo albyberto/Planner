@@ -24,9 +24,18 @@
             <MudTd DataLabel="ID">
                 <MudText Typo="Typo.caption" Class="mud-text-secondary">@context.Id</MudText>
             </MudTd>
+            
+            @* Aggiunto l'indicatore per il preset di Default *@
             <MudTd DataLabel="Name">
-                <MudText Typo="Typo.body2" Class="fw-bold">@context.Name</MudText>
+                <div class="d-flex align-center">
+                    <MudText Typo="Typo.body2" Class="fw-bold">@context.Name</MudText>
+                    @if (context.Default)
+                    {
+                        <MudChip T="string" Size="Size.Small" Color="Color.Primary" Variant="Variant.Text" Class="ml-2 py-0">Default</MudChip>
+                    }
+                </div>
             </MudTd>
+            
             <MudTd DataLabel="Description">
                 <MudText Typo="Typo.body2">@context.Description</MudText>
             </MudTd>
@@ -48,8 +57,10 @@
     [Inject] public required IDialogService DialogService { get; set; }
     [Inject] public required ISnackbar Snackbar { get; set; }
 
-    // Proprietà calcolata per visualizzare l'array in ordine alfabetico
-    private ImmutableArray<PresetItem> PresetsList => [.._presets.OrderBy(preset => preset.Name)];
+    // MODIFICA QUI: Ordina prima per Default (true viene prima di false) e poi per Nome
+    private ImmutableArray<PresetItem> PresetsList => [.._presets
+        .OrderByDescending(preset => preset.Default)
+        .ThenBy(preset => preset.Name)];
 
     private ImmutableArray<PresetItem> _presets = [];
     private bool _isLoading = true;
@@ -72,12 +83,12 @@
     }
 
     private async Task OpenCreateDialogAsync() {
-        var @new = new PresetItem(); // Assicurati che il record abbia un costruttore vuoto, o usa default/un metodo factory
+        var @new = new PresetItem(); 
         await ShowDialogAsync("New Preset", @new);
     }
 
     private async Task OpenEditDialogAsync(PresetItem item) {
-        var clone = item with { }; // Ottimo uso del "with" per clonare un record!
+        var clone = item with { }; 
         await ShowDialogAsync("Update Preset", clone);
     }
 
@@ -90,27 +101,23 @@
         var dialog = await DialogService.ShowAsync<PresetEditDialog>(title, parameters, options);
         var result = await dialog.Result;
 
-        // SE IL DIALOG RITORNA UN DATO VALIDO, LA PAGINA LO SALVA NEL DATABASE
-        if (result is not null && !result.Canceled && result.Data is PresetItem modelToSave) {
+        if (result is { Canceled: false, Data: PresetItem modelToSave }) {
             await SaveAsync(modelToSave);
         }
     }
 
     private async Task SaveAsync(PresetItem item) {
         try {
-            // Il Service farà il Create o l'Update a seconda se l'Id esiste già
-            var preset = await PresetService.SaveAsync(item);
+            var savedPreset = await PresetService.SaveAsync(item);
 
-            if (preset is null) {
+            if (savedPreset is null) {
                 Snackbar.Add("Errore: il preset non è stato salvato.", Severity.Error);
                 return;
             }
 
             Snackbar.Add("Preset salvato con successo!", Severity.Success);
 
-            // Aggiorna l'interfaccia utente (ImmutableArray)
-            var existingItem = _presets.FirstOrDefault(p => p.Id == preset.Id);
-            _presets = existingItem is not null ? _presets.Replace(existingItem, preset) : _presets.Add(preset);
+            await LoadDataAsync();
         }
         catch (Exception ex) {
             Snackbar.Add($"Errore durante il salvataggio: {ex.Message}", Severity.Error);
@@ -133,8 +140,7 @@
                 await PresetService.DeleteAsync(item.Id);
                 Snackbar.Add("Preset eliminato.", Severity.Info);
 
-                // Rimuove l'elemento dall'array immutabile
-                _presets = [.._presets.Where(p => p.Id != item.Id)];
+                await LoadDataAsync();
             }
             catch (Exception ex) {
                 Snackbar.Add($"Errore durante l'eliminazione: {ex.Message}", Severity.Error);

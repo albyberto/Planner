@@ -160,14 +160,13 @@
 
 @code {
     [Inject] public required IOptions<JiraFilterOptions> Options { get; set; }
-    [Inject] public required FilterFacade FilterFacade { get; set; }
+    [Inject] public required ProjectFacade ProjectFacade { get; set; }
     [Inject] public required IPresetService PresetService { get; set; }
     [Inject] public required ISnackbar Snackbar { get; set; }
 
     [Parameter] public bool Collapsable { get; set; } = true;
     [Parameter] public required EventCallback<SearchCriteria> OnCriteriaChanged { get; set; }
 
-    // Se passato, il componente entra in modalità "Edit" (DDL preset nascosta, controlli abilitati)
     [Parameter] public PresetItem? InitialPreset { get; set; }
 
     private ImmutableArray<ProjectModel> _projects = [];
@@ -183,8 +182,6 @@
     private bool _isLoading = true;
     private bool _isExpanded = true;
 
-    // Se stiamo editando un preset esistente, i controlli devono essere sbloccati.
-    // Se lo stiamo scegliendo da una lista (Dashboard), i controlli rimangono bloccati.
     private bool IsControlDisabled => _isLoading || (_selectedPreset is not null && InitialPreset is null);
 
     protected override async Task OnInitializedAsync() {
@@ -195,6 +192,7 @@
                 _selectedPreset = InitialPreset;
             } else {
                 _presets = await PresetService.GetAllAsync();
+                _selectedPreset = await PresetService.GetDefaultAsync();
             }
 
             var projectKey = _selectedPreset?.Criteria.ProjectKey ?? Options.Value.DefaultProject;
@@ -237,7 +235,7 @@
         _isLoading = true;
         try {
             var projectKey = _searchCriteria.Project?.Key ?? Options.Value.DefaultProject;
-            _statuses = await FilterFacade.GetStatusesAsync(projectKey, _searchCriteria.Types.Items);
+            _statuses = await ProjectFacade.GetStatusesAsync(projectKey, _searchCriteria.Types.Items);
             await OnCriteriaChanged.InvokeAsync(_searchCriteria);
         }
         finally {
@@ -285,15 +283,14 @@
     private async Task BuildAsync(string projectKey) {
         if (string.IsNullOrEmpty(projectKey)) return;
 
-        // 1. Ottimizzazione: carichiamo i progetti solo la prima volta
         if (_projects.IsDefaultOrEmpty) {
-            _projects = await FilterFacade.GetProjectsAsync(CancellationToken.None);
+            _projects = await ProjectFacade.GetProjectsAsync(CancellationToken.None);
         }
 
-        var typesTask = FilterFacade.GetTypesAsync(projectKey);
-        var assigneesTask = FilterFacade.GetAssigneesAsync(projectKey);
-        var componentsTask = FilterFacade.GetComponentsAsync(projectKey);
-        var labelsTask = FilterFacade.GetLabelsAsync();
+        var typesTask = ProjectFacade.GetTypesAsync(projectKey);
+        var assigneesTask = ProjectFacade.GetAssigneesAsync(projectKey);
+        var componentsTask = ProjectFacade.GetComponentsAsync(projectKey);
+        var labelsTask = ProjectFacade.GetLabelsAsync();
 
         await Task.WhenAll(typesTask, assigneesTask, componentsTask, labelsTask);
 
@@ -302,23 +299,27 @@
         _components = await componentsTask;
         _labels = await labelsTask;
 
-        // Identifichiamo il progetto corrente richiesto
         var currentProject = _projects.FirstOrDefault(p => p.Key.Equals(projectKey, StringComparison.OrdinalIgnoreCase));
 
+        if (currentProject is null) {
+            Snackbar.Add($"Impossibile recuperare il progetto selezionato, provare a aggiornare la cache", Severity.Error);
+            return;
+        }
+        
         if (_selectedPreset is not null) {
             _searchCriteria = _selectedPreset.ToModel(_projects, _types, _assignees, _components, _labels);
         
-            // FIX 1: Se il preset non aveva un progetto esplicito o l'utente lo ha appena cambiato,
-            // forziamo l'aggiornamento del Project in base al projectKey passato alla funzione.
-            if (_searchCriteria.Project?.Key != projectKey && currentProject is not null) {
+            if (_searchCriteria.Project?.Key != projectKey) {
                 _searchCriteria = _searchCriteria with { Project = currentProject };
             }
 
-            _statuses = await FilterFacade.GetStatusesAsync(projectKey, _searchCriteria.Types.Items);
+            _statuses = await ProjectFacade.GetStatusesAsync(projectKey, _searchCriteria.Types.Items);
             _searchCriteria = _searchCriteria.HydrateStatuses(_selectedPreset, _statuses);
         } else {
             _searchCriteria = SearchCriteria.Create(currentProject);
-            _statuses = await FilterFacade.GetStatusesAsync(projectKey, _searchCriteria.Types.Items);
+            _statuses = await ProjectFacade.GetStatusesAsync(projectKey, _searchCriteria.Types.Items);
         }
+
+        await OnCriteriaChanged.InvokeAsync(_searchCriteria);
     }
 }

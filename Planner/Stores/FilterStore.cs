@@ -7,58 +7,30 @@ namespace Planner.Stores;
 
 public class FilterStore
 {
-    private class FilterEntry
+    private readonly ConcurrentDictionary<Guid, BehaviorSubject<SearchCriteria>> _filters = new();
+    private readonly Subject<(Guid Key, SearchCriteria Criteria)> _stream = new();
+
+    public IObservable<SearchCriteria> Observe(Guid key) => GetOrCreate(key).AsObservable();
+
+    public IObservable<(Guid Key, SearchCriteria Criteria)> ObserveUpdates() => _stream.AsObservable();
+
+    public void Emit(Guid key, SearchCriteria criteria)
     {
-        public BehaviorSubject<SearchCriteria> Subject { get; } = new(SearchCriteria.Empty);
-        public DateTime LastFetched { get; set; } = DateTime.MinValue;
+        GetOrCreate(key).OnNext(criteria);
+        _stream.OnNext((key, criteria));
     }
 
-    private readonly ConcurrentDictionary<Guid, FilterEntry> _entries = new();
-    private readonly Subject<Emit<SearchCriteria>> _stream = new();
+    public IReadOnlyDictionary<Guid, SearchCriteria> GetActiveFilters() => 
+        _filters.ToDictionary(k => k.Key, v => v.Value.Value);
 
-    public IObservable<SearchCriteria> Observe(Guid key) => _entries.TryGetValue(key, out var entry) 
-        ? entry.Subject.AsObservable() 
-        : Observable.Empty<SearchCriteria>();
-
-    public IObservable<Emit<SearchCriteria>> ObserveGlobal() => _stream.AsObservable();
-
-    public IReadOnlyList<Emit<SearchCriteria>> GetFiltersForPolling(TimeSpan threshold)
+    public void Unregister(Guid key)
     {
-        var now = DateTime.UtcNow;
-        var result = new List<Emit<SearchCriteria>>();
-
-        foreach (var kvp in _entries)
-        {
-            if (now - kvp.Value.LastFetched < threshold) continue;
-            
-            result.Add(new(kvp.Key, kvp.Value.Subject.Value));
-                
-            kvp.Value.LastFetched = now;
-        }
-
-        return result;
-    }
-
-    public void MarkAsFetched(Guid key)
-    {
-        if (_entries.TryGetValue(key, out var entry)) entry.LastFetched = DateTime.UtcNow;
-    }
-    
-    public void Emit(Guid key, SearchCriteria searchCriteria)
-    {
-        if (_entries.TryGetValue(key, out var entry))
-        {
-            entry.Subject.OnNext(searchCriteria);
-            entry.LastFetched = DateTime.UtcNow; 
-        }
+        if (!_filters.TryRemove(key, out var subject)) return;
         
-        _stream.OnNext(new(key, searchCriteria));
+        subject.OnCompleted();
+        subject.Dispose();
     }
-    
-    public void Register(Guid key) => _entries.TryAdd(key, new());
-    
-    public void UnRegister(Guid key)
-    {
-        if (_entries.TryRemove(key, out var entry)) entry.Subject.Dispose();
-    }
+
+    private BehaviorSubject<SearchCriteria> GetOrCreate(Guid key) =>
+        _filters.GetOrAdd(key, _ => new(SearchCriteria.Empty));
 }

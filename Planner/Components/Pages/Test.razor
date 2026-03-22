@@ -1,65 +1,65 @@
-@page "/test"
-@using System.Collections.Immutable
-@using Planner.Components.Shared.Filters
-@using Planner.Model
-@using Planner.Stores
-@implements IDisposable
-@inject IssueStore IssueStore
-
-<MudContainer MaxWidth="MaxWidth.ExtraLarge" Class="mt-4">
-    <MudText Typo="Typo.h4" Class="mb-4">Jira Dashboard</MudText>
-
-    <FiltersControl OnCriteriaChanged="@Emit"/>
-
-    <MudTable Items="@_issues" Hover="true" Striped="true" Loading="@_isLoading" Class="mt-6">
-        <HeaderContent>
-            <MudTh>Key</MudTh>
-            <MudTh>Summary</MudTh>
-            <MudTh>Type</MudTh>
-            <MudTh>Status</MudTh>
-            <MudTh>Assignee</MudTh>
-        </HeaderContent>
-        <RowTemplate>
-            <MudTd DataLabel="Key">@context.Key</MudTd>
-            <MudTd DataLabel="Summary">@context.Summary</MudTd>
-            <MudTd DataLabel="Type">@context.Type.Name</MudTd>
-            <MudTd DataLabel="Status">@context.Status.Name</MudTd>
-            <MudTd DataLabel="Assignee">@context.Assignee.DisplayName</MudTd>
-        </RowTemplate>
-        <NoRecordsContent>
-            <MudText>Nessun ticket trovato con i filtri correnti.</MudText>
-        </NoRecordsContent>
-        <LoadingContent>
-            <MudText>Caricamento dati da Jira in corso...</MudText>
-        </LoadingContent>
-    </MudTable>
-</MudContainer>
-
-@code {
-    [Inject] public required FilterStore FilterStore { get; set; }
-
-    private readonly Guid _pageKey = Guid.NewGuid();
-
-    private ImmutableArray<IssueModel> _issues = [];
-    private IDisposable? _storeSubscription;
-    private bool _isLoading = true;
-
-    protected override void OnInitialized() {
-        FilterStore.Register(_pageKey);
-
-        _storeSubscription = IssueStore.Observe(_pageKey).Subscribe(issues => {
-            InvokeAsync(() => {
-                _issues = issues;
-                _isLoading = false;
-                StateHasChanged();
-            });
-        });
-    }
-
-    private void Emit(SearchCriteria criteria) => FilterStore.Emit(_pageKey, criteria);
-
-    public void Dispose() {
-        FilterStore.UnRegister(_pageKey);
-        _storeSubscription?.Dispose();
-    }
-}
+@* @page "/test" *@
+@* @using System.Collections.Immutable *@
+@* @using Planner.Components.Shared.Filters *@
+@* @using Planner.Model *@
+@* @using Planner.Stores *@
+@* @implements IDisposable *@
+@* @inject IssueStore IssueStore *@
+@* *@
+@* <MudContainer MaxWidth="MaxWidth.ExtraLarge" Class="mt-4"> *@
+@*     <MudText Typo="Typo.h4" Class="mb-4">Jira Dashboard</MudText> *@
+@* *@
+@*     <FiltersControl OnCriteriaChanged="@Emit"/> *@
+@* *@
+@*     <MudTable Items="@_issues" Hover="true" Striped="true" Loading="@_isLoading" Class="mt-6"> *@
+@*         <HeaderContent> *@
+@*             <MudTh>Key</MudTh> *@
+@*             <MudTh>Summary</MudTh> *@
+@*             <MudTh>Type</MudTh> *@
+@*             <MudTh>Status</MudTh> *@
+@*             <MudTh>Assignee</MudTh> *@
+@*         </HeaderContent> *@
+@*         <RowTemplate> *@
+@*             <MudTd DataLabel="Key">@context.Key</MudTd> *@
+@*             <MudTd DataLabel="Summary">@context.Summary</MudTd> *@
+@*             <MudTd DataLabel="Type">@context.Type.Name</MudTd> *@
+@*             <MudTd DataLabel="Status">@context.Status.Name</MudTd> *@
+@*             <MudTd DataLabel="Assignee">@context.Assignee.DisplayName</MudTd> *@
+@*         </RowTemplate> *@
+@*         <NoRecordsContent> *@
+@*             <MudText>Nessun ticket trovato con i filtri correnti.</MudText> *@
+@*         </NoRecordsContent> *@
+@*         <LoadingContent> *@
+@*             <MudText>Caricamento dati da Jira in corso...</MudText> *@
+@*         </LoadingContent> *@
+@*     </MudTable> *@
+@* </MudContainer> *@
+@* *@
+@* @code { *@
+@*     [Inject] public required FilterStore FilterStore { get; set; } *@
+@* *@
+@*     private readonly Guid _pageKey = Guid.NewGuid(); *@
+@* *@
+@*     private ImmutableArray<IssueModel> _issues = []; *@
+@*     private IDisposable? _storeSubscription; *@
+@*     private bool _isLoading = true; *@
+@* *@
+@*     protected override void OnInitialized() { *@
+@*         FilterStore.Register(_pageKey); *@
+@* *@
+@*         _storeSubscription = IssueStore.Observe(_pageKey).Subscribe(issues => { *@
+@*             InvokeAsync(() => { *@
+@*                 _issues = issues; *@
+@*                 _isLoading = false; *@
+@*                 StateHasChanged(); *@
+@*             }); *@
+@*         }); *@
+@*     } *@
+@* *@
+@*     private void Emit(SearchCriteria criteria) => FilterStore.Emit(_pageKey, criteria); *@
+@* *@
+@*     public void Dispose() { *@
+@*         FilterStore.UnRegister(_pageKey); *@
+@*         _storeSubscription?.Dispose(); *@
+@*     } *@
+@* } *@

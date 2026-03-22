@@ -13,24 +13,8 @@ public class ProjectService(JiraProjectClient jiraClient, IFusionCache cache, IO
     private readonly CacheOptions _cacheOptions = cacheOptions.Value;
 
     public async Task<ImmutableArray<Project>> GetProjectsAsync(CancellationToken cancellationToken = default) =>
-        await cache.GetOrSetAsync("jira:projects:all",
-            async ct => await jiraClient.GetProjectsAsync(ct),
-            new FusionCacheEntryOptions { Duration = _cacheOptions.Projects },
-            cancellationToken);
+        await cache.GetOrSetAsync("jira:projects:all", async ct => await jiraClient.GetProjectsAsync(ct), new FusionCacheEntryOptions { Duration = _cacheOptions.Projects }, cancellationToken);
 
-    public async Task<ImmutableArray<Type>> GetTypesAsync(CancellationToken cancellationToken = default) =>
-        await cache.GetOrSetAsync("jira:types",
-            async ct => await jiraClient.GetTypesAsync(ct),
-            new FusionCacheEntryOptions { Duration = _cacheOptions.Types },
-            cancellationToken);
-
-    public async Task<ImmutableArray<Type>> GetStatusesAsync(string projectKey, CancellationToken cancellationToken = default) =>
-        await cache.GetOrSetAsync($"jira:statuses:{projectKey}",
-            async ct => await jiraClient.GetStatusesAsync(projectKey, ct),
-            new FusionCacheEntryOptions { Duration = _cacheOptions.Types },
-            cancellationToken);
-
-    // Business logic di dominio isolata nell'Application Layer
     public async Task<ImmutableArray<Type>> GetTypesAndStatusesAsync(string projectKey, CancellationToken cancellationToken = default)
     {
         var statusesTask = GetStatusesAsync(projectKey, cancellationToken);
@@ -43,7 +27,8 @@ public class ProjectService(JiraProjectClient jiraClient, IFusionCache cache, IO
 
         var typesById = types.DistinctBy(t => t.Id).ToDictionary(t => t.Id);
 
-        return [
+        return
+        [
             ..statuses.Select(t =>
             {
                 var globalType = typesById.GetValueOrDefault(t.Id);
@@ -64,20 +49,17 @@ public class ProjectService(JiraProjectClient jiraClient, IFusionCache cache, IO
     }
 
     public async Task<ImmutableArray<User>> GetAssigneesAsync(string projectKey, CancellationToken cancellationToken = default) =>
-        await cache.GetOrSetAsync($"jira:assignees:{projectKey}",
-            async ct => await jiraClient.GetAssigneesAsync(projectKey, ct),
-            new FusionCacheEntryOptions { Duration = _cacheOptions.Assignees },
-            cancellationToken);
+        await cache.GetOrSetAsync($"jira:assignees:{projectKey}", async ct => await jiraClient.GetAssigneesAsync(projectKey, ct), new FusionCacheEntryOptions { Duration = _cacheOptions.Assignees }, cancellationToken);
 
     public async Task<ImmutableArray<Component>> GetComponentsAsync(string projectKey, CancellationToken cancellationToken = default) =>
-        await cache.GetOrSetAsync($"jira:components:{projectKey}",
-            async ct => await jiraClient.GetComponentsAsync(projectKey, ct),
-            new FusionCacheEntryOptions { Duration = _cacheOptions.Components },
-            cancellationToken);
+        await cache.GetOrSetAsync($"jira:components:{projectKey}", async ct => await jiraClient.GetComponentsAsync(projectKey, ct), new FusionCacheEntryOptions { Duration = _cacheOptions.Components }, cancellationToken);
 
     public async Task<ImmutableArray<string>> GetLabelsAsync(CancellationToken cancellationToken = default) =>
-        await cache.GetOrSetAsync("jira:labels:all",
-            async ct => await jiraClient.GetLabelsAsync(ct),
-            new FusionCacheEntryOptions { Duration = _cacheOptions.Labels },
-            cancellationToken);
+        await cache.GetOrSetAsync("jira:labels:all", async ct => await jiraClient.GetLabelsAsync(ct), new FusionCacheEntryOptions { Duration = _cacheOptions.Labels }, cancellationToken);
+    
+    private async Task<ImmutableArray<Type>> GetTypesAsync(CancellationToken cancellationToken = default) =>
+        await cache.GetOrSetAsync("jira:types", async ct => await jiraClient.GetTypesAsync(ct), new FusionCacheEntryOptions { Duration = _cacheOptions.Types }, cancellationToken);
+
+    private async Task<ImmutableArray<Type>> GetStatusesAsync(string projectKey, CancellationToken cancellationToken = default) =>
+        await cache.GetOrSetAsync($"jira:statuses:{projectKey}", async ct => await jiraClient.GetStatusesAsync(projectKey, ct), new FusionCacheEntryOptions { Duration = _cacheOptions.Types }, cancellationToken);
 }

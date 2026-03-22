@@ -7,7 +7,7 @@ using Planner.Options;
 
 namespace Planner.Facades;
 
-public class FilterFacade(IOptions<JiraFilterOptions> options, ProjectService client)
+public class ProjectFacade(IOptions<JiraFilterOptions> options, ProjectService client)
 {
     public async Task<ImmutableArray<ProjectModel>> GetProjectsAsync(CancellationToken cancellationToken = default)
     {

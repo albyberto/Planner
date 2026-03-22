@@ -1,43 +1,30 @@
+using System.Collections.Generic;
 using System.ComponentModel.DataAnnotations;
 
 namespace Planner.Options;
 
-public record DefaultFilterItem
-{
-    public string Value { get; init; } = string.Empty;
-    public bool IsExcluded { get; init; } = false;
-}
-
-public class JiraFilterOptions
+public class JiraFilterOptions : IValidatableObject
 {
     public const string SectionName = nameof(JiraFilterOptions);
 
     [Required, MinLength(2)]
     public string DefaultProject { get; init; } = string.Empty;
-    
-    public List<DefaultFilterItem> DefaultTypes { get; init; } = [];
-    public List<DefaultFilterItem> DefaultStatuses { get; init; } = [];
-    public List<DefaultFilterItem> DefaultAssignees { get; init; } = [];
-    public List<DefaultFilterItem> DefaultComponents { get; init; } = [];
-    public List<DefaultFilterItem> DefaultLabels { get; init; } = [];
-    
-    public bool IncludeUnassignedByDefault { get; init; }
-    
+ 
+    [Required(ErrorMessage = "Il campo Me è obbligatorio.")]
+    [EmailAddress(ErrorMessage = "Il campo Me deve essere un indirizzo email valido.")]
     public string Me { get; init; } = string.Empty;
-}
 
-public class TeamMember
-{
-    public string Email { get; init; } = string.Empty;
-}
+    public List<string> TeamMembers { get; init; } = [];
 
-public class JiraPreset
-{
-    public string Name { get; init; } = string.Empty;
-    public string Jql { get; init; } = string.Empty;
-}
-
-public class MeOptions
-{
-    public string Email { get; init; } = string.Empty;
+    public IEnumerable<ValidationResult> Validate(ValidationContext validationContext)
+    {
+        if (TeamMembers.Count <= 0) yield break;
+        
+        var emailValidator = new EmailAddressAttribute();
+        foreach (var email in TeamMembers.Where(email => !emailValidator.IsValid(email)))
+        {
+            yield return new ValidationResult(
+                $"L'indirizzo '{email}' in TeamMembers non è un'email valida.", [nameof(TeamMembers)]);
+        }
+    }
 }

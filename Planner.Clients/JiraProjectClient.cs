@@ -1,14 +1,20 @@
 using System.Collections.Immutable;
 using System.Net.Http.Json;
+using System.Text.Json; // Aggiunto
 using Microsoft.Extensions.Logging;
+using Microsoft.Extensions.Options; // Aggiunto
 using Planner.Clients.Domain;
 using Planner.Clients.Domain.Responses;
 using Type = Planner.Clients.Domain.Type;
 
 namespace Planner.Clients;
 
-public class JiraProjectClient(HttpClient httpClient, ILogger<JiraProjectClient> logger)
+// 1. Aggiunto IOptionsMonitor nel costruttore
+public class JiraProjectClient(HttpClient httpClient, IOptionsMonitor<JsonSerializerOptions> jsonOptions, ILogger<JiraProjectClient> logger)
 {
+    // 2. Estratte le opzioni centralizzate
+    private readonly JsonSerializerOptions _jsonOptions = jsonOptions.Get("JiraSerializer");
+    
     public async Task<ImmutableArray<Project>> GetProjectsAsync(CancellationToken cancellationToken = default)
     {
         const int maxResults = 100;
@@ -21,7 +27,9 @@ public class JiraProjectClient(HttpClient httpClient, ILogger<JiraProjectClient>
             while (!isLast)
             {
                 var uri = $"project/search?startAt={startAt}&maxResults={maxResults}";
-                var response = await httpClient.GetFromJsonAsync<ProjectResponse>(uri, cancellationToken);
+                
+                // 3. Aggiunte _jsonOptions qui
+                var response = await httpClient.GetFromJsonAsync<ProjectResponse>(uri, _jsonOptions, cancellationToken);
 
                 if (response is null) break;
                 if (response.Projects.Any()) accumulator.AddRange(response.Projects);
@@ -45,7 +53,8 @@ public class JiraProjectClient(HttpClient httpClient, ILogger<JiraProjectClient>
     {
         try
         {
-            var response = await httpClient.GetFromJsonAsync<Type[]>("issuetype", cancellationToken);
+            // Aggiunte _jsonOptions qui
+            var response = await httpClient.GetFromJsonAsync<Type[]>("issuetype", _jsonOptions, cancellationToken);
             return response?.ToImmutableArray() ?? [];
         }
         catch (Exception exception)
@@ -59,7 +68,8 @@ public class JiraProjectClient(HttpClient httpClient, ILogger<JiraProjectClient>
     {
         try
         {
-            var response = await httpClient.GetFromJsonAsync<Type[]>($"project/{projectKey}/statuses", cancellationToken);
+            // Aggiunte _jsonOptions qui
+            var response = await httpClient.GetFromJsonAsync<Type[]>($"project/{projectKey}/statuses", _jsonOptions, cancellationToken);
             return response?.ToImmutableArray() ?? [];
         }
         catch (Exception exception)
@@ -73,7 +83,8 @@ public class JiraProjectClient(HttpClient httpClient, ILogger<JiraProjectClient>
     {
         try
         {
-            var response = await httpClient.GetFromJsonAsync<User[]>($"user/assignable/search?project={projectKey}&maxResults=1000", cancellationToken);
+            // Aggiunte _jsonOptions qui
+            var response = await httpClient.GetFromJsonAsync<User[]>($"user/assignable/search?project={projectKey}&maxResults=1000", _jsonOptions, cancellationToken);
             return (response ?? []).Where(user => !string.IsNullOrWhiteSpace(user.EmailAddress)).DistinctBy(user => user.AccountId).ToImmutableArray();
         }
         catch (Exception exception)
@@ -87,7 +98,8 @@ public class JiraProjectClient(HttpClient httpClient, ILogger<JiraProjectClient>
     {
         try
         {
-            var response = await httpClient.GetFromJsonAsync<Component[]>($"project/{projectKey}/components", cancellationToken);
+            // Aggiunte _jsonOptions qui
+            var response = await httpClient.GetFromJsonAsync<Component[]>($"project/{projectKey}/components", _jsonOptions, cancellationToken);
             return (response ?? []).DistinctBy(component => component.Id).ToImmutableArray();
         }
         catch (Exception exception)
@@ -109,7 +121,9 @@ public class JiraProjectClient(HttpClient httpClient, ILogger<JiraProjectClient>
             while (!isLast)
             {
                 var uri = $"label?startAt={startAt}&maxResults={maxResults}";
-                var response = await httpClient.GetFromJsonAsync<LabelResponse>(uri, cancellationToken);
+                
+                // Aggiunte _jsonOptions qui
+                var response = await httpClient.GetFromJsonAsync<LabelResponse>(uri, _jsonOptions, cancellationToken);
 
                 if (response == null) break;
                 if (response.Values.Any()) accumulator.AddRange(response.Values);

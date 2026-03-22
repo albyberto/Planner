@@ -1,0 +1,94 @@
+@using System.Collections.Immutable
+@using Planner.Components.Shared.Filters
+@using Planner.Facades
+@using Planner.Model
+@using Planner.Stores
+@implements IDisposable
+
+<PageTitle>@_displayTitle</PageTitle>
+
+<MudText Typo="Typo.h4" GutterBottom="true">
+    <MudIcon Icon="@Icons.Material.Outlined.Dashboard" Class="mr-2" />
+    @_displayTitle
+</MudText>
+
+<FiltersControl OnCriteriaChanged="OnCriteriaChanged" />
+
+@if (_loading)
+{
+    <MudProgressLinear Color="Color.Primary" Indeterminate="true" Class="my-4" />
+}
+else
+{
+    @ChildContent(_issues)
+}
+
+@code {
+    [Inject] public required ProjectFacade ProjectFacade { get; set; }
+    [Inject] public required FilterStore FilterStore { get; set; }
+    [Inject] public required IssueStore IssueStore { get; set; }
+    
+    [Parameter, EditorRequired] public required string Title { get; set; } = string.Empty;
+    [Parameter] public string? Email { get; set; }
+    
+    [Parameter, EditorRequired]
+    public required RenderFragment<ImmutableArray<DashboardIssueModel>> ChildContent { get; set; } = null!;
+
+    private ImmutableArray<DashboardIssueModel> _issues = ImmutableArray<DashboardIssueModel>.Empty;
+    private bool _loading = true;
+    private string _displayTitle = string.Empty;
+
+    private readonly Guid _pageId = Guid.NewGuid();
+    private IDisposable? _issueSubscription;
+    
+    private bool _isDisposed;
+
+    protected override void OnInitialized()
+    {
+        _issueSubscription = IssueStore.Observe(_pageId).Subscribe(issues =>
+        {
+            InvokeAsync(() =>
+            {
+                if (_isDisposed) return;
+
+                _issues = issues;
+                _loading = false;
+                StateHasChanged();
+            });
+        });
+    }
+
+    protected override void OnParametersSet() => UpdateTitle();
+
+    private void UpdateTitle()
+    {
+        if (string.IsNullOrEmpty(Email))
+        {
+            _displayTitle = $"{Title} — Team";
+        }
+        else if (Email.Equals(Constants.Unassigned, StringComparison.OrdinalIgnoreCase))
+        {
+            _displayTitle = $"{Title} — Non Assegnate";
+        }
+        else 
+        {
+            _displayTitle = $"{Title} — {Email}";
+        }
+    }
+
+    private void OnCriteriaChanged(SearchCriteria criteria)
+    {
+        _loading = true;
+        StateHasChanged(); 
+        
+        FilterStore.Emit(_pageId, criteria);
+    }
+
+    public void Dispose()
+    {
+        _isDisposed = true;
+        
+        _issueSubscription?.Dispose();
+        FilterStore.Unregister(_pageId);
+    }
+}
