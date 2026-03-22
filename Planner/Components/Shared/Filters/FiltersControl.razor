@@ -33,12 +33,10 @@
     </MudStack>
 
     <MudCollapse Expanded="@(!Collapsable || _isExpanded)">
-
         <MudGrid>
-            @* SELETTORE PRESET *@
-            @if (ShowPresets) 
-            {
-                <MudItem xs="12" sm="12" md="12" lg="12">
+            @* Visualizziamo il selettore dei preset solo se non ne è stato imposto uno dall'esterno (Dashboard) *@
+            @if (InitialPreset is null) {
+                <MudItem xs="12">
                     <FilterSingleAutocomplete TItem="PresetItem"
                                               Label="Load Preset"
                                               Disabled="@_isLoading"
@@ -53,7 +51,7 @@
             <MudItem xs="12" sm="12" md="4" lg="4">
                 <FilterSingleAutocomplete TItem="ProjectModel"
                                           Label="Project Key"
-                                          Disabled="@Disabled"
+                                          Disabled="@IsControlDisabled"
                                           Items="_projects"
                                           SelectedValue="_searchCriteria.Project"
                                           SelectedValueChanged="OnProjectChangedAsync"
@@ -63,7 +61,7 @@
             <MudItem xs="12" sm="12" md="4" lg="4">
                 <FilterMultiSelect TItem="TypeModel"
                                    Label="Select Types"
-                                   Disabled="@Disabled"
+                                   Disabled="@IsControlDisabled"
                                    Items="_types"
                                    Selection="_searchCriteria.Types"
                                    SelectionChanged="OnTypesChangedAsync"
@@ -73,7 +71,7 @@
             <MudItem xs="12" sm="12" md="4" lg="4">
                 <FilterMultiSelect TItem="StatusModel"
                                    Label="Select Statuses"
-                                   Disabled="@Disabled"
+                                   Disabled="@IsControlDisabled"
                                    Items="_statuses"
                                    Selection="_searchCriteria.Statuses"
                                    SelectionChanged="OnStatusesChanged"/>
@@ -83,7 +81,7 @@
                 <div class="d-flex flex-column gap-1">
                     <FilterMultiSelect TItem="UserModel"
                                        Label="Select Assignees"
-                                       Disabled="@Disabled"
+                                       Disabled="@IsControlDisabled"
                                        Items="_assignees"
                                        Selection="_searchCriteria.Assignees"
                                        SelectionChanged="OnAssigneesChanged"/>
@@ -92,7 +90,7 @@
                                Label="Include unassigned"
                                Color="Color.Primary"
                                Size="Size.Medium"
-                               Disabled="@Disabled"
+                               Disabled="@IsControlDisabled"
                                Value="_searchCriteria.IncludeUnassigned"
                                ValueChanged="OnIncludeUnassignedChanged"
                                Class="ml-1"/>
@@ -102,7 +100,7 @@
             <MudItem xs="12" sm="12" md="4" lg="4">
                 <FilterMultiSelect TItem="ComponentModel"
                                    Label="Select Components"
-                                   Disabled="@Disabled"
+                                   Disabled="@IsControlDisabled"
                                    Items="_components"
                                    Selection="_searchCriteria.Components"
                                    SelectionChanged="OnComponentsChanged"/>
@@ -111,32 +109,33 @@
             <MudItem xs="12" sm="12" md="4" lg="4">
                 <FilterAutocomplete TItem="LabelModel"
                                     Label="Search Labels"
-                                    Disabled="@Disabled"
+                                    Disabled="@IsControlDisabled"
                                     Items="_labels"
                                     Selection="_searchCriteria.Labels"
                                     SelectionChanged="OnLabelsChanged"/>
             </MudItem>
 
-            @* DATE FILTERS *@
             <MudItem xs="12" sm="12" md="4" lg="4">
                 <FilterDate Label="Data Creazione" Value="@(GetDateFilter("created"))"
-                            ValueChanged="@(v => SetDateFilter("created", v))" Disabled="@Disabled"/>
+                            ValueChanged="@(v => SetDateFilter("created", v))" Disabled="@IsControlDisabled"/>
             </MudItem>
+
             <MudItem xs="12" sm="12" md="4" lg="4">
                 <FilterDate Label="Data Risoluzione" Value="@(GetDateFilter("resolved"))"
-                            ValueChanged="@(v => SetDateFilter("resolved", v))" Disabled="@Disabled"/>
+                            ValueChanged="@(v => SetDateFilter("resolved", v))" Disabled="@IsControlDisabled"/>
             </MudItem>
+
             <MudItem xs="12" sm="12" md="4" lg="4">
                 <FilterDate Label="Start Date" Value="@(GetDateFilter("Start date"))"
-                            ValueChanged="@(v => SetDateFilter("Start date", v))" Disabled="@Disabled"/>
+                            ValueChanged="@(v => SetDateFilter("Start date", v))" Disabled="@IsControlDisabled"/>
             </MudItem>
             <MudItem xs="12" sm="12" md="4" lg="4">
                 <FilterDate Label="End Date" Value="@(GetDateFilter("End date"))"
-                            ValueChanged="@(v => SetDateFilter("End date", v))" Disabled="@Disabled"/>
+                            ValueChanged="@(v => SetDateFilter("End date", v))" Disabled="@IsControlDisabled"/>
             </MudItem>
             <MudItem xs="12" sm="12" md="4" lg="4">
                 <FilterDate Label="Due Date" Value="@(GetDateFilter("duedate"))"
-                            ValueChanged="@(v => SetDateFilter("duedate", v))" Disabled="@Disabled"/>
+                            ValueChanged="@(v => SetDateFilter("duedate", v))" Disabled="@IsControlDisabled"/>
             </MudItem>
 
             <MudItem xs="12" sm="12" md="4" lg="4">
@@ -147,14 +146,12 @@
                                   LeftColumnHeader="Status..."
                                   RightColumnHeader="Period..."
                                   Label="Passaggio di Stato"
-                                  Disabled="@Disabled"/>
+                                  Disabled="@IsControlDisabled"/>
             </MudItem>
 
-            <MudItem xs="12" sm="12" md="12" lg="12" Class="d-flex justify-end pt-2">
+            <MudItem xs="12" Class="d-flex justify-end pt-2">
                 @if (!_isLoading) {
-                    <MudText Typo="Typo.caption">
-                        @_searchCriteria.ToJql()
-                    </MudText>
+                    <MudText Typo="Typo.caption">@_searchCriteria.ToJql()</MudText>
                 }
             </MudItem>
         </MudGrid>
@@ -164,13 +161,14 @@
 @code {
     [Inject] public required IOptions<JiraFilterOptions> Options { get; set; }
     [Inject] public required FilterFacade FilterFacade { get; set; }
-    [Inject] public required IPresetService PresetService { get; set; } // Iniettato il service
+    [Inject] public required IPresetService PresetService { get; set; }
     [Inject] public required ISnackbar Snackbar { get; set; }
 
-    [Parameter] public bool ShowAssignees { get; set; } = true;
     [Parameter] public bool Collapsable { get; set; } = true;
     [Parameter] public required EventCallback<SearchCriteria> OnCriteriaChanged { get; set; }
-    [Parameter] public bool ShowPresets { get; set; } = true;
+
+    // Se passato, il componente entra in modalità "Edit" (DDL preset nascosta, controlli abilitati)
+    [Parameter] public PresetItem? InitialPreset { get; set; }
 
     private ImmutableArray<ProjectModel> _projects = [];
     private ImmutableArray<TypeModel> _types = [];
@@ -178,36 +176,29 @@
     private ImmutableArray<UserModel> _assignees = [];
     private ImmutableArray<ComponentModel> _components = [];
     private ImmutableArray<LabelModel> _labels = [];
-
     private ImmutableArray<PresetItem> _presets = [];
-    private PresetItem? _selectedPreset;
 
+    private PresetItem? _selectedPreset;
     private SearchCriteria _searchCriteria = SearchCriteria.Empty;
     private bool _isLoading = true;
     private bool _isExpanded = true;
 
-    private bool Disabled => _isLoading || _selectedPreset is not null;
+    // Se stiamo editando un preset esistente, i controlli devono essere sbloccati.
+    // Se lo stiamo scegliendo da una lista (Dashboard), i controlli rimangono bloccati.
+    private bool IsControlDisabled => _isLoading || (_selectedPreset is not null && InitialPreset is null);
 
     protected override async Task OnInitializedAsync() {
         try {
             _isLoading = true;
 
-            if (ShowPresets) 
-            {
-                var allPresets = await PresetService.GetAllAsync();
-                _presets = [..allPresets.OrderByDescending(p => p.Default).ThenBy(p => p.Name)];
-                _selectedPreset = _presets.FirstOrDefault(p => p.Default);
-            }
-            else 
-            {
-                _presets = [];
-                _selectedPreset = null;
+            if (InitialPreset is not null) {
+                _selectedPreset = InitialPreset;
+            } else {
+                _presets = await PresetService.GetAllAsync();
             }
 
-            await OnCriteriaChanged.InvokeAsync(_searchCriteria);
-
-            var projectToLoad = _selectedPreset?.Criteria.ProjectKey ?? Options.Value.DefaultProject;
-            await BuildAsync(projectToLoad);
+            var projectKey = _selectedPreset?.Criteria.ProjectKey ?? Options.Value.DefaultProject;
+            await BuildAsync(projectKey);
         }
         catch (Exception) {
             Snackbar.Add("Errore durante l'inizializzazione dei filtri.", Severity.Error);
@@ -219,47 +210,38 @@
 
     private async Task OnPresetChangedAsync(PresetItem? preset) {
         _selectedPreset = preset;
-        try 
-        {
-            _isLoading = true;
-
-            var projectKeyToLoad = preset?.Criteria.ProjectKey ?? string.Empty;
-
-            await BuildAsync(projectKeyToLoad);
+        _isLoading = true;
+        try {
+            await BuildAsync(preset?.Criteria.ProjectKey ?? Options.Value.DefaultProject);
             await OnCriteriaChanged.InvokeAsync(_searchCriteria);
         }
-        finally 
-        {
+        finally {
             _isLoading = false;
         }
     }
 
     private async Task OnProjectChangedAsync(ProjectModel? project) {
-        if (project is null || !_projects.Any(p => string.Equals(p.Key, project.Key, StringComparison.OrdinalIgnoreCase))) {
-            return;
-        }
-
+        if (project is null) return;
+        _isLoading = true;
         try {
-            _isLoading = true;
-            await OnCriteriaChanged.InvokeAsync(_searchCriteria);
             await BuildAsync(project.Key);
+            await OnCriteriaChanged.InvokeAsync(_searchCriteria);
         }
         finally {
             _isLoading = false;
         }
     }
 
-    // ... (metodi intermedi come OnTypesChangedAsync, OnStatusesChanged rimangono identici) ...
     private async Task OnTypesChangedAsync(IFilterSelection<TypeModel> types) {
         _searchCriteria = _searchCriteria with { Types = types };
+        _isLoading = true;
         try {
-            _isLoading = true;
             var projectKey = _searchCriteria.Project?.Key ?? Options.Value.DefaultProject;
             _statuses = await FilterFacade.GetStatusesAsync(projectKey, _searchCriteria.Types.Items);
+            await OnCriteriaChanged.InvokeAsync(_searchCriteria);
         }
         finally {
             _isLoading = false;
-            await OnCriteriaChanged.InvokeAsync(_searchCriteria);
         }
     }
 
@@ -270,12 +252,12 @@
 
     private async Task OnAssigneesChanged(IFilterSelection<UserModel> assignees) {
         _searchCriteria = _searchCriteria with { Assignees = assignees };
-        await OnCriteriaChanged.InvokeAsync(_searchCriteria).ConfigureAwait(false);
+        await OnCriteriaChanged.InvokeAsync(_searchCriteria);
     }
 
     private async Task OnIncludeUnassignedChanged(bool newValue) {
         _searchCriteria = _searchCriteria with { IncludeUnassigned = newValue };
-        await OnCriteriaChanged.InvokeAsync(_searchCriteria).ConfigureAwait(false);
+        await OnCriteriaChanged.InvokeAsync(_searchCriteria);
     }
 
     private async Task OnComponentsChanged(IFilterSelection<ComponentModel> components) {
@@ -301,6 +283,8 @@
     }
 
     private async Task BuildAsync(string projectKey) {
+        if (string.IsNullOrEmpty(projectKey)) return;
+
         var projectsTask = FilterFacade.GetProjectsAsync(CancellationToken.None);
         var typesTask = FilterFacade.GetTypesAsync(projectKey);
         var assigneesTask = FilterFacade.GetAssigneesAsync(projectKey);
@@ -315,18 +299,14 @@
         _components = await componentsTask;
         _labels = await labelsTask;
 
-        if (_selectedPreset is not null) 
-        {
-            _searchCriteria = BuildSearchCriteria(_selectedPreset);
-        }
-        else 
-        {
-            var project = _projects.Single(project => project.Key.Equals(projectKey, StringComparison.OrdinalIgnoreCase));
+        if (_selectedPreset is not null) {
+            _searchCriteria = _selectedPreset.ToModel(_projects, _types, _assignees, _components, _labels);
+            _statuses = await FilterFacade.GetStatusesAsync(projectKey, _searchCriteria.Types.Items);
+            _searchCriteria = _searchCriteria.HydrateStatuses(_selectedPreset, _statuses);
+        } else {
+            var project = _projects.FirstOrDefault(p => p.Key.Equals(projectKey, StringComparison.OrdinalIgnoreCase));
             _searchCriteria = SearchCriteria.Create(project);
+            _statuses = await FilterFacade.GetStatusesAsync(projectKey, _searchCriteria.Types.Items);
         }
-
-        _statuses = await FilterFacade.GetStatusesAsync(projectKey, _searchCriteria.Types.Items);
     }
-    
-    public SearchCriteria BuildSearchCriteria(PresetItem preset) => preset.ToModel(_projects, _types, _assignees, _components, _labels);
 }
