@@ -32,6 +32,8 @@ public class PresetRepository(IDatabaseContext context) : IPresetRepository
             var documents = (await context.GetAsync<PresetDocument>()).ToList();
             var document = item.ToDocument();
 
+            if (document.Id == Guid.Empty) document = document with { Id = Guid.NewGuid() };
+
             documents.Add(document);
 
             await context.SaveChangesAsync(documents);

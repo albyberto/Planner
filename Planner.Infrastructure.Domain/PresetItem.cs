@@ -12,6 +12,8 @@ public record PresetItem
     public DateTime Created { get; init; }
     public DateTime Updated { get; init; }
     public CriteriaItem Criteria { get; init; } = new();
+
+    public override string ToString() => Name;
 }
 
 public record CriteriaItem
