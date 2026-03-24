@@ -1,133 +1,88 @@
-@* @using Planner.Clients *@
-@* @using Planner.Model *@
-@* @inject JiraReadClient ReadClient *@
-@* @inject JiraWriteClient WriteClient *@
-@* @inject ISnackbar Snackbar *@
-@* *@
-@* @if (_editing) *@
-@* { *@
-@*     <MudSelect T="Domain.Transition" *@
-@*                Value="@null" *@
-@*                ValueChanged="DoTransition" *@
-@*                Placeholder="@Value.Name" *@
-@*                Open="_editing" *@
-@*                OpenChanged="OnOpenChanged" *@
-@*                Dense="true" *@
-@*                Variant="Variant.Outlined" *@
-@*                Margin="Margin.Dense" *@
-@*                AnchorOrigin="Origin.BottomLeft" *@
-@*                Class="text-nowrap" *@
-@*                PopoverClass="text-nowrap" *@
-@*                CloseIcon="@Icons.Material.Filled.Close" *@
-@*                ToStringFunc="@(t => t?.Name ?? string.Empty)"> *@
-@*         @if (_loading) *@
-@*         { *@
-@*             <MudSelectItem T="Domain.Transition" Value="@null" Disabled="true"> *@
-@*                 <MudProgressCircular Size="Size.Small" Indeterminate="true" Class="mr-2" /> Caricamento... *@
-@*             </MudSelectItem> *@
-@*         } *@
-@*         else *@
-@*         { *@
-@*             @foreach (var transition in _transitions) *@
-@*             { *@
-@*                 <MudSelectItem T="Domain.Transition" Value="@transition" Class="text-nowrap"> *@
-@*                     @transition.Name *@
-@*                 </MudSelectItem> *@
-@*             } *@
-@*         } *@
-@*     </MudSelect> *@
-@* } *@
-@* else *@
-@* { *@
-@*     <MudChip T="string" Size="Size.Small" Color="@ChipColor" Icon="@ChipIcon" Variant="Variant.Filled" Class="cursor-pointer" OnClick="StartEdit"> *@
-@*         @Value.Name *@
-@*     </MudChip> *@
-@* } *@
-@* *@
-@* @code { *@
-@*     [Parameter, EditorRequired] public required string IssueKey { get; set; } *@
-@*     [Parameter, EditorRequired] public required StatusModel Value { get; set; } *@
-@*     [Parameter] public EventCallback<StatusModel> ValueChanged { get; set; } *@
-@*     [Parameter] public EventCallback OnChanged { get; set; } *@
-@*     [CascadingParameter(Name = "RefreshIssues")] public Func<Task>? RefreshIssues { get; set; } *@
-@* *@
-@*     private IReadOnlyList<Domain.Transition> _transitions = []; *@
-@*     private bool _loading; *@
-@*     private bool _editing; *@
-@* *@
-@*     private async Task StartEdit() *@
-@*     { *@
-@*         if (_transitions.Count == 0) *@
-@*         { *@
-@*             await LoadTransitionsAsync(); *@
-@*         } *@
-@*         _editing = true; *@
-@*     } *@
-@* *@
-@*     private void OnOpenChanged(bool isOpen) *@
-@*     { *@
-@*         if (!isOpen) *@
-@*         { *@
-@*             _editing = false; *@
-@*         } *@
-@*     } *@
-@* *@
-@*     private async Task LoadTransitionsAsync() *@
-@*     { *@
-@*         _loading = true; *@
-@*         try *@
-@*         { *@
-@*             _transitions = await ReadClient.GetTransitionsAsync(IssueKey); *@
-@*         } *@
-@*         catch *@
-@*         { *@
-@*             _transitions = []; *@
-@*         } *@
-@*         finally *@
-@*         { *@
-@*             _loading = false; *@
-@*         } *@
-@*     } *@
-@* *@
-@*     private async Task DoTransition(Domain.Transition? transition) *@
-@*     { *@
-@*         if (transition == null) *@
-@*         { *@
-@*             _editing = false; *@
-@*             return; *@
-@*         } *@
-@* *@
-@*         try *@
-@*         { *@
-@*             await WriteClient.TransitionAsync(IssueKey, transition.Id); *@
-@*             Snackbar.Add($"{IssueKey} → {transition.Name}", Severity.Success); *@
-@*              *@
-@*             var newStatus = new StatusModel(transition.To); *@
-@*             Value = newStatus; *@
-@*             await ValueChanged.InvokeAsync(Value); *@
-@* *@
-@*             if (OnChanged.HasDelegate) await OnChanged.InvokeAsync(); *@
-@* *@
-@*             _transitions = []; // Clear transitions so they reload next time for the new status *@
-@*         } *@
-@*         catch (Exception ex) *@
-@*         { *@
-@*             Snackbar.Add($"Errore transizione: {ex.Message}", Severity.Error); *@
-@*         } *@
-@*         finally *@
-@*         { *@
-@*             _editing = false; *@
-@*         } *@
-@*     } *@
-@* *@
-@*     private (Color Color, string Icon) Style => Value.Category switch *@
-@*     { *@
-@*         "To Do" => (Color.Default, Icons.Material.Filled.RadioButtonUnchecked), *@
-@*         "In Progress" => (Color.Info, Icons.Material.Filled.Autorenew), *@
-@*         "Done" => (Color.Success, Icons.Material.Filled.CheckCircle), *@
-@*         _ => (Color.Default, Icons.Material.Filled.Circle) *@
-@*     }; *@
-@* *@
-@*     private Color ChipColor => Style.Color; *@
-@*     private string ChipIcon => Style.Icon; *@
-@* } *@
+@using Planner.Facades
+@using Planner.Model
+@inject IssueFacade Facade
+@inject ISnackbar Snackbar
+
+@if (_editing)
+{
+    <MudSelect T="TransitionModel"
+               Value="@null"
+               ValueChanged="DoTransition"
+               Placeholder="@Value.Name"
+               Open="_editing"
+               OpenChanged="OnOpenChanged"
+               Dense="true"
+               Variant="Variant.Outlined"
+               Margin="Margin.Dense"
+               AnchorOrigin="Origin.BottomLeft"
+               Class="text-nowrap"
+               PopoverClass="text-nowrap"
+               CloseIcon="@Icons.Material.Filled.Close"
+               ToStringFunc="@(t => t?.Name ?? string.Empty)">
+        @foreach (var transition in Transitions)
+        {
+            <MudSelectItem T="TransitionModel" Value="@transition" Class="text-nowrap">
+                @transition.Name
+            </MudSelectItem>
+        }
+    </MudSelect>
+}
+else
+{
+    <MudChip T="string" Size="Size.Small" Color="@Value.Color" Variant="Variant.Filled" Class="cursor-pointer" OnClick="StartEdit">
+        @Value.Name
+    </MudChip>
+}
+
+@code {
+    [Parameter, EditorRequired] public required string IssueKey { get; set; }
+    [Parameter, EditorRequired] public required StatusModel Value { get; set; }
+    [Parameter] public IReadOnlyList<TransitionModel> Transitions { get; set; } = Array.Empty<TransitionModel>();
+    [Parameter] public EventCallback<StatusModel> ValueChanged { get; set; }
+    [Parameter] public EventCallback OnChanged { get; set; }
+    [CascadingParameter(Name = "RefreshIssues")] public Func<Task>? RefreshIssues { get; set; }
+
+    private bool _editing;
+
+    private void StartEdit()
+    {
+        _editing = true;
+    }
+
+    private void OnOpenChanged(bool isOpen)
+    {
+        if (!isOpen)
+        {
+            _editing = false;
+        }
+    }
+
+    private async Task DoTransition(TransitionModel? transition)
+    {
+        if (transition == null)
+        {
+            _editing = false;
+            return;
+        }
+
+        try
+        {
+            await Facade.TransitionAsync(IssueKey, transition.Id);
+            Snackbar.Add($"{IssueKey} → {transition.Name}", Severity.Success);
+            
+            Value = transition.TargetStatus;
+            await ValueChanged.InvokeAsync(Value);
+
+            if (OnChanged.HasDelegate) await OnChanged.InvokeAsync();
+        }
+        catch (Exception ex)
+        {
+            Snackbar.Add($"Errore transizione: {ex.Message}", Severity.Error);
+        }
+        finally
+        {
+            _editing = false;
+        }
+    }
+
+}

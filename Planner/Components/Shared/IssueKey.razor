@@ -1,20 +1,20 @@
-@* @using Planner.Model *@
-@* *@
-@* <MudLink Href="@Url" Target="_blank" Typo="Typo.body2" Color="Color.Primary" Underline="Underline.Hover"> *@
-@*     @Issue.Key *@
-@* </MudLink> *@
-@* *@
-@* @code { *@
-@*     [Parameter, EditorRequired] public required IssueModel Issue { get; set; } = null!; *@
-@* *@
-@*     private string Url  *@
-@*     { *@
-@*         get *@
-@*         { *@
-@*             if (string.IsNullOrEmpty(Issue.Self)) return "#"; // Fallback di sicurezza *@
-@* *@
-@*             var baseUri = new Uri(Issue.Self).GetLeftPart(UriPartial.Authority); *@
-@*             return $"{baseUri}/browse/{Issue.Key}"; *@
-@*         } *@
-@*     } *@
-@* } *@
+@using Planner.Model
+
+<MudLink Href="@Url" Target="_blank" Typo="Typo.body2" Color="Color.Primary" Underline="Underline.Hover">
+    @Issue.Key
+</MudLink>
+
+@code {
+    [Parameter, EditorRequired] public required IIssue Issue { get; set; }
+
+    private string Url 
+    {
+        get
+        {
+            if (string.IsNullOrEmpty(Issue.Self)) return "#"; // Fallback di sicurezza
+
+            var baseUri = new Uri(Issue.Self).GetLeftPart(UriPartial.Authority);
+            return $"{baseUri}/browse/{Issue.Key}";
+        }
+    }
+}

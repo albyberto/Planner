@@ -21,22 +21,22 @@ public static class DashboardIssueMapper
         var stats = new TimeStats(originalEstimate, totalTimeSpent, assigneeTimeSpent, explicitRemaining);
 
         return new(
-            Id: issue.Id,
-            Key: issue.Key,
-            Self: issue.Self ?? string.Empty,
-            ProjectKey: issue.Fields?.Project?.Key ?? string.Empty,
-            Summary: issue.Fields?.Summary ?? string.Empty,
-            Status: new(issue.Fields?.Status ?? throw new InvalidOperationException("Status is required for a dashboard issue.")),
-            Assignee: issue.Fields?.Assignee != null ? new UserModel(issue.Fields.Assignee) : null,
-            Type: new(issue.Fields?.Type ?? throw new InvalidOperationException("Type is required for a dashboard issue.")),
-            Components: issue.Fields?.Components != null ? [..issue.Fields.Components.Select(c => new ComponentModel(c))] : [],
-            Labels: issue.Fields?.Labels != null ? [..issue.Fields.Labels.Select(l => new LabelModel(l))] : [],
-            FixVersions: issue.Fields?.FixVersions != null ? [..issue.Fields.FixVersions.Select(v => new FixVersionModel(v))] : [],
-            Transitions: issue.Transitions != null ? [..issue.Transitions.Select(t => new TransitionModel(t))] : [],
-            StartDate: issue.Fields?.StartDate,
-            EndDate: issue.Fields?.EndDate,
-            DueDate: issue.Fields?.DueDate,
-            Stats: stats
+             issue.Id,
+             issue.Key,
+             issue.Self ?? string.Empty,
+             issue.Fields?.Project?.Key ?? string.Empty,
+             issue.Fields?.Summary ?? string.Empty,
+             new(issue.Fields?.Status ?? throw new InvalidOperationException("Status is required for a dashboard issue.")),
+             issue.Fields?.Assignee != null ? new UserModel(issue.Fields.Assignee) : null,
+             new(issue.Fields?.Type ?? throw new InvalidOperationException("Type is required for a dashboard issue.")),
+             issue.Fields?.Components != null ? [..issue.Fields.Components.Select(c => new ComponentModel(c))] : [],
+             issue.Fields?.Labels != null ? [..issue.Fields.Labels.Select(l => new LabelModel(l))] : [],
+             issue.Fields?.FixVersions != null ? [..issue.Fields.FixVersions.Select(v => new FixVersionModel(v))] : [],
+             issue.Transitions != null ? [..issue.Transitions.Select(t => new TransitionModel(t))] : [],
+             issue.Fields?.StartDate,
+             issue.Fields?.EndDate,
+             issue.Fields?.DueDate,
+             stats
         );
     }
 }

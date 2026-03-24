@@ -1,59 +1,58 @@
-@* @using Planner.Clients *@
-@* @inject JiraWriteClient WriteClient *@
-@* @inject ISnackbar Snackbar *@
-@* *@
-@* @if (_editing) *@
-@* { *@
-@*     <MudTextField @bind-Value="_value" Variant="Variant.Outlined" Margin="Margin.Dense" *@
-@*                   Immediate="true" OnKeyDown="OnKeyDown" OnBlur="Cancel" *@
-@*                   AutoFocus="true" Typo="Typo.body2" /> *@
-@* } *@
-@* else *@
-@* { *@
-@*     <MudTooltip Text="Click per modificare" Arrow="true"> *@
-@*         <MudText Typo="Typo.body2" Class="cursor-pointer" @onclick="StartEdit">@Value</MudText> *@
-@*     </MudTooltip> *@
-@* } *@
-@* *@
-@* @code { *@
-@*     [Parameter, EditorRequired] public required string IssueKey { get; set; } *@
-@*     [Parameter, EditorRequired] public required string Value { get; set; } *@
-@*     [Parameter] public EventCallback<string> ValueChanged { get; set; } *@
-@*     [Parameter] public EventCallback OnChanged { get; set; } *@
-@*     [CascadingParameter(Name = "RefreshIssues")] public Func<Task>? RefreshIssues { get; set; } *@
-@* *@
-@*     private bool _editing; *@
-@*     private string _value = string.Empty; *@
-@* *@
-@*     private void StartEdit() *@
-@*     { *@
-@*         _value = Value; *@
-@*         _editing = true; *@
-@*     } *@
-@* *@
-@*     private void Cancel() => _editing = false; *@
-@* *@
-@*     private async Task OnKeyDown(KeyboardEventArgs e) *@
-@*     { *@
-@*         if (e.Key == "Escape") { Cancel(); return; } *@
-@*         if (e.Key != "Enter") return; *@
-@*         if (_value == Value) { Cancel(); return; } *@
-@* *@
-@*         try *@
-@*         { *@
-@*             var update = new Builders.IssueUpdateBuilder().SetSummary(_value); *@
-@*             await WriteClient.UpdateIssueAsync(IssueKey, update); *@
-@*             Snackbar.Add($"{IssueKey} summary aggiornato", Severity.Success); *@
-@*             _editing = false; *@
-@*              *@
-@*             Value = _value; *@
-@*             await ValueChanged.InvokeAsync(Value); *@
-@* *@
-@*             if (OnChanged.HasDelegate) await OnChanged.InvokeAsync(); *@
-@*         } *@
-@*         catch (Exception ex) *@
-@*         { *@
-@*             Snackbar.Add($"Errore: {ex.Message}", Severity.Error); *@
-@*         } *@
-@*     } *@
-@* } *@
+@using Planner.Facades
+@inject IssueFacade Facade
+@inject ISnackbar Snackbar
+
+@if (_editing)
+{
+    <MudTextField @bind-Value="_value" Variant="Variant.Outlined" Margin="Margin.Dense"
+                  Immediate="true" OnKeyDown="OnKeyDown" OnBlur="Cancel"
+                  AutoFocus="true" Typo="Typo.body2" />
+}
+else
+{
+    <MudTooltip Text="Click per modificare" Arrow="true">
+        <MudText Typo="Typo.body2" Class="cursor-pointer" @onclick="StartEdit">@Value</MudText>
+    </MudTooltip>
+}
+
+@code {
+    [Parameter, EditorRequired] public required string IssueKey { get; set; }
+    [Parameter, EditorRequired] public required string Value { get; set; }
+    [Parameter] public EventCallback<string> ValueChanged { get; set; }
+    [Parameter] public EventCallback OnChanged { get; set; }
+    [CascadingParameter(Name = "RefreshIssues")] public Func<Task>? RefreshIssues { get; set; }
+
+    private bool _editing;
+    private string _value = string.Empty;
+
+    private void StartEdit()
+    {
+        _value = Value;
+        _editing = true;
+    }
+
+    private void Cancel() => _editing = false;
+
+    private async Task OnKeyDown(KeyboardEventArgs e)
+    {
+        if (e.Key == "Escape") { Cancel(); return; }
+        if (e.Key != "Enter") return;
+        if (_value == Value) { Cancel(); return; }
+
+        try
+        {
+            await Facade.UpdateSummaryAsync(IssueKey, _value);
+            Snackbar.Add($"{IssueKey} summary aggiornato", Severity.Success);
+            _editing = false;
+            
+            Value = _value;
+            await ValueChanged.InvokeAsync(Value);
+
+            if (OnChanged.HasDelegate) await OnChanged.InvokeAsync();
+        }
+        catch (Exception ex)
+        {
+            Snackbar.Add($"Errore: {ex.Message}", Severity.Error);
+        }
+    }
+}

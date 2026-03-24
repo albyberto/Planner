@@ -1,33 +1,32 @@
-@* @using Planner.Clients *@
-@* @using Planner.Model *@
-@* @inject JiraWriteClient WriteClient *@
-@* @inject ISnackbar Snackbar *@
-@* *@
-@* <InlineTimeEdit TimeValue="@Issue.Stats.FormattedEstimate" *@
-@*                 TimeValueChanged="SaveOriginalEstimationAsync" *@
-@*                 Label="estimate" *@
-@*                 EmptyTooltip="Aggiungi estimate"> *@
-@* </InlineTimeEdit> *@
-@* *@
-@* @code { *@
-@*     [Parameter, EditorRequired] public required IssueModel Issue { get; set; } *@
-@*      *@
-@*     // Removed local _displayValue property as FormattedEstimate is computed and read-only. *@
-@* *@
-@*     private async Task SaveOriginalEstimationAsync(string newValue) *@
-@*     { *@
-@*         try *@
-@*         { *@
-@*             var update = new Builders.IssueUpdateBuilder().SetTimeTracking(originalEstimate: newValue); *@
-@*             await WriteClient.UpdateIssueAsync(Issue.Key, update); *@
-@* *@
-@*             Issue.Stats = Issue.Stats with { OriginalEstimate = TimeStats.ParseTime(newValue) }; *@
-@*              *@
-@*             Snackbar.Add($"{Issue.Key} estimate aggiornato a {newValue}", Severity.Success); *@
-@*         } *@
-@*         catch (Exception ex) *@
-@*         { *@
-@*             Snackbar.Add($"Errore nel salvataggio: {ex.Message}", Severity.Error); *@
-@*         } *@
-@*     } *@
-@* } *@
+@using Planner.Facades
+@using Planner.Model
+@inject IssueFacade Facade
+@inject ISnackbar Snackbar
+
+<InlineTimeEdit TimeValue="@Issue.Stats.FormattedEstimate"
+                TimeValueChanged="SaveOriginalEstimationAsync"
+                Label="estimate"
+                EmptyTooltip="Aggiungi estimate">
+</InlineTimeEdit>
+
+@code {
+    [Parameter, EditorRequired] public required IIssue Issue { get; set; }
+    
+    // Removed local _displayValue property as FormattedEstimate is computed and read-only.
+
+    private async Task SaveOriginalEstimationAsync(string newValue)
+    {
+        try
+        {
+            await Facade.UpdateOriginalEstimationAsync(Issue.Key, newValue);
+
+            Issue.Stats = Issue.Stats with { OriginalEstimate = TimeStats.ParseTime(newValue) };
+            
+            Snackbar.Add($"{Issue.Key} estimate aggiornato a {newValue}", Severity.Success);
+        }
+        catch (Exception ex)
+        {
+            Snackbar.Add($"Errore nel salvataggio: {ex.Message}", Severity.Error);
+        }
+    }
+}

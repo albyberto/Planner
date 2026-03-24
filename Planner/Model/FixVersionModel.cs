@@ -5,11 +5,13 @@ namespace Planner.Model;
 
 public record FixVersionModel
 {
-    public string Value { get; set; }
-    public string Name { get; set; }
-    public string Description { get; set; }
+    public string Value { get; set; } = string.Empty;
+    public string Name { get; set; } = string.Empty;
+    public string Description { get; set; } = string.Empty;
     public DateOnly? StartDate { get; set; }
     public DateOnly? ReleaseDate { get; set; }
+
+    public FixVersionModel() {}
 
     public FixVersionModel(FixVersion version)
     {
@@ -19,4 +21,6 @@ public record FixVersionModel
         StartDate = version.StartDate;
         ReleaseDate = version.ReleaseDate;
     }
+
+    public static readonly FixVersionModel Unassigned = new() { Value = "-1", Name = "Unassigned", Description = "Senza Fix Version" };
 }

@@ -4,22 +4,24 @@
 @using System.Collections.Immutable
 @using Planner.Extensions
 @using Planner.Model
+@using Planner.Components.Shared
 
 <ReactivePage Title="Dashboard" Context="issues">
     @{
         var stats = issues.GetTimeStats();
+        var groups = issues.GroupByFixVersion();
     }
 
     @* ───── Summary globale calcolato su TUTTE le issue ───── *@
     <MudGrid Spacing="3" Class="mb-6 align-center">
         <MudItem xs="12" md="4">
-            <MudChip T="string" Icon="@Icons.Material.Outlined.Schedule" Color="Color.Primary" Variant="Variant.Outlined" Size="Size.Small">
+            <MudChip T="string" Icon="@Icons.Material.Filled.Schedule" Color="Color.Primary" Variant="Variant.Filled" Size="Size.Small">
                 Estimate @stats.FormattedEstimate
             </MudChip>
-            <MudChip T="string" Icon="@Icons.Material.Outlined.Timer" Color="Color.Info" Variant="Variant.Outlined" Size="Size.Small">
+            <MudChip T="string" Icon="@Icons.Material.Filled.Timer" Color="Color.Info" Variant="Variant.Filled" Size="Size.Small">
                 Spent @stats.FormattedTotalSpent
             </MudChip>
-            <MudChip T="string" Icon="@Icons.Material.Outlined.HourglassBottom" Color="@(stats.IsOverBudget ? Color.Error : Color.Success)" Variant="Variant.Outlined" Size="Size.Small">
+            <MudChip T="string" Icon="@Icons.Material.Filled.HourglassBottom" Color="@(stats.IsOverBudget ? Color.Error : Color.Success)" Variant="Variant.Filled" Size="Size.Small">
                 @(stats.IsOverBudget ? $"Over {stats.FormattedRemaining}" : $"Left {stats.FormattedRemaining}")
             </MudChip>
         </MudItem>
@@ -28,39 +30,95 @@
         </MudItem>
     </MudGrid>
 
-    <MudPaper Class="pa-4" Elevation="1">
-        @* 2. Passiamo i dati grezzi *@
-        <MudTable Items="@issues" Dense="true" Hover="true" Breakpoint="Breakpoint.Sm" Elevation="0">
-            <HeaderContent>
-                <MudTh>
-                    <MudTableSortLabel SortBy="new Func<DashboardIssueModel, object>(x => x.Key)">Key</MudTableSortLabel>
-                </MudTh>
-                <MudTh>
-                    <MudTableSortLabel SortBy="new Func<DashboardIssueModel, object>(x => x.Summary)">Summary</MudTableSortLabel>
-                </MudTh>
-                <MudTh>
-                    @* 3. Gestione dei null: se la data manca, la consideriamo "piccolissima" per non rompere l'ordinamento *@
-                    <MudTableSortLabel SortBy="new Func<DashboardIssueModel, object>(x => x.StartDate ?? DateOnly.MinValue)">
-                        Start Date
-                    </MudTableSortLabel>
-                </MudTh>
-                <MudTh>
-                    @* 4. LA MAGIA È QUI: InitialDirection fa l'ordinamento in automatico al caricamento della pagina *@
-                    <MudTableSortLabel InitialDirection="SortDirection.Descending" SortBy="new Func<DashboardIssueModel, object>(x => x.EndDate ?? DateOnly.MinValue)">
-                        End Date
-                    </MudTableSortLabel>
-                </MudTh>
-            </HeaderContent>
-            
-            <RowTemplate Context="issue">
-                <MudTd DataLabel="Key">@issue.Key</MudTd>
-                <MudTd DataLabel="Summary">@issue.Summary</MudTd>
-                <MudTd DataLabel="Start Date">@issue.StartDate?.ToString("d")</MudTd>
-                <MudTd DataLabel="End Date">@issue.EndDate?.ToString("d")</MudTd>
-            </RowTemplate>
-        </MudTable>
-    </MudPaper>
+    @* ───── Fix Version groups ───── *@
+    @foreach (var group in groups)
+    {
+        var g = group.Issues.GetTimeStats();
 
+        <MudPaper Class="pa-4 mb-4" Elevation="2">
+            <div class="d-flex justify-space-between align-center mb-1">
+                <div class="d-flex flex-column">
+                    <div class="d-flex align-center">
+                        <MudIcon Icon="@Icons.Material.Filled.NewReleases" Size="Size.Small" Color="Color.Primary" />
+                        <InlineVersionEdit Version="@group.Version" Issues="@group.Issues" />
+                    </div>
+                    @if (!string.IsNullOrWhiteSpace(group.Version.Description))
+                    {
+                        <MudText Typo="Typo.caption" Color="Color.Default" Class="ml-6 mud-text-secondary">@group.Version.Description</MudText>
+                    }
+                </div>
+                <div class="d-flex align-center justify-end flex-wrap gap-1">
+                    <MudChip T="string" Size="Size.Small" Color="Color.Primary" Variant="Variant.Text" Class="ma-0">@g.FormattedEstimate</MudChip>
+                    <MudChip T="string" Size="Size.Small" Color="Color.Info" Variant="Variant.Text" Class="ma-0">@g.FormattedTotalSpent</MudChip>
+                    <MudChip T="string" Size="Size.Small" Color="@(g.IsOverBudget ? Color.Error : Color.Warning)" Variant="Variant.Text" Class="ma-0">
+                        @g.FormattedRemaining
+                    </MudChip>
+                    <MudChip T="string" Size="Size.Small" Color="Color.Default" Variant="Variant.Text" Class="ma-0">@g.FormattedAssigneeSpent</MudChip>
+                </div>
+            </div>
+
+            <MudGrid Spacing="2" Class="mb-3 align-center">
+                <MudItem xs="12">
+                    <TimeProgressBar Stats="@g" Size="Size.Small" />
+                </MudItem>
+            </MudGrid>
+
+            <MudTable Items="@group.Issues" Dense="true" Hover="true" Breakpoint="Breakpoint.Sm" Elevation="0">
+                <HeaderContent>
+                    <MudTh Class="mud-text-align-center"></MudTh>
+                    <MudTh>Key</MudTh>
+                    <MudTh>Summary</MudTh>
+                    <MudTh>Status</MudTh>
+                    <MudTh Class="mud-text-align-center">Start</MudTh>
+                    <MudTh Class="mud-text-align-center">End</MudTh>
+                    <MudTh Class="mud-text-align-end">Original</MudTh>
+                    <MudTh Class="mud-text-align-end">Spent</MudTh>
+                    <MudTh Class="mud-text-align-end">Remaining</MudTh>
+                    <MudTh Class="mud-text-align-end">Calc. Left</MudTh>
+                    <MudTh>Components</MudTh>
+                    <MudTh>Labels</MudTh>
+                </HeaderContent>
+                <RowTemplate Context="issue">
+                    <MudTd DataLabel="Type" Class="mud-text-align-center">
+                        <InlineTypeEdit IssueKey="@issue.Key" @bind-Value="issue.Type" />
+                    </MudTd>
+                    <MudTd DataLabel="Key">
+                        <IssueKey Issue="@issue" />
+                    </MudTd>
+                    <MudTd DataLabel="Summary">
+                        <InlineSummaryEdit IssueKey="@issue.Key" @bind-Value="issue.Summary" />
+                    </MudTd>
+                    <MudTd DataLabel="Status">
+                        <InlineStatusEdit IssueKey="@issue.Key" @bind-Value="issue.Status" Transitions="@issue.Transitions" />
+                    </MudTd>
+                    <MudTd DataLabel="Start" Class="mud-text-align-center">
+                        <InlineStartDateEdit Issue="@issue" />
+                    </MudTd>
+                    <MudTd DataLabel="End" Class="mud-text-align-center">
+                        <InlineEndDateEdit Issue="@issue" />
+                    </MudTd>
+                    <MudTd DataLabel="Est" Class="mud-text-align-end">
+                        <InlineOriginalEstimationEdit Issue="@issue" />
+                    </MudTd>
+                    <MudTd DataLabel="Spent" Class="mud-text-align-end">
+                        <MudText Typo="Typo.body2" Color="Color.Info">@issue.Stats.FormattedTotalSpent</MudText>
+                    </MudTd>
+                    <MudTd DataLabel="Remaining" Class="mud-text-align-end">
+                        <InlineRemainingEstimationEdit Issue="@issue" />
+                    </MudTd>
+                    <MudTd DataLabel="Left" Class="mud-text-align-end">
+                        <MudText Typo="Typo.body2" Color="Color.Default">@issue.Stats.FormattedAssigneeSpent</MudText>
+                    </MudTd>
+                    <MudTd DataLabel="Components">
+                        <InlineComponentsSelect Issue="@issue" />
+                    </MudTd>
+                    <MudTd DataLabel="Labels">
+                        <InlineLabelsSelect Issue="@issue" />
+                    </MudTd>
+                </RowTemplate>
+            </MudTable>
+        </MudPaper>
+    }
 </ReactivePage>
 
 @code {

@@ -49,10 +49,10 @@ public static class Bootstrapper
             services.AddHttpClient<JiraReadClient>(ConfigureJiraClient).AddHttpMessageHandler<JiraAuthenticationHandler>().AddPolicyHandler(GetRetryPolicy()).AddPolicyHandler(GetCircuitBreakerPolicy());
 
             // Register Write Client
-            // services.AddHttpClient<JiraWriteClient>(ConfigureJiraClient)
-            //     .AddHttpMessageHandler<JiraAuthenticationHandler>()
-            //     .AddPolicyHandler(GetRetryPolicy())
-            //     .AddPolicyHandler(GetCircuitBreakerPolicy());
+            services.AddHttpClient<JiraWriteClient>(ConfigureJiraClient)
+                .AddHttpMessageHandler<JiraAuthenticationHandler>()
+                .AddPolicyHandler(GetRetryPolicy())
+                .AddPolicyHandler(GetCircuitBreakerPolicy());
 
             return services;
         }

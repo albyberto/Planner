@@ -1,43 +1,42 @@
-@* @using Planner.Clients *@
-@* @using Planner.Model *@
-@* @inject JiraWriteClient WriteClient *@
-@* @inject ISnackbar Snackbar *@
-@* *@
-@* <div class="d-flex justify-end align-center gap-2"> *@
-@*     <InlineTimeEdit *@
-@*                     TimeValue="@Issue.Stats.FormattedRemaining" *@
-@*                     TimeValueChanged="SaveRemainingEstimationAsync" *@
-@*                     Label="rimanente" *@
-@*                     EmptyTooltip="Aggiungi rimanente" *@
-@*                     DisplayColor="Color.Warning"> *@
-@*     </InlineTimeEdit> *@
-@*     @{ *@
-@*         var isZero = string.IsNullOrWhiteSpace(Issue.Stats.FormattedRemaining) || Issue.Stats.FormattedRemaining == "0h"; *@
-@*     } *@
-@*     <div style="@(isZero ? "visibility: hidden;" : "")" class="d-flex align-center"> *@
-@*         <MudTooltip Text="Azzera rimanente" Arrow="true" Disabled="@isZero"> *@
-@*             <MudIconButton Icon="@Icons.Material.Filled.CleanHands" Size="Size.Small" Color="Color.Default" Class="pa-0" OnClick="@(() => SaveRemainingEstimationAsync("0m"))" Disabled="@isZero"/> *@
-@*         </MudTooltip> *@
-@*     </div> *@
-@* </div> *@
-@* *@
-@* @code { *@
-@*     [Parameter, EditorRequired] public required IssueModel Issue { get; set; } *@
-@* *@
-@*     private async Task SaveRemainingEstimationAsync(string newValue) *@
-@*     { *@
-@*         try *@
-@*         { *@
-@*             var update = new Builders.IssueUpdateBuilder().SetTimeTracking(remainingEstimate: newValue); *@
-@*             await WriteClient.UpdateIssueAsync(Issue.Key, update); *@
-@* *@
-@*             Issue.Stats = Issue.Stats with { ExplicitRemaining = TimeStats.ParseTime(newValue) }; *@
-@*              *@
-@*             Snackbar.Add($"{Issue.Key} rimanente aggiornato a {newValue}", Severity.Success); *@
-@*         } *@
-@*         catch (Exception ex) *@
-@*         { *@
-@*             Snackbar.Add($"Errore nel salvataggio: {ex.Message}", Severity.Error); *@
-@*         } *@
-@*     } *@
-@* } *@
+@using Planner.Facades
+@using Planner.Model
+@inject IssueFacade Facade
+@inject ISnackbar Snackbar
+
+<div class="d-flex justify-end align-center gap-2">
+    <InlineTimeEdit
+                    TimeValue="@Issue.Stats.FormattedRemaining"
+                    TimeValueChanged="SaveRemainingEstimationAsync"
+                    Label="rimanente"
+                    EmptyTooltip="Aggiungi rimanente"
+                    DisplayColor="Color.Warning">
+    </InlineTimeEdit>
+    @{
+        var isZero = string.IsNullOrWhiteSpace(Issue.Stats.FormattedRemaining) || Issue.Stats.FormattedRemaining == "0h";
+    }
+    <div style="@(isZero ? "visibility: hidden;" : "")" class="d-flex align-center">
+        <MudTooltip Text="Azzera rimanente" Arrow="true" Disabled="@isZero">
+            <MudIconButton Icon="@Icons.Material.Filled.CleanHands" Size="Size.Small" Color="Color.Default" Class="pa-0" OnClick="@(() => SaveRemainingEstimationAsync("0m"))" Disabled="@isZero"/>
+        </MudTooltip>
+    </div>
+</div>
+
+@code {
+    [Parameter, EditorRequired] public required IIssue Issue { get; set; }
+
+    private async Task SaveRemainingEstimationAsync(string newValue)
+    {
+        try
+        {
+            await Facade.UpdateRemainingEstimationAsync(Issue.Key, newValue);
+
+            Issue.Stats = Issue.Stats with { ExplicitRemaining = TimeStats.ParseTime(newValue) };
+            
+            Snackbar.Add($"{Issue.Key} rimanente aggiornato a {newValue}", Severity.Success);
+        }
+        catch (Exception ex)
+        {
+            Snackbar.Add($"Errore nel salvataggio: {ex.Message}", Severity.Error);
+        }
+    }
+}

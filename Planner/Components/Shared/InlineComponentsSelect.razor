@@ -1,18 +1,16 @@
-@* @using System.Collections.Immutable *@
-@* @using Planner.Model *@
-@* @using Planner.Services *@
-@* @inject ProjectsService ProjectsService *@
-@* *@
-@* <InlineMultiSelect TItem="ComponentModel" Issue="@Issue" Items="@Issue.Components" *@
-@*     ItemsChanged="@((IReadOnlyCollection<ComponentModel> components) => Issue.Components = ImmutableList.CreateRange(components))" *@
-@*     LoadItemsAsync="@(async projectKey => { *@
-@*                        var project = (await ProjectsService.GetAsync(projectKey)); *@
-@*                        return project != null ? (IReadOnlyList<ComponentModel>)await project.GetComponentsAsync() : Array.Empty<ComponentModel>(); *@
-@*                    })" UpdateBuilderAction="@((builder, components) => builder.SetComponents(components))" *@
-@*     Label="Components" ChipColor="Color.Primary" EmptyTooltip="Aggiungi Component" /> *@
-@* *@
-@* @code { *@
-@*     [Parameter, EditorRequired] *@
-@* *@
-@*     public IssueModel Issue { get; set; } = null!; *@
-@* } *@
+@using System.Collections.Immutable
+@using Planner.Model
+@using Planner.Facades
+@inject ProjectFacade ProjectFacade
+@inject IssueFacade Facade
+
+<InlineMultiSelect TItem="ComponentModel" Issue="@Issue" Items="@Issue.Components"
+    ItemsChanged="@((IReadOnlyCollection<ComponentModel> components) => Issue.Components = ImmutableArray.CreateRange(components))"
+    LoadItemsAsync="@(async projectKey => await ProjectFacade.GetComponentsAsync(projectKey))"
+    SaveActionAsync="@(async components => await Facade.UpdateComponentsAsync(Issue.Key, components))"
+    Label="Components" ChipColor="Color.Primary" EmptyTooltip="Aggiungi Component" />
+
+@code {
+    [Parameter, EditorRequired]
+    public required IIssue Issue { get; set; }
+}
