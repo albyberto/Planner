@@ -11,5 +11,5 @@
     Label="Labels" ChipColor="Color.Secondary" EmptyTooltip="Aggiungi Label" />
 
 @code {
-    [Parameter][EditorRequired] public IIssue Issue { get; set; } = null!;
+    [Parameter][EditorRequired] public IHasLabels Issue { get; set; } = null!;
 }

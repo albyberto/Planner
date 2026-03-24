@@ -56,7 +56,7 @@ else
 
 @code {
     [Parameter, EditorRequired] public required FixVersionModel Version { get; set; }
-    [Parameter, EditorRequired] public IEnumerable<IIssue> Issues { get; set; } = [];
+    [Parameter, EditorRequired] public IEnumerable<IHasDates> Issues { get; set; } = [];
     [Parameter] public EventCallback<FixVersionModel> VersionChanged { get; set; }
     [Parameter] public EventCallback OnChanged { get; set; }
     [CascadingParameter(Name = "RefreshIssues")] public Func<Task>? RefreshIssues { get; set; }

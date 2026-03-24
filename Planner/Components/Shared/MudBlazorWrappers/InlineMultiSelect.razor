@@ -47,7 +47,7 @@ else
 }
 
 @code {
-    [Parameter] [EditorRequired] public required IIssue Issue { get; set; }
+    [Parameter] [EditorRequired] public required IIssueCore Issue { get; set; }
     [Parameter] [EditorRequired] public required IReadOnlyCollection<TItem> Items { get; set; }
     [Parameter] public EventCallback<IReadOnlyCollection<TItem>> ItemsChanged { get; set; }
 

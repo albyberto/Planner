@@ -10,7 +10,7 @@
 </InlineTimeEdit>
 
 @code {
-    [Parameter, EditorRequired] public required IIssue Issue { get; set; }
+    [Parameter, EditorRequired] public required IHasStats Issue { get; set; }
     
     // Removed local _displayValue property as FormattedEstimate is computed and read-only.
 

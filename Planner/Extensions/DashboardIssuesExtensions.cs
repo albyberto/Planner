@@ -4,10 +4,10 @@ namespace Planner.Extensions;
 
 public static class DashboardIssuesExtensions
 {
-    public static TimeStats GetTimeStats(this IEnumerable<IIssue> issues) =>
+    public static TimeStats GetTimeStats(this IEnumerable<IHasStats> issues) =>
         issues.Aggregate(TimeStats.Empty, (currentStats, issue) => currentStats + issue.Stats);
 
-    public static IEnumerable<(FixVersionModel Version, IEnumerable<IIssue> Issues)> GroupByFixVersion(this IEnumerable<IIssue> issues)
+    public static IEnumerable<(FixVersionModel Version, IEnumerable<T> Issues)> GroupByFixVersion<T>(this IEnumerable<T> issues) where T : IHasFixVersions
     {
         var issueList = issues.ToList();
         return issueList.Count == 0
@@ -20,7 +20,7 @@ public static class DashboardIssuesExtensions
             .OrderBy(group => group.Key)
             .Select(group => (
                 Version: group.First().Version, 
-                Issues: (IEnumerable<IIssue>)group.Select(x => x.Issue).ToList()
+                Issues: (IEnumerable<T>)group.Select(x => x.Issue).ToList()
             ));
     }
 }

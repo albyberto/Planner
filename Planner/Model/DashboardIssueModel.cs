@@ -3,9 +3,9 @@ using System.Collections.Immutable;
 
 namespace Planner.Model;
 
-public class DashboardIssueModel : IIssue
+public record DashboardIssueModel : IIssueCore, IHasAssignee, IHasType, IHasComponents, IHasLabels, IHasFixVersions, IHasTransitions, IHasDates, IHasStats
 {
-    public string Id { get; set; }
+    public string Id { get; init; }
     public string Key { get; set; }
     public string Self { get; set; }
     public string ProjectKey { get; set; }
@@ -57,4 +57,29 @@ public class DashboardIssueModel : IIssue
         DueDate = dueDate;
         Stats = stats;
     }
+
+    public virtual bool Equals(DashboardIssueModel? other)
+    {
+        if (other is null) return false;
+        if (ReferenceEquals(this, other)) return true;
+
+        return Id == other.Id
+            && Key == other.Key
+            && Self == other.Self
+            && ProjectKey == other.ProjectKey
+            && Summary == other.Summary
+            && Status == other.Status
+            && Assignee == other.Assignee
+            && Type == other.Type
+            && StartDate == other.StartDate
+            && EndDate == other.EndDate
+            && DueDate == other.DueDate
+            && Stats == other.Stats
+            && Components.SequenceEqual(other.Components)
+            && Labels.SequenceEqual(other.Labels)
+            && FixVersions.SequenceEqual(other.FixVersions)
+            && Transitions.SequenceEqual(other.Transitions);
+    }
+
+    public override int GetHashCode() => Id.GetHashCode();
 }
