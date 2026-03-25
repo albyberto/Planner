@@ -51,7 +51,7 @@
             <MudItem xs="12" sm="12" md="4" lg="4">
                 <FilterSingleAutocomplete TItem="ProjectModel"
                                           Label="Project Key"
-                                          Disabled="@IsControlDisabled"
+                                          Disabled="@(IsControlDisabled || LockedProjectKey is not null)"
                                           Items="_projects"
                                           SelectedValue="_searchCriteria.Project"
                                           SelectedValueChanged="OnProjectChangedAsync"
@@ -81,7 +81,7 @@
                 <div class="d-flex flex-column gap-1">
                     <FilterMultiSelect TItem="UserModel"
                                        Label="Select Assignees"
-                                       Disabled="@IsControlDisabled"
+                                       Disabled="@(IsControlDisabled || LockedEmail is not null)"
                                        Items="_assignees"
                                        Selection="_searchCriteria.Assignees"
                                        SelectionChanged="OnAssigneesChanged"/>
@@ -90,7 +90,7 @@
                                Label="Include unassigned"
                                Color="Color.Primary"
                                Size="Size.Medium"
-                               Disabled="@IsControlDisabled"
+                               Disabled="@(IsControlDisabled || LockedEmail is not null)"
                                Value="_searchCriteria.IncludeUnassigned"
                                ValueChanged="OnIncludeUnassignedChanged"
                                Class="ml-1"/>
@@ -168,6 +168,8 @@
     [Parameter] public required EventCallback<SearchCriteria> OnCriteriaChanged { get; set; }
 
     [Parameter] public PresetItem? InitialPreset { get; set; }
+    [Parameter] public string? LockedProjectKey { get; set; }
+    [Parameter] public string? LockedEmail { get; set; }
 
     private ImmutableArray<ProjectModel> _projects = [];
     private ImmutableArray<TypeModel> _types = [];
@@ -175,6 +177,7 @@
     private ImmutableArray<UserModel> _assignees = [];
     private ImmutableArray<ComponentModel> _components = [];
     private ImmutableArray<LabelModel> _labels = [];
+    private ImmutableArray<PresetItem> _allPresets = [];
     private ImmutableArray<PresetItem> _presets = [];
 
     private PresetItem? _selectedPreset;
@@ -191,11 +194,21 @@
             if (InitialPreset is not null) {
                 _selectedPreset = InitialPreset;
             } else {
-                _presets = await PresetService.GetAllAsync();
+                _allPresets = await PresetService.GetAllAsync();
+                
+                if (LockedProjectKey is not null) {
+                    _presets = [.._allPresets.Where(p => string.Equals(p.Criteria.ProjectKey, LockedProjectKey, StringComparison.OrdinalIgnoreCase))];
+                } else {
+                    _presets = _allPresets;
+                }
+                
                 _selectedPreset = await PresetService.GetDefaultAsync();
+                if (LockedProjectKey is not null && (_selectedPreset is null || !string.Equals(_selectedPreset.Criteria.ProjectKey, LockedProjectKey, StringComparison.OrdinalIgnoreCase))) {
+                    _selectedPreset = _presets.FirstOrDefault();
+                }
             }
 
-            var projectKey = _selectedPreset?.Criteria.ProjectKey ?? Options.Value.DefaultProject;
+            var projectKey = LockedProjectKey ?? _selectedPreset?.Criteria.ProjectKey ?? Options.Value.DefaultProject;
             await BuildAsync(projectKey);
         }
         catch (Exception) {
@@ -210,7 +223,8 @@
         _selectedPreset = preset;
         _isLoading = true;
         try {
-            await BuildAsync(preset?.Criteria.ProjectKey ?? Options.Value.DefaultProject);
+            var projectKey = LockedProjectKey ?? preset?.Criteria.ProjectKey ?? Options.Value.DefaultProject;
+            await BuildAsync(projectKey);
             await OnCriteriaChanged.InvokeAsync(_searchCriteria);
         }
         finally {
@@ -318,6 +332,21 @@
         } else {
             _searchCriteria = SearchCriteria.Create(currentProject);
             _statuses = await ProjectFacade.GetStatusesAsync(projectKey, _searchCriteria.Types.Items);
+        }
+        
+        // Applica i lock se definiti
+        if (LockedProjectKey is not null) {
+             _searchCriteria = _searchCriteria with { Project = currentProject };
+        }
+        
+        if (LockedEmail is not null) {
+            if (LockedEmail.Equals(Constants.Unassigned, StringComparison.OrdinalIgnoreCase)) {
+                _searchCriteria = _searchCriteria with { IncludeUnassigned = true, Assignees = FilterSelection<UserModel>.Empty };
+            } else {
+                var lockedUser = _assignees.FirstOrDefault(u => u.EmailAddress.Equals(LockedEmail, StringComparison.OrdinalIgnoreCase));
+                var userSelection = lockedUser is not null ? FilterSelection<UserModel>.Empty.Add(lockedUser) : FilterSelection<UserModel>.Empty;
+                _searchCriteria = _searchCriteria with { IncludeUnassigned = false, Assignees = userSelection };
+            }
         }
 
         await OnCriteriaChanged.InvokeAsync(_searchCriteria);

@@ -1,5 +1,7 @@
+@using System.Collections.Immutable
 @using Microsoft.Extensions.Options
 @using Planner.Facades
+@using Planner.Infrastructure.Domain
 @using Planner.Model
 @using Planner.Options
 <MudNavMenu>
@@ -19,38 +21,41 @@
         Presets
     </MudNavLink>
 
+    <MudNavLink Href="/menu-config" Match="NavLinkMatch.All" Icon="@Icons.Material.Outlined.Settings">
+        Menu Config
+    </MudNavLink>
+
     <MudNavGroup Title="Dashboard" Icon="@Icons.Material.Outlined.Dashboard" Expanded="true">
         <MudNavLink Href="/dashboard" Match="NavLinkMatch.All" Icon="@Icons.Material.Outlined.Groups">
             Team
         </MudNavLink>
-        @foreach (var user in _members) {
-            <MudNavLink Href="@($"/dashboard/{Uri.EscapeDataString(user.EmailAddress)}")"
-                        Match="NavLinkMatch.All">
-                <UserAvatar User="@user" Size="Size.Small"/>
-            </MudNavLink>
-        }
         <MudNavLink Href="@UnassignedHref" Match="NavLinkMatch.All" Icon="@Icons.Material.Outlined.PersonOff">
             Non Assegnate
         </MudNavLink>
     </MudNavGroup>
+
+    @foreach (var config in _menuConfigs) {
+        <MudNavGroup Title="@config.ProjectKey" Icon="@Icons.Material.Outlined.Folder" Expanded="true">
+            @foreach (var email in config.Assignees) {
+                <MudNavLink Href="@($"/dashboard?project={Uri.EscapeDataString(config.ProjectKey)}&email={Uri.EscapeDataString(email)}")" Match="NavLinkMatch.All" Icon="@Icons.Material.Outlined.Person">
+                    @email
+                </MudNavLink>
+            }
+        </MudNavGroup>
+    }
 </MudNavMenu>
 
 @inject ProjectFacade ProjectFacade
+@inject MenuConfigFacade MenuConfigFacade
 @inject IOptions<JiraFilterOptions> FilterOptions
 
 @code {
     private const string UnassignedHref = $"/dashboard/{Constants.Unassigned}";
-    private readonly List<UserModel> _members = [];
+    private ImmutableArray<MenuConfigItem> _menuConfigs = [];
 
     protected override async Task OnInitializedAsync() {
         try {
-            var options = FilterOptions.Value;
-
-            // var emails = options.TeamMembers
-            //     .Select(m => m.Email)
-            //     .ToArray();
-            //
-            // var users = await ProjectsService.GetAsync(options.DefaultProject);
+            _menuConfigs = await MenuConfigFacade.GetAllAsync();
         }
         catch {
             // fallback: mostra solo Team e Non Assegnate

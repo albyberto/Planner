@@ -12,7 +12,7 @@
     @_displayTitle
 </MudText>
 
-<FiltersControl OnCriteriaChanged="OnCriteriaChanged" />
+<FiltersControl OnCriteriaChanged="OnCriteriaChanged" LockedEmail="@Email" LockedProjectKey="@LockedProjectKey" />
 
 @if (_loading)
 {
@@ -30,6 +30,7 @@ else
     
     [Parameter, EditorRequired] public required string Title { get; set; } = string.Empty;
     [Parameter] public string? Email { get; set; }
+    [Parameter] public string? LockedProjectKey { get; set; }
     
     [Parameter, EditorRequired]
     public required RenderFragment<ImmutableArray<DashboardIssueModel>> ChildContent { get; set; } = null!;

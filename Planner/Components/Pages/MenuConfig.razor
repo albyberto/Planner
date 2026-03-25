@@ -1,0 +1,191 @@
+@page "/menu-config"
+@using System.Collections.Immutable
+@using Planner.Facades
+@using Planner.Infrastructure.Domain
+@using Planner.Model
+
+<PageTitle>Menu Configuration</PageTitle>
+
+<MudText Typo="Typo.h4" GutterBottom="true">
+    <MudIcon Icon="@Icons.Material.Filled.Menu" Class="mr-2" />
+    Menu Configuration
+</MudText>
+
+<MudText Typo="Typo.body1" Class="mb-6">
+    Configure dynamic user dashboards to be displayed in the sidebar menu. Select a project and the users you want to link to it.
+</MudText>
+
+@if (_isLoading)
+{
+    <MudProgressLinear Color="Color.Primary" Indeterminate="true" Class="my-4" />
+}
+else
+{
+    <MudGrid>
+        <MudItem xs="12" md="4">
+            <MudPaper Class="pa-4" Elevation="2">
+                <MudText Typo="Typo.h6" Class="mb-4">@( _editModel.Id == Guid.Empty ? "Create New" : "Edit Configuration" )</MudText>
+                
+                <MudSelect T="ProjectModel" Label="Project" Value="_selectedProject" ValueChanged="OnProjectChangedAsync" Class="mb-4" ToStringFunc="@(p => p?.Key ?? string.Empty)" Required="true" Variant="Variant.Outlined">
+                    @foreach (var project in _projects)
+                    {
+                        <MudSelectItem Value="@project">@project.Key</MudSelectItem>
+                    }
+                </MudSelect>
+
+                <MudSelect T="UserModel" Label="Assignees" MultiSelection="true" SelectedValues="_selectedAssignees" SelectedValuesChanged="OnAssigneesSelectionChanged" Class="mb-4" ToStringFunc="@(u => u?.DisplayName ?? string.Empty)" Disabled="@(_selectedProject is null)" Variant="Variant.Outlined">
+                    @foreach (var user in _projectAssignees)
+                    {
+                        <MudSelectItem Value="@user" />
+                    }
+                </MudSelect>
+
+                <div class="d-flex gap-2">
+                    <MudButton Variant="Variant.Filled" Color="Color.Primary" OnClick="SaveAsync" Disabled="@(_selectedProject is null || !_selectedAssignees.Any())" StartIcon="@Icons.Material.Filled.Save">Save</MudButton>
+                    @if (_editModel.Id != Guid.Empty)
+                    {
+                        <MudButton Variant="Variant.Text" Color="Color.Default" OnClick="ResetForm">Cancel</MudButton>
+                    }
+                </div>
+            </MudPaper>
+        </MudItem>
+
+        <MudItem xs="12" md="8">
+            <MudTable Items="@_configs" Hover="true" Breakpoint="Breakpoint.Sm" Elevation="2">
+                <HeaderContent>
+                    <MudTh>Project Key</MudTh>
+                    <MudTh>Assignees</MudTh>
+                    <MudTh>Actions</MudTh>
+                </HeaderContent>
+                <RowTemplate>
+                    <MudTd DataLabel="Project Key">@context.ProjectKey</MudTd>
+                    <MudTd DataLabel="Assignees">
+                        <div class="d-flex flex-wrap gap-1">
+                            @foreach (var email in context.Assignees)
+                            {
+                                <MudChip T="string" Size="Size.Small" Color="Color.Default" Variant="Variant.Text">@email</MudChip>
+                            }
+                        </div>
+                    </MudTd>
+                    <MudTd DataLabel="Actions">
+                        <MudIconButton Icon="@Icons.Material.Filled.Edit" Color="Color.Primary" Size="Size.Small" OnClick="@(() => EditConfig(context))" />
+                        <MudIconButton Icon="@Icons.Material.Filled.Delete" Color="Color.Error" Size="Size.Small" OnClick="@(() => DeleteAsync(context.Id))" />
+                    </MudTd>
+                </RowTemplate>
+            </MudTable>
+        </MudItem>
+    </MudGrid>
+}
+
+@code {
+    [Inject] public required MenuConfigFacade MenuConfigFacade { get; set; }
+    [Inject] public required ProjectFacade ProjectFacade { get; set; }
+    [Inject] public required ISnackbar Snackbar { get; set; }
+
+    private bool _isLoading = true;
+    
+    private ImmutableArray<MenuConfigItem> _configs = [];
+    private ImmutableArray<ProjectModel> _projects = [];
+    private ImmutableArray<UserModel> _projectAssignees = [];
+    
+    private MenuConfigItem _editModel = new();
+    private ProjectModel? _selectedProject;
+    private IReadOnlyCollection<UserModel> _selectedAssignees = [];
+
+    protected override async Task OnInitializedAsync()
+    {
+        try
+        {
+            _isLoading = true;
+            _projects = await ProjectFacade.GetProjectsAsync(CancellationToken.None);
+            await LoadConfigsAsync();
+        }
+        catch (Exception ex)
+        {
+            Snackbar.Add("Error loading data", Severity.Error);
+        }
+        finally
+        {
+            _isLoading = false;
+        }
+    }
+
+    private async Task LoadConfigsAsync()
+    {
+        _configs = await MenuConfigFacade.GetAllAsync();
+    }
+
+    private async Task OnProjectChangedAsync(ProjectModel? project)
+    {
+        _selectedProject = project;
+        _editModel = _editModel with { ProjectKey = project?.Key ?? string.Empty };
+        _selectedAssignees = [];
+
+        if (project is not null)
+        {
+            _projectAssignees = await ProjectFacade.GetAssigneesAsync(project.Key);
+        }
+        else
+        {
+            _projectAssignees = [];
+        }
+    }
+
+    private async Task EditConfig(MenuConfigItem item)
+    {
+        _editModel = item;
+        _selectedProject = _projects.FirstOrDefault(p => p.Key.Equals(item.ProjectKey, StringComparison.OrdinalIgnoreCase));
+        
+        if (_selectedProject is not null)
+        {
+            _projectAssignees = await ProjectFacade.GetAssigneesAsync(_selectedProject.Key);
+            _selectedAssignees = _projectAssignees.Where(u => item.Assignees.Contains(u.EmailAddress, StringComparer.OrdinalIgnoreCase)).ToList();
+        }
+    }
+
+    private void OnAssigneesSelectionChanged(IEnumerable<UserModel> values)
+    {
+        _selectedAssignees = values.ToList();
+    }
+
+    private async Task SaveAsync()
+    {
+        if (_selectedProject is null || !_selectedAssignees.Any()) return;
+
+        var assignees = _selectedAssignees.Select(u => u.EmailAddress).ToImmutableArray();
+        _editModel = _editModel with { Assignees = assignees };
+
+        var result = await MenuConfigFacade.SaveAsync(_editModel);
+        
+        if (result is not null)
+        {
+            Snackbar.Add("Configuration saved successfully", Severity.Success);
+            await LoadConfigsAsync();
+            ResetForm();
+        }
+        else
+        {
+            Snackbar.Add("Failed to save configuration", Severity.Error);
+        }
+    }
+
+    private async Task DeleteAsync(Guid id)
+    {
+        await MenuConfigFacade.DeleteAsync(id);
+        Snackbar.Add("Configuration deleted", Severity.Success);
+        await LoadConfigsAsync();
+        
+        if (_editModel.Id == id)
+        {
+            ResetForm();
+        }
+    }
+
+    private void ResetForm()
+    {
+        _editModel = new MenuConfigItem();
+        _selectedProject = null;
+        _selectedAssignees = [];
+        _projectAssignees = [];
+    }
+}
