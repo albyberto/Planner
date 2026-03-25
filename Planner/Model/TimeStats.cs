@@ -6,6 +6,7 @@ public record TimeStats(int OriginalEstimate, int TotalTimeSpent, int AssigneeTi
     
     public int CalculatedRemaining => Math.Max(OriginalEstimate - TotalTimeSpent, 0);
     public int Remaining => ExplicitRemaining ?? CalculatedRemaining;
+    public int AssigneeLeft => Math.Max(OriginalEstimate - AssigneeTimeSpent, 0);
     public int OverBudgetAmount => Math.Max(TotalTimeSpent - OriginalEstimate, 0);
     public bool IsOverBudget => OriginalEstimate > 0 && TotalTimeSpent > OriginalEstimate;
     
@@ -15,6 +16,7 @@ public record TimeStats(int OriginalEstimate, int TotalTimeSpent, int AssigneeTi
     public string FormattedTotalSpent => FormatTime(TotalTimeSpent);
     public string FormattedAssigneeSpent => FormatTime(AssigneeTimeSpent);
     public string FormattedRemaining => IsOverBudget ? $"-{FormatTime(OverBudgetAmount)}" : FormatTime(Remaining);
+    public string FormattedAssigneeLeft => FormatTime(AssigneeLeft);
 
     public static int ParseTime(string time)
     {
