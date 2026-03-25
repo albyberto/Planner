@@ -62,18 +62,18 @@
 
             <MudTable Items="@group.Issues" Dense="true" Hover="true" Breakpoint="Breakpoint.Sm" Elevation="0">
                 <HeaderContent>
-                    <MudTh Class="mud-text-align-center"></MudTh>
-                    <MudTh>Key</MudTh>
-                    <MudTh>Summary</MudTh>
-                    <MudTh>Status</MudTh>
-                    <MudTh Class="mud-text-align-center">Start</MudTh>
-                    <MudTh Class="mud-text-align-center">End</MudTh>
-                    <MudTh Class="mud-text-align-end">Original</MudTh>
-                    <MudTh Class="mud-text-align-end">Spent</MudTh>
-                    <MudTh Class="mud-text-align-end">Remaining</MudTh>
-                    <MudTh Class="mud-text-align-end">Calc. Left</MudTh>
-                    <MudTh>Components</MudTh>
-                    <MudTh>Labels</MudTh>
+                    <MudTh Style="min-width: 48px;" Class="mud-text-align-center"></MudTh>
+                    <MudTh Style="min-width: 90px;">Key</MudTh>
+                    <MudTh Style="min-width: 200px;">Summary</MudTh>
+                    <MudTh Style="min-width: 130px;">Status</MudTh>
+                    <MudTh Style="min-width: 120px;" Class="mud-text-align-center">Start</MudTh>
+                    <MudTh Style="min-width: 120px;" Class="mud-text-align-center">End</MudTh>
+                    <MudTh Style="min-width: 80px;" Class="mud-text-align-end">Original</MudTh>
+                    <MudTh Style="min-width: 70px;" Class="mud-text-align-end">Spent</MudTh>
+                    <MudTh Style="min-width: 80px;" Class="mud-text-align-end">Remaining</MudTh>
+                    <MudTh Style="min-width: 80px;" Class="mud-text-align-end">Calc. Left</MudTh>
+                    <MudTh Style="min-width: 140px;">Components</MudTh>
+                    <MudTh Style="min-width: 140px;">Labels</MudTh>
                 </HeaderContent>
                 <RowTemplate Context="issue">
                     <MudTd DataLabel="Type" Class="mud-text-align-center">

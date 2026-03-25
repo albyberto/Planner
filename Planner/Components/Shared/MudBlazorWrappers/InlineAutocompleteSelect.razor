@@ -1,0 +1,189 @@
+@using Planner.Model
+@using System.Collections.Immutable
+@inject ISnackbar Snackbar
+@typeparam TItem where TItem : IMultiSelect
+
+@if (_editing)
+{
+    <div id="@_popoverId" class="d-inline-flex">
+        <MudChipSet T="string" Size="Size.Small" Class="d-inline-flex flex-wrap" ReadOnly="true">
+            @foreach (var item in _selected)
+            {
+                <MudChip T="string" Variant="Variant.Outlined" Color="@ChipColor">
+                    @item.Name
+                </MudChip>
+            }
+        </MudChipSet>
+    </div>
+
+    <MudPopover Open="@_editing" AnchorOrigin="Origin.BottomLeft" TransformOrigin="Origin.TopLeft"
+                RelativeToElement="@_popoverId" Class="pa-4" Style="min-width: 320px; max-width: 400px;">
+        <div class="d-flex flex-column gap-2">
+            <MudAutocomplete @ref="_autocomplete" T="TItem"
+                             Label="@Label"
+                             Placeholder="Cerca..."
+                             SearchFunc="SearchFunc"
+                             ValueChanged="OnItemSelected"
+                             Clearable="false"
+                             ResetValueOnEmptyText="true"
+                             CoerceText="false"
+                             CoerceValue="false"
+                             Variant="Variant.Outlined"
+                             Margin="Margin.Dense"
+                             MinCharacters="1"
+                             DebounceInterval="200"
+                             MaxItems="50">
+                <ItemTemplate>
+                    <MudText Typo="Typo.body2">@context.Name</MudText>
+                </ItemTemplate>
+            </MudAutocomplete>
+
+            @if (_selected.Count > 0)
+            {
+                <MudChipSet T="string" Size="Size.Small" Class="d-flex flex-wrap">
+                    @foreach (var item in _selected)
+                    {
+                        <MudChip T="string" Variant="Variant.Outlined" Color="@ChipColor"
+                                 OnClose="@(() => RemoveItem(item))">
+                            @item.Name
+                        </MudChip>
+                    }
+                </MudChipSet>
+            }
+
+            <div class="d-flex justify-end gap-1 mt-1">
+                <MudTooltip Text="Annulla" Arrow="true" Placement="Placement.Top">
+                    <MudIconButton Icon="@Icons.Material.Filled.Close" Size="Size.Small" OnClick="Cancel" />
+                </MudTooltip>
+                <MudTooltip Text="Salva" Arrow="true" Placement="Placement.Top">
+                    <MudIconButton Icon="@Icons.Material.Filled.Save" Size="Size.Small" Color="Color.Primary" OnClick="SaveAndCloseAsync" />
+                </MudTooltip>
+            </div>
+        </div>
+    </MudPopover>
+
+    <MudOverlay Visible="true" OnClick="Cancel" AutoClose="true" DarkBackground="false" ZIndex="9" />
+}
+else
+{
+    @if (Items is { Count: > 0 })
+    {
+        <MudChipSet T="string" Size="Size.Small" Class="d-inline-flex flex-wrap cursor-pointer" @onclick="StartEdit"
+                    ReadOnly="true">
+            @foreach (var item in Items)
+            {
+                <MudChip T="string" Variant="Variant.Outlined" Color="@ChipColor">
+                    @item.Name
+                </MudChip>
+            }
+        </MudChipSet>
+    }
+    else
+    {
+        <MudTooltip Text="@EmptyTooltip" Arrow="true">
+            <MudIconButton Icon="@Icons.Material.Filled.Add" Size="Size.Small" Color="Color.Default" @onclick="StartEdit" Class="pa-0"/>
+        </MudTooltip>
+    }
+}
+
+@code {
+    private MudAutocomplete<TItem>? _autocomplete;
+    private readonly string _popoverId = "autocomplete-" + Guid.NewGuid().ToString("N");
+
+    [Parameter] [EditorRequired] public required IIssueCore Issue { get; set; }
+    [Parameter] [EditorRequired] public required IReadOnlyCollection<TItem> Items { get; set; }
+    [Parameter] public EventCallback<IReadOnlyCollection<TItem>> ItemsChanged { get; set; }
+
+    [Parameter] [EditorRequired] public required Func<string, Task<IReadOnlyList<TItem>>> LoadItemsAsync { get; set; }
+    [Parameter] [EditorRequired] public required Func<IReadOnlyList<string>, Task> SaveActionAsync { get; set; }
+
+    [Parameter] public string Label { get; set; } = "Items";
+    [Parameter] public Color ChipColor { get; set; } = Color.Primary;
+    [Parameter] public string EmptyTooltip { get; set; } = "Aggiungi";
+
+    private bool _editing;
+    private List<TItem> _selected = [];
+    private IReadOnlyList<TItem> _availableItems = [];
+
+    private async Task StartEdit()
+    {
+        try
+        {
+            _availableItems = await LoadItemsAsync(Issue.ProjectKey);
+        }
+        catch (Exception ex)
+        {
+            Snackbar.Add($"Errore nel caricamento opzioni: {ex.Message}", Severity.Error);
+        }
+
+        _selected = [..Items];
+        _editing = true;
+    }
+
+    private Task<IEnumerable<TItem>> SearchFunc(string value, CancellationToken _)
+    {
+        var selectedValues = new HashSet<string>(_selected.Select(s => s.Value));
+        var available = _availableItems.Where(item => !selectedValues.Contains(item.Value));
+
+        var result = string.IsNullOrWhiteSpace(value)
+            ? available
+            : available.Where(item => item.Name.Contains(value, StringComparison.OrdinalIgnoreCase));
+
+        return Task.FromResult(result.OrderBy(item => item.Name).Take(50));
+    }
+
+    private async Task OnItemSelected(TItem? item)
+    {
+        if (item is null) return;
+
+        if (_selected.All(s => s.Value != item.Value))
+        {
+            _selected.Add(item);
+        }
+
+        if (_autocomplete is not null)
+        {
+            await _autocomplete.ClearAsync();
+        }
+    }
+
+    private void RemoveItem(TItem item)
+    {
+        _selected.RemoveAll(s => s.Value == item.Value);
+    }
+
+    private void Cancel()
+    {
+        _editing = false;
+    }
+
+    private async Task SaveAndCloseAsync()
+    {
+        var newValues = _selected.Select(i => i.Value).OrderBy(v => v).ToList();
+        var oldValues = Items.Select(i => i.Value).OrderBy(v => v).ToList();
+
+        if (newValues.SequenceEqual(oldValues))
+        {
+            _editing = false;
+            return;
+        }
+
+        try
+        {
+            await SaveActionAsync(newValues);
+
+            var newImmutableList = _selected.ToImmutableList();
+            await ItemsChanged.InvokeAsync(newImmutableList);
+
+            Snackbar.Add($"{Issue.Key} {Label} aggiornati", Severity.Success);
+        }
+        catch (Exception ex)
+        {
+            Snackbar.Add($"Errore: {ex.Message}", Severity.Error);
+        }
+        finally
+        {
+            _editing = false;
+        }
+    }
+}

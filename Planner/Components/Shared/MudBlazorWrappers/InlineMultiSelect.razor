@@ -17,7 +17,8 @@
                AnchorOrigin="Origin.BottomLeft"
                Clearable="true"
                ClearIcon="@Icons.Material.Filled.CleanHands"
-               ToStringFunc="GetItemText">
+               ToStringFunc="GetItemText"
+               Style="min-width: 180px;">
         @foreach (var item in _availableItems)
         {
             <MudSelectItem T="TItem" Value="@item">@item.Name</MudSelectItem>

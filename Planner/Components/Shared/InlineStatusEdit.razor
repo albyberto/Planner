@@ -18,7 +18,8 @@
                Class="text-nowrap"
                PopoverClass="text-nowrap"
                CloseIcon="@Icons.Material.Filled.Close"
-               ToStringFunc="@(t => t?.Name ?? string.Empty)">
+               ToStringFunc="@(t => t?.Name ?? string.Empty)"
+               Style="min-width: 160px;">
         @foreach (var transition in Transitions)
         {
             <MudSelectItem T="TransitionModel" Value="@transition" Class="text-nowrap">

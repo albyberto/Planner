@@ -8,7 +8,8 @@
 {
     <MudSelect T="TypeModel" Value="@Value" ValueChanged="ChangeType" Open="_editing" OpenChanged="OnOpenChanged"
         Dense="true" Variant="Variant.Outlined" Margin="Margin.Dense" AnchorOrigin="Origin.BottomLeft" Class="text-nowrap"
-        PopoverClass="text-nowrap" CloseIcon="@Icons.Material.Filled.Close" ToStringFunc="@(t => t?.Name ?? string.Empty)">
+        PopoverClass="text-nowrap" CloseIcon="@Icons.Material.Filled.Close" ToStringFunc="@(t => t?.Name ?? string.Empty)"
+        Style="min-width: 160px;">
         @if (_loading)
         {
             <MudSelectItem T="TypeModel" Value="@null" Disabled="true">
