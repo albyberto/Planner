@@ -1,0 +1,24 @@
+@using Planner.Model
+
+<div class="d-flex flex-column" style="gap: 2px; line-height: 1.3;">
+    <div class="d-flex align-center justify-end" style="gap: 4px;">
+        <MudText Typo="Typo.caption" Color="Color.Default" Class="text-nowrap" Style="min-width: 28px;">Est</MudText>
+        <InlineOriginalEstimationEdit Issue="@Issue" />
+    </div>
+    <div class="d-flex align-center justify-end" style="gap: 4px;">
+        <MudText Typo="Typo.caption" Color="Color.Default" Class="text-nowrap" Style="min-width: 28px;">Spn</MudText>
+        <MudText Typo="Typo.body2" Color="Color.Info" Class="text-nowrap">@Issue.Stats.FormattedTotalSpent</MudText>
+    </div>
+    <div class="d-flex align-center justify-end" style="gap: 4px;">
+        <MudText Typo="Typo.caption" Color="Color.Default" Class="text-nowrap" Style="min-width: 28px;">Rem</MudText>
+        <InlineRemainingEstimationEdit Issue="@Issue" />
+    </div>
+    <div class="d-flex align-center justify-end" style="gap: 4px;">
+        <MudText Typo="Typo.caption" Color="Color.Default" Class="text-nowrap" Style="min-width: 28px;">Left</MudText>
+        <MudText Typo="Typo.body2" Color="Color.Default" Class="text-nowrap">@Issue.Stats.FormattedAssigneeSpent</MudText>
+    </div>
+</div>
+
+@code {
+    [Parameter, EditorRequired] public required IHasStats Issue { get; set; }
+}

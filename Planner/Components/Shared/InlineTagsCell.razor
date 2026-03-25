@@ -1,0 +1,10 @@
+@using Planner.Model
+
+<div class="d-flex flex-column" style="gap: 4px;">
+    <InlineComponentsSelect Issue="@Issue" />
+    <InlineLabelsSelect Issue="@Issue" />
+</div>
+
+@code {
+    [Parameter, EditorRequired] public required DashboardIssueModel Issue { get; set; }
+}

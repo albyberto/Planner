@@ -1,0 +1,27 @@
+@using Planner.Model
+
+<div class="d-flex flex-column" style="gap: 2px; line-height: 1.3;">
+    <div class="d-flex align-center" style="gap: 4px;">
+        <MudIcon Icon="@Icons.Material.Outlined.PlayArrow" Size="Size.Small" Color="Color.Success" />
+        <InlineStartDateEdit Issue="@Issue" />
+    </div>
+    <div class="d-flex align-center" style="gap: 4px;">
+        <MudIcon Icon="@Icons.Material.Outlined.Flag" Size="Size.Small" Color="Color.Error" />
+        <InlineEndDateEdit Issue="@Issue" />
+    </div>
+    <div class="d-flex align-center" style="gap: 4px;">
+        <MudIcon Icon="@Icons.Material.Outlined.PushPin" Size="Size.Small" Color="Color.Warning" />
+        @if (Issue.DueDate.HasValue)
+        {
+            <MudText Typo="Typo.body2">@Issue.DueDate.Value.ToString("dd/MM")</MudText>
+        }
+        else
+        {
+            <MudText Typo="Typo.caption" Color="Color.Default">—</MudText>
+        }
+    </div>
+</div>
+
+@code {
+    [Parameter, EditorRequired] public required IHasDates Issue { get; set; }
+}

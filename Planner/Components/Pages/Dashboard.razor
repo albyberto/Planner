@@ -62,25 +62,19 @@
 
             <MudTable Items="@group.Issues" Dense="true" Hover="true" Breakpoint="Breakpoint.Sm" Elevation="0">
                 <HeaderContent>
-                    <MudTh Style="min-width: 48px;" Class="mud-text-align-center"></MudTh>
-                    <MudTh Style="min-width: 90px;">Key</MudTh>
+                    <MudTh Style="min-width: 110px;">Issue</MudTh>
                     <MudTh Style="min-width: 200px;">Summary</MudTh>
-                    <MudTh Style="min-width: 130px;">Status</MudTh>
-                    <MudTh Style="min-width: 120px;" Class="mud-text-align-center">Start</MudTh>
-                    <MudTh Style="min-width: 120px;" Class="mud-text-align-center">End</MudTh>
-                    <MudTh Style="min-width: 80px;" Class="mud-text-align-end">Original</MudTh>
-                    <MudTh Style="min-width: 70px;" Class="mud-text-align-end">Spent</MudTh>
-                    <MudTh Style="min-width: 80px;" Class="mud-text-align-end">Remaining</MudTh>
-                    <MudTh Style="min-width: 80px;" Class="mud-text-align-end">Calc. Left</MudTh>
-                    <MudTh Style="min-width: 140px;">Components</MudTh>
-                    <MudTh Style="min-width: 140px;">Labels</MudTh>
+                    <MudTh Style="min-width: 100px;">Status</MudTh>
+                    <MudTh Style="min-width: 130px;">Dates</MudTh>
+                    <MudTh Style="min-width: 150px;" Class="mud-text-align-end">Time Tracking</MudTh>
+                    <MudTh Style="min-width: 160px;">Tags</MudTh>
                 </HeaderContent>
                 <RowTemplate Context="issue">
-                    <MudTd DataLabel="Type" Class="mud-text-align-center">
-                        <InlineTypeEdit IssueKey="@issue.Key" @bind-Value="issue.Type" />
-                    </MudTd>
-                    <MudTd DataLabel="Key">
-                        <IssueKey Issue="@issue" />
+                    <MudTd DataLabel="Issue">
+                        <div class="d-flex align-center" style="gap: 6px;">
+                            <InlineTypeEdit IssueKey="@issue.Key" @bind-Value="issue.Type" />
+                            <IssueKey Issue="@issue" />
+                        </div>
                     </MudTd>
                     <MudTd DataLabel="Summary">
                         <InlineSummaryEdit IssueKey="@issue.Key" @bind-Value="issue.Summary" />
@@ -88,29 +82,14 @@
                     <MudTd DataLabel="Status">
                         <InlineStatusEdit IssueKey="@issue.Key" @bind-Value="issue.Status" Transitions="@issue.Transitions" />
                     </MudTd>
-                    <MudTd DataLabel="Start" Class="mud-text-align-center">
-                        <InlineStartDateEdit Issue="@issue" />
+                    <MudTd DataLabel="Dates">
+                        <InlineDatesCell Issue="@issue" />
                     </MudTd>
-                    <MudTd DataLabel="End" Class="mud-text-align-center">
-                        <InlineEndDateEdit Issue="@issue" />
+                    <MudTd DataLabel="Time" Class="mud-text-align-end">
+                        <InlineTimeTrackingCell Issue="@issue" />
                     </MudTd>
-                    <MudTd DataLabel="Est" Class="mud-text-align-end">
-                        <InlineOriginalEstimationEdit Issue="@issue" />
-                    </MudTd>
-                    <MudTd DataLabel="Spent" Class="mud-text-align-end">
-                        <MudText Typo="Typo.body2" Color="Color.Info">@issue.Stats.FormattedTotalSpent</MudText>
-                    </MudTd>
-                    <MudTd DataLabel="Remaining" Class="mud-text-align-end">
-                        <InlineRemainingEstimationEdit Issue="@issue" />
-                    </MudTd>
-                    <MudTd DataLabel="Left" Class="mud-text-align-end">
-                        <MudText Typo="Typo.body2" Color="Color.Default">@issue.Stats.FormattedAssigneeSpent</MudText>
-                    </MudTd>
-                    <MudTd DataLabel="Components">
-                        <InlineComponentsSelect Issue="@issue" />
-                    </MudTd>
-                    <MudTd DataLabel="Labels">
-                        <InlineLabelsSelect Issue="@issue" />
+                    <MudTd DataLabel="Tags">
+                        <InlineTagsCell Issue="@issue" />
                     </MudTd>
                 </RowTemplate>
             </MudTable>
