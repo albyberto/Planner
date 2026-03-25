@@ -13,6 +13,18 @@ public class Issue
     [JsonPropertyName("fields")] public Fields? Fields { get; init; }
 }
 
+public class ParentLink
+{
+    [JsonPropertyName("id")] public string Id { get; init; } = string.Empty;
+    [JsonPropertyName("key")] public string Key { get; init; } = string.Empty;
+    [JsonPropertyName("fields")] public ParentFields? Fields { get; init; }
+}
+
+public class ParentFields
+{
+    [JsonPropertyName("summary")] public string? Summary { get; init; }
+}
+
 public class Fields
 {
     [JsonPropertyName("summary")] public string? Summary { get; init; }
@@ -28,6 +40,8 @@ public class Fields
     [JsonPropertyName("status")] public Status? Status { get; init; }
     [JsonPropertyName("project")] public Project? Project { get; init; }
     [JsonPropertyName("assignee")] public User? Assignee { get; init; }
+    [JsonPropertyName("parent")] public ParentLink? Parent { get; init; }
+    [JsonPropertyName("customfield_10014")] public string? EpicLink { get; init; }
     [JsonPropertyName("timetracking")] public TimeTracking? TimeTracking { get; init; }
     [JsonPropertyName("worklog")] public Worklog? Worklog { get; init; }
     [JsonPropertyName("comment")] public Comment? Comment { get; init; }

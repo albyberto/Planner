@@ -20,6 +20,10 @@ public static class DashboardIssueMapper
 
         var stats = new TimeStats(originalEstimate, totalTimeSpent, assigneeTimeSpent, explicitRemaining);
 
+        var epic = issue.Fields?.Parent != null
+            ? new EpicModel(issue.Fields.Parent.Key, issue.Fields.Parent.Fields?.Summary ?? string.Empty)
+            : (!string.IsNullOrWhiteSpace(issue.Fields?.EpicLink) ? new EpicModel(issue.Fields.EpicLink, issue.Fields.EpicLink) : null);
+
         return new(
              issue.Id,
              issue.Key,
@@ -33,6 +37,7 @@ public static class DashboardIssueMapper
              issue.Fields?.Labels != null ? [..issue.Fields.Labels.Select(l => new LabelModel(l))] : [],
              issue.Fields?.FixVersions != null ? [..issue.Fields.FixVersions.Select(v => new FixVersionModel(v))] : [],
              issue.Transitions != null ? [..issue.Transitions.Select(t => new TransitionModel(t))] : [],
+             epic,
              issue.Fields?.StartDate,
              issue.Fields?.EndDate,
              issue.Fields?.DueDate,

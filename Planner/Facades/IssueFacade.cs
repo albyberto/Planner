@@ -11,6 +11,18 @@ public class IssueFacade(IssueWriteService writeService)
         return writeService.UpdateIssueAsync(issueKey, update.Fields, ct);
     }
 
+    public Task<string> CreateEpicAsync(string projectKey, string summary, string epicName, CancellationToken ct = default)
+    {
+        return writeService.CreateEpicAsync(projectKey, summary, epicName, ct);
+    }
+
+    public Task UpdateEpicAsync(string issueKey, string epicKey, CancellationToken ct = default)
+    {
+        // Try parent first
+        var update = new IssueUpdateBuilder().SetCustomField("parent", new { key = epicKey });
+        return writeService.UpdateIssueAsync(issueKey, update.Fields, ct);
+    }
+
     public Task UpdateTypeAsync(string issueKey, string issueTypeId, CancellationToken ct = default)
     {
         var update = new IssueUpdateBuilder().SetIssueType(issueTypeId);

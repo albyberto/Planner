@@ -1,0 +1,110 @@
+@using System.Collections.Immutable
+@using Planner.Components.Shared.Filters.Controls
+@using Planner.Facades
+@using Planner.Model
+
+@inject ProjectFacade ProjectFacade
+
+<MudDialog>
+    <TitleContent>
+        <div class="d-flex justify-space-between align-center">
+            <MudText Typo="Typo.h6">Assign to Epic</MudText>
+            <MudIconButton Icon="@Icons.Material.Filled.Close" Size="Size.Small" OnClick="Cancel" aria-label="Close" />
+        </div>
+    </TitleContent>
+    <DialogContent>
+        <MudTabs Elevation="0" Rounded="true" ApplyEffectsToContainer="true" PanelClass="pa-4">
+            <MudTabPanel Text="Existing Epic" Icon="@Icons.Material.Filled.List">
+                <MudText Typo="Typo.body2" Class="mb-3">Select an open Epic from project <b>@ProjectKey</b>:</MudText>
+                @if (_loadingEpics)
+                {
+                    <MudProgressCircular Color="Color.Primary" Indeterminate="true" Size="Size.Small" />
+                }
+                else
+                {
+                    <FilterSingleAutocomplete TItem="EpicModel"
+                                              Items="@_epics"
+                                              @bind-SelectedValue="_selectedEpic"
+                                              Label="Epic"
+                                              Placeholder="Search Epics..."
+                                              Clearable="true"
+                                              Disabled="false"
+                                              Required="true" />
+                }
+            </MudTabPanel>
+            <MudTabPanel Text="New Epic" Icon="@Icons.Material.Filled.Add">
+                <MudText Typo="Typo.body2" Class="mb-3">Create a new Epic in project <b>@ProjectKey</b>:</MudText>
+                <MudTextField @bind-Value="_newEpicSummary" Label="Epic Summary" Required="true" Variant="Variant.Outlined" Margin="Margin.Dense" Class="mb-3" />
+                <MudTextField @bind-Value="_newEpicName" Label="Epic Name" Required="true" Variant="Variant.Outlined" Margin="Margin.Dense" />
+                <MudText Typo="Typo.caption" Class="mud-text-secondary mt-1">Note: Epic Name is often required by older Jira instances.</MudText>
+            </MudTabPanel>
+        </MudTabs>
+    </DialogContent>
+    <DialogActions>
+        <MudButton OnClick="Cancel" Variant="Variant.Text">Cancel</MudButton>
+        <MudButton Color="Color.Primary" Variant="Variant.Filled" OnClick="Submit" Disabled="@IsSubmitDisabled">Assign</MudButton>
+    </DialogActions>
+</MudDialog>
+
+@code {
+    [CascadingParameter] public required IMudDialogInstance MudDialog { get; set; }
+    
+    [Parameter, EditorRequired] public required string ProjectKey { get; set; }
+
+    private ImmutableArray<EpicModel> _epics = [];
+    private bool _loadingEpics = true;
+    
+    // Tab 1: Existing
+    private EpicModel? _selectedEpic;
+    
+    // Tab 2: New
+    private string _newEpicSummary = string.Empty;
+    private string _newEpicName = string.Empty;
+
+    protected override async Task OnInitializedAsync()
+    {
+        try
+        {
+            _epics = await ProjectFacade.GetEpicsAsync(ProjectKey);
+        }
+        finally
+        {
+            _loadingEpics = false;
+        }
+    }
+
+    private bool IsSubmitDisabled
+    {
+        get
+        {
+            // We don't easily know which tab is active just from bindings unless we bind ActivePanelIndex.
+            // But we can just check if either a valid existing epic is selected OR valid new epic fields are filled.
+            bool existingValid = _selectedEpic != null;
+            bool newValid = !string.IsNullOrWhiteSpace(_newEpicSummary) && !string.IsNullOrWhiteSpace(_newEpicName);
+            return !(existingValid || newValid);
+        }
+    }
+
+    private void Submit()
+    {
+        // Prioritize New Epic fields if they are filled out, otherwise existing epic
+        if (!string.IsNullOrWhiteSpace(_newEpicSummary) && !string.IsNullOrWhiteSpace(_newEpicName))
+        {
+            MudDialog.Close(DialogResult.Ok(new EpicAssignResult { IsNew = true, Summary = _newEpicSummary, Name = _newEpicName }));
+        }
+        else if (_selectedEpic != null)
+        {
+            MudDialog.Close(DialogResult.Ok(new EpicAssignResult { IsNew = false, EpicKey = _selectedEpic.Key }));
+        }
+    }
+
+    private void Cancel() => MudDialog.Cancel();
+    
+    public class EpicAssignResult
+    {
+        public bool IsNew { get; set; }
+        public string? EpicKey { get; set; }
+        public string? Summary { get; set; }
+        public string? Name { get; set; }
+    }
+}

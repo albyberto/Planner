@@ -18,6 +18,7 @@ public interface IHasComponents : IIssueCore { ImmutableArray<ComponentModel> Co
 public interface IHasLabels : IIssueCore { ImmutableArray<LabelModel> Labels { get; set; } }
 public interface IHasFixVersions : IIssueCore { ImmutableArray<FixVersionModel> FixVersions { get; set; } }
 public interface IHasTransitions : IIssueCore { ImmutableArray<TransitionModel> Transitions { get; set; } }
+public interface IHasEpic : IIssueCore { EpicModel? Epic { get; set; } }
 public interface IHasDates : IIssueCore
 {
     DateOnly? StartDate { get; set; }

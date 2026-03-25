@@ -3,7 +3,19 @@ using System.Collections.Immutable;
 
 namespace Planner.Model;
 
-public record DashboardIssueModel : IIssueCore, IHasAssignee, IHasType, IHasComponents, IHasLabels, IHasFixVersions, IHasTransitions, IHasDates, IHasStats
+public record EpicModel(string Key, string Summary) : IComparable<EpicModel>
+{
+    public int CompareTo(EpicModel? other)
+    {
+        if (ReferenceEquals(this, other)) return 0;
+        if (ReferenceEquals(null, other)) return 1;
+        return string.Compare(Summary, other.Summary, StringComparison.OrdinalIgnoreCase);
+    }
+    
+    public override string ToString() => Summary;
+}
+
+public record DashboardIssueModel : IIssueCore, IHasAssignee, IHasType, IHasComponents, IHasLabels, IHasFixVersions, IHasTransitions, IHasEpic, IHasDates, IHasStats
 {
     public string Id { get; init; }
     public string Key { get; set; }
@@ -17,6 +29,7 @@ public record DashboardIssueModel : IIssueCore, IHasAssignee, IHasType, IHasComp
     public ImmutableArray<LabelModel> Labels { get; set; }
     public ImmutableArray<FixVersionModel> FixVersions { get; set; }
     public ImmutableArray<TransitionModel> Transitions { get; set; }
+    public EpicModel? Epic { get; set; }
     public DateOnly? StartDate { get; set; }
     public DateOnly? EndDate { get; set; }
     public DateOnly? DueDate { get; set; }
@@ -35,6 +48,7 @@ public record DashboardIssueModel : IIssueCore, IHasAssignee, IHasType, IHasComp
         ImmutableArray<LabelModel> labels,
         ImmutableArray<FixVersionModel> fixVersions,
         ImmutableArray<TransitionModel> transitions,
+        EpicModel? epic,
         DateOnly? startDate,
         DateOnly? endDate,
         DateOnly? dueDate,
@@ -52,6 +66,7 @@ public record DashboardIssueModel : IIssueCore, IHasAssignee, IHasType, IHasComp
         Labels = labels;
         FixVersions = fixVersions;
         Transitions = transitions;
+        Epic = epic;
         StartDate = startDate;
         EndDate = endDate;
         DueDate = dueDate;
@@ -71,6 +86,7 @@ public record DashboardIssueModel : IIssueCore, IHasAssignee, IHasType, IHasComp
             && Status == other.Status
             && Assignee == other.Assignee
             && Type == other.Type
+            && Epic == other.Epic
             && StartDate == other.StartDate
             && EndDate == other.EndDate
             && DueDate == other.DueDate

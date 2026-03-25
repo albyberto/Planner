@@ -1,5 +1,6 @@
 using System.Collections.Immutable;
 using Microsoft.Extensions.Options;
+using Planner.Clients;
 using Planner.Clients.Core;
 using Planner.Extensions;
 using Planner.Model;
@@ -7,8 +8,14 @@ using Planner.Options;
 
 namespace Planner.Facades;
 
-public class ProjectFacade(IOptions<JiraFilterOptions> options, ProjectService client)
+public class ProjectFacade(IOptions<JiraFilterOptions> options, ProjectService client, JiraReadClient readClient)
 {
+    public async Task<ImmutableArray<EpicModel>> GetEpicsAsync(string projectKey, CancellationToken cancellationToken = default)
+    {
+        var issues = await readClient.GetIssuesAsync($"project = '{projectKey}' AND issuetype = Epic AND statusCategory != Done", ["summary"], null, cancellationToken);
+        return [..issues.Select(i => new EpicModel(i.Key, i.Fields?.Summary ?? string.Empty)).OrderBy(e => e.Summary)];
+    }
+
     public async Task<ImmutableArray<ProjectModel>> GetProjectsAsync(CancellationToken cancellationToken = default)
     {
         var projects = await client.GetProjectsAsync(cancellationToken);

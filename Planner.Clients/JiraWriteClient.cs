@@ -11,6 +11,25 @@ public class JiraWriteClient(HttpClient httpClient, ILogger<JiraWriteClient> log
         await EnsureSuccessAsync(response, $"UpdateIssueAsync({issueKey})", ct);
     }
 
+    public async Task<string> CreateEpicAsync(string projectKey, string summary, string name, CancellationToken ct = default)
+    {
+        var body = new
+        {
+            fields = new Dictionary<string, object>
+            {
+                ["project"] = new { key = projectKey },
+                ["issuetype"] = new { name = "Epic" },
+                ["summary"] = summary,
+                ["customfield_10011"] = name // Epic Name (fallback for older instances, often ignored safely if not needed)
+            }
+        };
+        var response = await httpClient.PostAsJsonAsync("issue", body, ct);
+        await EnsureSuccessAsync(response, $"CreateEpicAsync({projectKey})", ct);
+        
+        var result = await response.Content.ReadFromJsonAsync<System.Text.Json.JsonElement>(cancellationToken: ct);
+        return result.GetProperty("key").GetString()!;
+    }
+
     public async Task TransitionAsync(string issueKey, string transitionId, CancellationToken ct = default)
     {
         var body = new { transition = new { id = transitionId } };

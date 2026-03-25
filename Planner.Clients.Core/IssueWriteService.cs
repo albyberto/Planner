@@ -18,6 +18,19 @@ public class IssueWriteService(JiraWriteClient writeClient, ILogger<IssueWriteSe
         }
     }
 
+    public async Task<string> CreateEpicAsync(string projectKey, string summary, string name, CancellationToken ct = default)
+    {
+        try
+        {
+            return await writeClient.CreateEpicAsync(projectKey, summary, name, ct);
+        }
+        catch (Exception ex)
+        {
+            logger.LogError(ex, "Error creating epic {Summary} in project {ProjectKey}", summary, projectKey);
+            throw;
+        }
+    }
+
     public async Task TransitionAsync(string issueKey, string transitionId, CancellationToken ct = default)
     {
         try

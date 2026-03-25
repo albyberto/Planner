@@ -2,106 +2,140 @@
 @page "/dashboard"
 @page "/dashboard/{Email}"
 @using Planner.Extensions
+@using Planner.Facades
+@using Planner.Model
+
+@inject IDialogService DialogService
+@inject IssueFacade IssueFacade
+@inject ISnackbar Snackbar
 
 <ReactivePage Title="Dashboard" Context="issues" Email="@ActiveEmail" LockedProjectKey="@QueryProjectKey">
     @{
         var stats = issues.GetTimeStats();
-        var groups = issues.GroupByFixVersion();
     }
 
     @* ───── Summary globale calcolato su TUTTE le issue ───── *@
     <MudGrid Spacing="3" Class="mb-6 align-center">
-        <MudItem xs="12" md="4">
-            <MudChip T="string" Icon="@Icons.Material.Filled.Schedule" Color="Color.Primary" Variant="Variant.Filled" Size="Size.Small">
+        <MudItem xs="12" md="8" Class="d-flex align-center gap-4 flex-wrap">
+            <MudChip T="string" Icon="@Icons.Material.Filled.Schedule" Color="Color.Primary" Variant="Variant.Filled" Size="Size.Small" Class="ma-0">
                 Estimate @stats.FormattedEstimate
             </MudChip>
-            <MudChip T="string" Icon="@Icons.Material.Filled.Timer" Color="Color.Info" Variant="Variant.Filled" Size="Size.Small">
+            <MudChip T="string" Icon="@Icons.Material.Filled.Timer" Color="Color.Info" Variant="Variant.Filled" Size="Size.Small" Class="ma-0">
                 Spent @stats.FormattedTotalSpent
             </MudChip>
-            <MudChip T="string" Icon="@Icons.Material.Filled.HourglassBottom" Color="@(stats.IsOverBudget ? Color.Error : Color.Success)" Variant="Variant.Filled" Size="Size.Small">
+            <MudChip T="string" Icon="@Icons.Material.Filled.HourglassBottom" Color="@(stats.IsOverBudget ? Color.Error : Color.Success)" Variant="Variant.Filled" Size="Size.Small" Class="ma-0">
                 @(stats.IsOverBudget ? $"Over {stats.FormattedRemaining}" : $"Left {stats.FormattedRemaining}")
             </MudChip>
+            
+            @if (selectedIssues.Any())
+            {
+                <MudButton StartIcon="@Icons.Material.Filled.LibraryAdd" Color="Color.Primary" Variant="Variant.Filled" Size="Size.Small" OnClick="OpenEpicAssignDialog">
+                    Assign to Epic (@selectedIssues.Count)
+                </MudButton>
+            }
         </MudItem>
-        <MudItem xs="12" md="8">
+        <MudItem xs="12" md="4" Class="d-flex align-center justify-end">
+             <MudToggleGroup @bind-Value="GroupingMode" T="DashboardGroupingMode" Size="Size.Small" Color="Color.Primary" SelectionMode="SelectionMode.SingleSelection" CheckMark="true">
+                <MudToggleItem Value="@(DashboardGroupingMode.ByVersion)">Version</MudToggleItem>
+                <MudToggleItem Value="@(DashboardGroupingMode.ByEpic)">Epic</MudToggleItem>
+                <MudToggleItem Value="@(DashboardGroupingMode.ByVersionAndEpic)">Mixed</MudToggleItem>
+            </MudToggleGroup>
+        </MudItem>
+        <MudItem xs="12">
             <TimeProgressBar Stats="@stats" Size="Size.Small" />
         </MudItem>
     </MudGrid>
 
-    @* ───── Fix Version groups ───── *@
-    @foreach (var group in groups)
+    @if (GroupingMode == DashboardGroupingMode.ByVersion)
     {
-        var g = group.Issues.GetTimeStats();
-
-        <MudPaper Class="pa-4 mb-4" Elevation="2">
-            <div class="d-flex justify-space-between align-center mb-1">
-                <div class="d-flex flex-column">
-                    <div class="d-flex align-center">
-                        <MudIcon Icon="@Icons.Material.Filled.NewReleases" Size="Size.Small" Color="Color.Primary" />
-                        <InlineVersionEdit Version="@group.Version" Issues="@group.Issues" />
-                    </div>
-                    @if (!string.IsNullOrWhiteSpace(group.Version.Description))
-                    {
-                        <MudText Typo="Typo.caption" Color="Color.Default" Class="ml-6 mud-text-secondary">@group.Version.Description</MudText>
-                    }
-                </div>
-                <div class="d-flex align-center justify-end flex-wrap gap-1">
-                    <MudTooltip Text="Estimate" Arrow="true">
-                        <MudChip T="string" Size="Size.Small" Color="Color.Primary" Variant="Variant.Text" Class="ma-0">@g.FormattedEstimate</MudChip>
-                    </MudTooltip>
-                    <MudTooltip Text="Spent" Arrow="true">
-                        <MudChip T="string" Size="Size.Small" Color="Color.Info" Variant="Variant.Text" Class="ma-0">@g.FormattedTotalSpent</MudChip>
-                    </MudTooltip>
-                    <MudTooltip Text="Remaining" Arrow="true">
-                        <MudChip T="string" Size="Size.Small" Color="@(g.IsOverBudget ? Color.Error : Color.Warning)" Variant="Variant.Text" Class="ma-0">
-                            @g.FormattedRemaining
-                        </MudChip>
-                    </MudTooltip>
-                    <MudTooltip Text="Left" Arrow="true">
-                        <MudChip T="string" Size="Size.Small" Color="Color.Default" Variant="Variant.Text" Class="ma-0">@g.FormattedAssigneeLeft</MudChip>
-                    </MudTooltip>
-                </div>
-            </div>
-
-            <MudGrid Spacing="2" Class="mb-3 align-center">
-                <MudItem xs="12">
-                    <TimeProgressBar Stats="@g" Size="Size.Small" />
-                </MudItem>
-            </MudGrid>
-
-            <MudTable Items="@group.Issues" Dense="true" Hover="true" Breakpoint="Breakpoint.Sm" Elevation="0">
-                <HeaderContent>
-                    <MudTh Style="min-width: 110px;">Issue</MudTh>
-                    <MudTh Style="min-width: 200px;">Summary</MudTh>
-                    <MudTh Style="min-width: 100px;">Status</MudTh>
-                    <MudTh Style="min-width: 130px;">Dates</MudTh>
-                    <MudTh Style="min-width: 150px;" Class="mud-text-align-end">Time Tracking</MudTh>
-                    <MudTh Style="min-width: 160px;">Tags</MudTh>
-                </HeaderContent>
-                <RowTemplate Context="issue">
-                    <MudTd DataLabel="Issue">
-                        <div class="d-flex align-center" style="gap: 6px;">
-                            <InlineTypeEdit IssueKey="@issue.Key" @bind-Value="issue.Type" />
-                            <IssueKey Issue="@issue" />
+        var groups = issues.GroupByFixVersion();
+        foreach (var group in groups)
+        {
+            var g = group.Issues.GetTimeStats();
+            <MudPaper Class="pa-4 mb-4" Elevation="2">
+                <div class="d-flex justify-space-between align-center mb-1">
+                    <div class="d-flex flex-column">
+                        <div class="d-flex align-center">
+                            <MudIcon Icon="@Icons.Material.Filled.NewReleases" Size="Size.Small" Color="Color.Primary" />
+                            <InlineVersionEdit Version="@group.Version" Issues="@group.Issues" />
                         </div>
-                    </MudTd>
-                    <MudTd DataLabel="Summary">
-                        <InlineSummaryEdit IssueKey="@issue.Key" @bind-Value="issue.Summary" />
-                    </MudTd>
-                    <MudTd DataLabel="Status">
-                        <InlineStatusEdit IssueKey="@issue.Key" @bind-Value="issue.Status" Transitions="@issue.Transitions" />
-                    </MudTd>
-                    <MudTd DataLabel="Dates">
-                        <InlineDatesCell Issue="@issue" />
-                    </MudTd>
-                    <MudTd DataLabel="Time" Class="mud-text-align-end">
-                        <InlineTimeTrackingCell Issue="@issue" />
-                    </MudTd>
-                    <MudTd DataLabel="Tags">
-                        <InlineTagsCell Issue="@issue" />
-                    </MudTd>
-                </RowTemplate>
-            </MudTable>
-        </MudPaper>
+                        @if (!string.IsNullOrWhiteSpace(group.Version.Description))
+                        {
+                            <MudText Typo="Typo.caption" Color="Color.Default" Class="ml-6 mud-text-secondary">@group.Version.Description</MudText>
+                        }
+                    </div>
+                    @RenderGroupStats(g)
+                </div>
+
+                <MudGrid Spacing="2" Class="mb-3 align-center">
+                    <MudItem xs="12"><TimeProgressBar Stats="@g" Size="Size.Small" /></MudItem>
+                </MudGrid>
+
+                @RenderIssueTable(group.Issues)
+            </MudPaper>
+        }
+    }
+    else if (GroupingMode == DashboardGroupingMode.ByEpic)
+    {
+        var groups = issues.GroupByEpic();
+        foreach (var group in groups)
+        {
+            var g = group.Issues.GetTimeStats();
+            <MudPaper Class="pa-4 mb-4" Elevation="2">
+                <div class="d-flex justify-space-between align-center mb-1">
+                    <div class="d-flex align-center">
+                        <MudIcon Icon="@Icons.Material.Filled.FlashOn" Size="Size.Small" Color="Color.Tertiary" Class="mr-2" />
+                        <MudText Typo="Typo.h6">@group.Epic.Summary</MudText>
+                    </div>
+                    @RenderGroupStats(g)
+                </div>
+
+                <MudGrid Spacing="2" Class="mb-3 align-center">
+                    <MudItem xs="12"><TimeProgressBar Stats="@g" Size="Size.Small" /></MudItem>
+                </MudGrid>
+
+                @RenderIssueTable(group.Issues)
+            </MudPaper>
+        }
+    }
+    else if (GroupingMode == DashboardGroupingMode.ByVersionAndEpic)
+    {
+        var vGroups = issues.GroupByVersionAndEpic();
+        foreach (var vGroup in vGroups)
+        {
+            var vgStats = vGroup.Epics.SelectMany(e => e.Issues).GetTimeStats();
+            <MudPaper Class="pa-4 mb-6" Elevation="2" Style="background-color: var(--mud-palette-background-grey);">
+                <div class="d-flex justify-space-between align-center mb-1">
+                    <div class="d-flex flex-column">
+                        <div class="d-flex align-center">
+                            <MudIcon Icon="@Icons.Material.Filled.NewReleases" Size="Size.Small" Color="Color.Primary" />
+                            <InlineVersionEdit Version="@vGroup.Version" Issues="@vGroup.Epics.SelectMany(e => e.Issues)" />
+                        </div>
+                        @if (!string.IsNullOrWhiteSpace(vGroup.Version.Description))
+                        {
+                            <MudText Typo="Typo.caption" Color="Color.Default" Class="ml-6 mud-text-secondary">@vGroup.Version.Description</MudText>
+                        }
+                    </div>
+                    @RenderGroupStats(vgStats)
+                </div>
+                <MudGrid Spacing="2" Class="mb-4 align-center"><MudItem xs="12"><TimeProgressBar Stats="@vgStats" Size="Size.Small" /></MudItem></MudGrid>
+
+                @foreach (var eGroup in vGroup.Epics)
+                {
+                    var egStats = eGroup.Issues.GetTimeStats();
+                    <MudPaper Class="pa-3 mb-3 ml-4" Elevation="1">
+                        <div class="d-flex justify-space-between align-center mb-1">
+                            <div class="d-flex align-center">
+                                <MudIcon Icon="@Icons.Material.Filled.FlashOn" Size="Size.Small" Color="Color.Tertiary" Class="mr-2" />
+                                <MudText Typo="Typo.subtitle1" Class="mud-text-secondary">@eGroup.Epic.Summary</MudText>
+                            </div>
+                            @RenderGroupStats(egStats)
+                        </div>
+                        @RenderIssueTable(eGroup.Issues)
+                    </MudPaper>
+                }
+            </MudPaper>
+        }
     }
 </ReactivePage>
 
@@ -112,4 +146,98 @@
     [SupplyParameterFromQuery(Name = "email")] public string? QueryEmail { get; set; }
     
     private string? ActiveEmail => QueryEmail ?? Email;
+
+    private DashboardGroupingMode GroupingMode { get; set; } = DashboardGroupingMode.ByVersion;
+    private HashSet<DashboardIssueModel> selectedIssues = new();
+
+    private async Task OpenEpicAssignDialog()
+    {
+        if (!selectedIssues.Any()) return;
+        
+        var projectKey = QueryProjectKey ?? selectedIssues.First().ProjectKey;
+
+        var parameters = new DialogParameters<EpicAssignDialog> { { x => x.ProjectKey, projectKey } };
+        var dialog = await DialogService.ShowAsync<EpicAssignDialog>("Assign to Epic", parameters);
+        var result = await dialog.Result;
+
+        if (result is { Canceled: false, Data: EpicAssignDialog.EpicAssignResult assignResult })
+        {
+            try
+            {
+                var epicKey = assignResult.IsNew 
+                    ? await IssueFacade.CreateEpicAsync(projectKey, assignResult.Summary!, assignResult.Name!)
+                    : assignResult.EpicKey!;
+                
+                foreach (var issue in selectedIssues)
+                {
+                    await IssueFacade.UpdateEpicAsync(issue.Key, epicKey);
+                }
+                
+                Snackbar.Add($"Successfully assigned {selectedIssues.Count} issues to Epic {epicKey}", Severity.Success);
+                selectedIssues.Clear();
+                StateHasChanged(); // Or ideally trigger a data refresh
+            }
+            catch (Exception ex)
+            {
+                Snackbar.Add($"Failed to assign issues: {ex.Message}", Severity.Error);
+            }
+        }
+    }
+
+    private RenderFragment RenderGroupStats(TimeStats g) => __builder =>
+    {
+        <div class="d-flex align-center justify-end flex-wrap gap-1">
+            <MudTooltip Text="Estimate" Arrow="true">
+                <MudChip T="string" Size="Size.Small" Color="Color.Primary" Variant="Variant.Text" Class="ma-0">@g.FormattedEstimate</MudChip>
+            </MudTooltip>
+            <MudTooltip Text="Spent" Arrow="true">
+                <MudChip T="string" Size="Size.Small" Color="Color.Info" Variant="Variant.Text" Class="ma-0">@g.FormattedTotalSpent</MudChip>
+            </MudTooltip>
+            <MudTooltip Text="Remaining" Arrow="true">
+                <MudChip T="string" Size="Size.Small" Color="@(g.IsOverBudget ? Color.Error : Color.Warning)" Variant="Variant.Text" Class="ma-0">
+                    @g.FormattedRemaining
+                </MudChip>
+            </MudTooltip>
+            <MudTooltip Text="Left" Arrow="true">
+                <MudChip T="string" Size="Size.Small" Color="Color.Default" Variant="Variant.Text" Class="ma-0">@g.FormattedAssigneeLeft</MudChip>
+            </MudTooltip>
+        </div>
+    };
+
+    private RenderFragment RenderIssueTable(IEnumerable<DashboardIssueModel> items) => __builder =>
+    {
+        <MudTable Items="@items" Dense="true" Hover="true" Breakpoint="Breakpoint.Sm" Elevation="0" MultiSelection="true" @bind-SelectedItems="selectedIssues">
+            <HeaderContent>
+                <MudTh Style="min-width: 110px;">Issue</MudTh>
+                <MudTh Style="min-width: 200px;">Summary</MudTh>
+                <MudTh Style="min-width: 100px;">Status</MudTh>
+                <MudTh Style="min-width: 130px;">Dates</MudTh>
+                <MudTh Style="min-width: 150px;" Class="mud-text-align-end">Time Tracking</MudTh>
+                <MudTh Style="min-width: 160px;">Tags</MudTh>
+            </HeaderContent>
+            <RowTemplate Context="issue">
+                <MudTd DataLabel="Issue">
+                    <div class="d-flex align-center" style="gap: 6px;">
+                        <InlineTypeEdit IssueKey="@issue.Key" @bind-Value="issue.Type" />
+                        <IssueKey Issue="@issue" />
+                    </div>
+                </MudTd>
+                <MudTd DataLabel="Summary">
+                    <InlineSummaryEdit IssueKey="@issue.Key" @bind-Value="issue.Summary" />
+                </MudTd>
+                <MudTd DataLabel="Status">
+                    <InlineStatusEdit IssueKey="@issue.Key" @bind-Value="issue.Status" Transitions="@issue.Transitions" />
+                </MudTd>
+                <MudTd DataLabel="Dates">
+                    <InlineDatesCell Issue="@issue" />
+                </MudTd>
+                <MudTd DataLabel="Time" Class="mud-text-align-end">
+                    <InlineTimeTrackingCell Issue="@issue" />
+                </MudTd>
+                <MudTd DataLabel="Tags">
+                    <InlineTagsCell Issue="@issue" />
+                </MudTd>
+            </RowTemplate>
+        </MudTable>
+    };
 }
