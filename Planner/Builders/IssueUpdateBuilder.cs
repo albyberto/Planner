@@ -2,7 +2,7 @@ namespace Planner.Builders;
 
 public class IssueUpdateBuilder
 {
-    public Dictionary<string, object> Fields { get; } = new();
+    public Dictionary<string, object?> Fields { get; } = new();
 
     public IssueUpdateBuilder SetSummary(string summary)
     {

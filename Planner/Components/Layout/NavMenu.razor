@@ -37,8 +37,12 @@
     @foreach (var config in _menuConfigs) {
         <MudNavGroup Title="@config.ProjectKey" Icon="@Icons.Material.Outlined.Folder" Expanded="true">
             @foreach (var email in config.Assignees) {
-                <MudNavLink Href="@($"/dashboard?project={Uri.EscapeDataString(config.ProjectKey)}&email={Uri.EscapeDataString(email)}")" Match="NavLinkMatch.All" Icon="@Icons.Material.Outlined.Person">
-                    @email
+                var isUnassigned = email.Equals(Constants.Unassigned, StringComparison.OrdinalIgnoreCase);
+                var icon = isUnassigned ? Icons.Material.Outlined.PersonOff : Icons.Material.Outlined.Person;
+                var displayName = isUnassigned ? "Unassigned" : email;
+
+                <MudNavLink Href="@($"/dashboard?project={Uri.EscapeDataString(config.ProjectKey)}&email={Uri.EscapeDataString(email)}")" Match="NavLinkMatch.All" Icon="@icon">
+                    @displayName
                 </MudNavLink>
             }
         </MudNavGroup>

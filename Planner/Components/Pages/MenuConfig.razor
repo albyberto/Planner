@@ -1,8 +1,11 @@
 @page "/menu-config"
 @using System.Collections.Immutable
+@using Planner.Components.Shared.Filters.Controls
+@using Planner.Components.Shared.Filters.Model
 @using Planner.Facades
 @using Planner.Infrastructure.Domain
 @using Planner.Model
+@using Planner
 
 <PageTitle>Menu Configuration</PageTitle>
 
@@ -26,22 +29,23 @@ else
             <MudPaper Class="pa-4" Elevation="2">
                 <MudText Typo="Typo.h6" Class="mb-4">@( _editModel.Id == Guid.Empty ? "Create New" : "Edit Configuration" )</MudText>
                 
-                <MudSelect T="ProjectModel" Label="Project" Value="_selectedProject" ValueChanged="OnProjectChangedAsync" Class="mb-4" ToStringFunc="@(p => p?.Key ?? string.Empty)" Required="true" Variant="Variant.Outlined">
-                    @foreach (var project in _projects)
-                    {
-                        <MudSelectItem Value="@project">@project.Key</MudSelectItem>
-                    }
-                </MudSelect>
+                <FilterSingleAutocomplete TItem="ProjectModel" 
+                                          Items="_projects" 
+                                          Label="Project" 
+                                          SelectedValue="_selectedProject" 
+                                          SelectedValueChanged="OnProjectChangedAsync" 
+                                          Disabled="false"
+                                          Required="true" />
 
-                <MudSelect T="UserModel" Label="Assignees" MultiSelection="true" SelectedValues="_selectedAssignees" SelectedValuesChanged="OnAssigneesSelectionChanged" Class="mb-4" ToStringFunc="@(u => u?.DisplayName ?? string.Empty)" Disabled="@(_selectedProject is null)" Variant="Variant.Outlined">
-                    @foreach (var user in _projectAssignees)
-                    {
-                        <MudSelectItem Value="@user" />
-                    }
-                </MudSelect>
+                <FilterMultiSelect TItem="UserModel"
+                                   Label="Assignees"
+                                   Disabled="@(_selectedProject is null)"
+                                   Items="_projectAssignees"
+                                   Selection="_selectedAssignees"
+                                   SelectionChanged="OnAssigneesSelectionChanged" />
 
-                <div class="d-flex gap-2">
-                    <MudButton Variant="Variant.Filled" Color="Color.Primary" OnClick="SaveAsync" Disabled="@(_selectedProject is null || !_selectedAssignees.Any())" StartIcon="@Icons.Material.Filled.Save">Save</MudButton>
+                <div class="d-flex gap-2 mt-4">
+                    <MudButton Variant="Variant.Filled" Color="Color.Primary" OnClick="SaveAsync" Disabled="@(_selectedProject is null || !_selectedAssignees.Included.Any())" StartIcon="@Icons.Material.Filled.Save">Save</MudButton>
                     @if (_editModel.Id != Guid.Empty)
                     {
                         <MudButton Variant="Variant.Text" Color="Color.Default" OnClick="ResetForm">Cancel</MudButton>
@@ -90,7 +94,7 @@ else
     
     private MenuConfigItem _editModel = new();
     private ProjectModel? _selectedProject;
-    private IReadOnlyCollection<UserModel> _selectedAssignees = [];
+    private IFilterSelection<UserModel> _selectedAssignees = FilterSelection<UserModel>.Empty;
 
     protected override async Task OnInitializedAsync()
     {
@@ -100,7 +104,7 @@ else
             _projects = await ProjectFacade.GetProjectsAsync(CancellationToken.None);
             await LoadConfigsAsync();
         }
-        catch (Exception ex)
+        catch (Exception)
         {
             Snackbar.Add("Error loading data", Severity.Error);
         }
@@ -119,16 +123,29 @@ else
     {
         _selectedProject = project;
         _editModel = _editModel with { ProjectKey = project?.Key ?? string.Empty };
-        _selectedAssignees = [];
+        _selectedAssignees = FilterSelection<UserModel>.Empty;
 
         if (project is not null)
         {
-            _projectAssignees = await ProjectFacade.GetAssigneesAsync(project.Key);
+            await LoadAssigneesAsync(project.Key);
         }
         else
         {
             _projectAssignees = [];
         }
+    }
+
+    private async Task LoadAssigneesAsync(string projectKey)
+    {
+        var users = await ProjectFacade.GetAssigneesAsync(projectKey);
+        var unassignedUser = new UserModel(new Planner.Clients.Domain.User 
+        { 
+            AccountId = Constants.Unassigned, 
+            DisplayName = "Unassigned", 
+            AccountType = "atlassian",
+            EmailAddress = Constants.Unassigned 
+        });
+        _projectAssignees = [unassignedUser, ..users];
     }
 
     private async Task EditConfig(MenuConfigItem item)
@@ -138,21 +155,22 @@ else
         
         if (_selectedProject is not null)
         {
-            _projectAssignees = await ProjectFacade.GetAssigneesAsync(_selectedProject.Key);
-            _selectedAssignees = _projectAssignees.Where(u => item.Assignees.Contains(u.EmailAddress, StringComparer.OrdinalIgnoreCase)).ToList();
+            await LoadAssigneesAsync(_selectedProject.Key);
+            var selected = _projectAssignees.Where(u => item.Assignees.Contains(u.EmailAddress, StringComparer.OrdinalIgnoreCase)).ToImmutableHashSet();
+            _selectedAssignees = new FilterSelection<UserModel>(selected, ImmutableHashSet<UserModel>.Empty);
         }
     }
 
-    private void OnAssigneesSelectionChanged(IEnumerable<UserModel> values)
+    private void OnAssigneesSelectionChanged(IFilterSelection<UserModel> values)
     {
-        _selectedAssignees = values.ToList();
+        _selectedAssignees = values;
     }
 
     private async Task SaveAsync()
     {
-        if (_selectedProject is null || !_selectedAssignees.Any()) return;
+        if (_selectedProject is null || !_selectedAssignees.Included.Any()) return;
 
-        var assignees = _selectedAssignees.Select(u => u.EmailAddress).ToImmutableArray();
+        var assignees = _selectedAssignees.Included.Select(u => u.EmailAddress).ToImmutableArray();
         _editModel = _editModel with { Assignees = assignees };
 
         var result = await MenuConfigFacade.SaveAsync(_editModel);
@@ -185,7 +203,7 @@ else
     {
         _editModel = new MenuConfigItem();
         _selectedProject = null;
-        _selectedAssignees = [];
+        _selectedAssignees = FilterSelection<UserModel>.Empty;
         _projectAssignees = [];
     }
 }
