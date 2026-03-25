@@ -94,7 +94,7 @@
         }
         else if (_selectedEpic != null)
         {
-            MudDialog.Close(DialogResult.Ok(new EpicAssignResult { IsNew = false, EpicKey = _selectedEpic.Key }));
+            MudDialog.Close(DialogResult.Ok(new EpicAssignResult { IsNew = false, Epic = _selectedEpic }));
         }
     }
 
@@ -103,7 +103,7 @@
     public class EpicAssignResult
     {
         public bool IsNew { get; set; }
-        public string? EpicKey { get; set; }
+        public EpicModel? Epic { get; set; }
         public string? Summary { get; set; }
         public string? Name { get; set; }
     }

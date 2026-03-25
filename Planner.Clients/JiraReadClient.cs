@@ -61,4 +61,29 @@ public class JiraReadClient(HttpClient client, IOptionsMonitor<JsonSerializerOpt
             throw;
         }
     }
+
+    public async Task<Issue?> GetIssueAsync(string key, string[]? expand = null, CancellationToken cancellationToken = default)
+    {
+        try
+        {
+            var url = $"issue/{key}";
+            if (expand is { Length: > 0 })
+                url += $"?expand={string.Join(',', expand)}";
+            
+            var response = await client.GetAsync(url, cancellationToken);
+            if (!response.IsSuccessStatusCode)
+            {
+                var errorContent = await response.Content.ReadAsStringAsync(cancellationToken);
+                logger.LogError("Error fetching issue {Key}: {StatusCode} - {Error}", key, response.StatusCode, errorContent);
+                return null;
+            }
+            
+            return await response.Content.ReadFromJsonAsync<Issue>(_jsonOptions, cancellationToken);
+        }
+        catch (Exception exception)
+        {
+            logger.LogError(exception, "Error fetching issue {Key}", key);
+            throw;
+        }
+    }
 }

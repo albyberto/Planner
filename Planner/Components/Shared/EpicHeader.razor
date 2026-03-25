@@ -1,0 +1,88 @@
+@using Planner.Clients
+@using Planner.Model
+@using MudBlazor
+@inject JiraReadClient ReadClient
+
+<div class="d-flex align-center">
+    @if (!string.IsNullOrEmpty(EpicModel.Key) && EpicModel.Key.Contains('-'))
+    {
+        if (_loading)
+        {
+            <MudIcon Icon="@Icons.Material.Filled.FlashOn" Size="Size.Small" Color="Color.Tertiary" Class="mr-2" />
+            <MudText Typo="@Typo" Class="@Class">@EpicModel.Summary</MudText>
+            <MudProgressCircular Size="Size.Small" Indeterminate="true" Class="ml-2" />
+        }
+        else
+        {
+            @if (_epic != null)
+            {
+                <MudLink Href="@Url" Target="_blank" Typo="@Typo" Color="Color.Tertiary" Underline="Underline.Hover" Class="mr-2 d-flex align-center">
+                    <MudIcon Icon="@Icons.Material.Filled.FlashOn" Size="Size.Small" Class="mr-1" />
+                    @EpicModel.Key
+                </MudLink>
+                <MudText Typo="@Typo" Class="@($"mr-3 {Class}")">@EpicModel.Summary</MudText>
+                @if (_status != null)
+                {
+                    <InlineStatusEdit IssueKey="@EpicModel.Key" @bind-Value="_status" Transitions="@_transitions" />
+                }
+            }
+            else
+            {
+                <MudIcon Icon="@Icons.Material.Filled.FlashOn" Size="Size.Small" Color="Color.Tertiary" Class="mr-2" />
+                <MudText Typo="@Typo" Class="@Class">@EpicModel.Summary</MudText>
+            }
+        }
+    }
+    else
+    {
+        <MudIcon Icon="@Icons.Material.Filled.FlashOn" Size="Size.Small" Color="Color.Tertiary" Class="mr-2" />
+        <MudText Typo="@Typo" Class="@Class">@EpicModel.Summary</MudText>
+    }
+</div>
+
+@code {
+    [Parameter, EditorRequired] public required EpicModel EpicModel { get; set; }
+    [Parameter] public Typo Typo { get; set; } = Typo.h6;
+    [Parameter] public string Class { get; set; } = string.Empty;
+
+    private Clients.Domain.Issue? _epic;
+    private bool _loading = true;
+    private StatusModel? _status;
+    private IReadOnlyList<TransitionModel> _transitions = [];
+
+    private string Url 
+    {
+        get
+        {
+            if (_epic == null || string.IsNullOrEmpty(_epic.Self)) return "#";
+            var baseUri = new Uri(_epic.Self).GetLeftPart(UriPartial.Authority);
+            return $"{baseUri}/browse/{_epic.Key}";
+        }
+    }
+
+    protected override async Task OnInitializedAsync()
+    {
+        if (string.IsNullOrEmpty(EpicModel.Key) || !EpicModel.Key.Contains('-'))
+        {
+            _loading = false;
+            return;
+        }
+
+        try
+        {
+            _epic = await ReadClient.GetIssueAsync(EpicModel.Key, ["transitions"]);
+            if (_epic?.Fields?.Status != null)
+            {
+                _status = new StatusModel(_epic.Fields.Status);
+            }
+            if (_epic?.Transitions != null)
+            {
+                _transitions = _epic.Transitions.Select(t => new TransitionModel(t)).ToList();
+            }
+        }
+        finally
+        {
+            _loading = false;
+        }
+    }
+}

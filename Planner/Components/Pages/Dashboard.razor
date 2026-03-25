@@ -26,13 +26,6 @@
             <MudChip T="string" Icon="@Icons.Material.Filled.HourglassBottom" Color="@(stats.IsOverBudget ? Color.Error : Color.Success)" Variant="Variant.Filled" Size="Size.Small" Class="ma-0">
                 @(stats.IsOverBudget ? $"Over {stats.FormattedRemaining}" : $"Left {stats.FormattedRemaining}")
             </MudChip>
-            
-            @if (selectedIssues.Any())
-            {
-                <MudButton StartIcon="@Icons.Material.Filled.LibraryAdd" Color="Color.Primary" Variant="Variant.Filled" Size="Size.Small" OnClick="OpenEpicAssignDialog">
-                    Assign to Epic (@selectedIssues.Count)
-                </MudButton>
-            }
         </MudItem>
         <MudItem xs="12" md="4" Class="d-flex align-center justify-end">
              <MudToggleGroup @bind-Value="GroupingMode" T="DashboardGroupingMode" Size="Size.Small" Color="Color.Primary" SelectionMode="SelectionMode.SingleSelection" CheckMark="true">
@@ -64,7 +57,7 @@
                             <MudText Typo="Typo.caption" Color="Color.Default" Class="ml-6 mud-text-secondary">@group.Version.Description</MudText>
                         }
                     </div>
-                    @RenderGroupStats(g)
+                    @RenderGroupStats(g, group.Issues)
                 </div>
 
                 <MudGrid Spacing="2" Class="mb-3 align-center">
@@ -83,11 +76,8 @@
             var g = group.Issues.GetTimeStats();
             <MudPaper Class="pa-4 mb-4" Elevation="2">
                 <div class="d-flex justify-space-between align-center mb-1">
-                    <div class="d-flex align-center">
-                        <MudIcon Icon="@Icons.Material.Filled.FlashOn" Size="Size.Small" Color="Color.Tertiary" Class="mr-2" />
-                        <MudText Typo="Typo.h6">@group.Epic.Summary</MudText>
-                    </div>
-                    @RenderGroupStats(g)
+                    <EpicHeader EpicModel="@group.Epic" />
+                    @RenderGroupStats(g, group.Issues)
                 </div>
 
                 <MudGrid Spacing="2" Class="mb-3 align-center">
@@ -116,7 +106,7 @@
                             <MudText Typo="Typo.caption" Color="Color.Default" Class="ml-6 mud-text-secondary">@vGroup.Version.Description</MudText>
                         }
                     </div>
-                    @RenderGroupStats(vgStats)
+                    @RenderGroupStats(vgStats, vGroup.Epics.SelectMany(e => e.Issues))
                 </div>
                 <MudGrid Spacing="2" Class="mb-4 align-center"><MudItem xs="12"><TimeProgressBar Stats="@vgStats" Size="Size.Small" /></MudItem></MudGrid>
 
@@ -125,11 +115,8 @@
                     var egStats = eGroup.Issues.GetTimeStats();
                     <MudPaper Class="pa-3 mb-3 ml-4" Elevation="1">
                         <div class="d-flex justify-space-between align-center mb-1">
-                            <div class="d-flex align-center">
-                                <MudIcon Icon="@Icons.Material.Filled.FlashOn" Size="Size.Small" Color="Color.Tertiary" Class="mr-2" />
-                                <MudText Typo="Typo.subtitle1" Class="mud-text-secondary">@eGroup.Epic.Summary</MudText>
-                            </div>
-                            @RenderGroupStats(egStats)
+                            <EpicHeader EpicModel="@eGroup.Epic" Typo="Typo.subtitle1" Class="mud-text-secondary" />
+                            @RenderGroupStats(egStats, eGroup.Issues)
                         </div>
                         @RenderIssueTable(eGroup.Issues)
                     </MudPaper>
@@ -150,11 +137,12 @@
     private DashboardGroupingMode GroupingMode { get; set; } = DashboardGroupingMode.ByVersion;
     private HashSet<DashboardIssueModel> selectedIssues = new();
 
-    private async Task OpenEpicAssignDialog()
+    private async Task OpenEpicAssignDialog(IEnumerable<DashboardIssueModel> issuesToAssign)
     {
-        if (!selectedIssues.Any()) return;
+        var issuesList = issuesToAssign.ToList();
+        if (!issuesList.Any()) return;
         
-        var projectKey = QueryProjectKey ?? selectedIssues.First().ProjectKey;
+        var projectKey = QueryProjectKey ?? issuesList.First().ProjectKey;
 
         var parameters = new DialogParameters<EpicAssignDialog> { { x => x.ProjectKey, projectKey } };
         var dialog = await DialogService.ShowAsync<EpicAssignDialog>("Assign to Epic", parameters);
@@ -164,18 +152,26 @@
         {
             try
             {
-                var epicKey = assignResult.IsNew 
-                    ? await IssueFacade.CreateEpicAsync(projectKey, assignResult.Summary!, assignResult.Name!)
-                    : assignResult.EpicKey!;
-                
-                foreach (var issue in selectedIssues)
+                EpicModel assignedEpic;
+                if (assignResult.IsNew)
                 {
-                    await IssueFacade.UpdateEpicAsync(issue.Key, epicKey);
+                    var epicKey = await IssueFacade.CreateEpicAsync(projectKey, assignResult.Summary!, assignResult.Name!);
+                    assignedEpic = new EpicModel(epicKey, assignResult.Summary!);
+                }
+                else
+                {
+                    assignedEpic = assignResult.Epic!;
                 }
                 
-                Snackbar.Add($"Successfully assigned {selectedIssues.Count} issues to Epic {epicKey}", Severity.Success);
-                selectedIssues.Clear();
-                StateHasChanged(); // Or ideally trigger a data refresh
+                foreach (var issue in issuesList)
+                {
+                    await IssueFacade.UpdateEpicAsync(issue.Key, assignedEpic.Key);
+                    issue.Epic = assignedEpic;
+                    selectedIssues.Remove(issue);
+                }
+                
+                Snackbar.Add($"Successfully assigned {issuesList.Count} issues to Epic {assignedEpic.Key}", Severity.Success);
+                StateHasChanged();
             }
             catch (Exception ex)
             {
@@ -184,9 +180,16 @@
         }
     }
 
-    private RenderFragment RenderGroupStats(TimeStats g) => __builder =>
+    private RenderFragment RenderGroupStats(TimeStats g, IEnumerable<DashboardIssueModel> groupIssues) => __builder =>
     {
+        var groupSelected = selectedIssues.Intersect(groupIssues).ToList();
         <div class="d-flex align-center justify-end flex-wrap gap-1">
+            @if (groupSelected.Any())
+            {
+                <MudButton StartIcon="@Icons.Material.Filled.LibraryAdd" Color="Color.Primary" Variant="Variant.Filled" Size="Size.Small" Class="mr-2" OnClick="() => OpenEpicAssignDialog(groupSelected)">
+                    Assign Epic (@groupSelected.Count)
+                </MudButton>
+            }
             <MudTooltip Text="Estimate" Arrow="true">
                 <MudChip T="string" Size="Size.Small" Color="Color.Primary" Variant="Variant.Text" Class="ma-0">@g.FormattedEstimate</MudChip>
             </MudTooltip>
@@ -223,6 +226,14 @@
                     </div>
                 </MudTd>
                 <MudTd DataLabel="Summary">
+                    @if (issue.Epic != null && GroupingMode != DashboardGroupingMode.ByEpic)
+                    {
+                        <MudChip T="string" Size="Size.Small" Color="Color.Tertiary" Variant="Variant.Outlined" Class="mb-1" Style="font-weight: 500; height: 18px;">
+                            <MudIcon Icon="@Icons.Material.Filled.FlashOn" Size="Size.Small" Class="mr-1" Style="font-size: 14px;"/>
+                            @issue.Epic.Summary
+                        </MudChip>
+                        <br />
+                    }
                     <InlineSummaryEdit IssueKey="@issue.Key" @bind-Value="issue.Summary" />
                 </MudTd>
                 <MudTd DataLabel="Status">
