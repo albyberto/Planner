@@ -4,11 +4,11 @@
 @inject ProjectFacade ProjectFacade
 @inject IssueFacade Facade
 
-<InlineMultiSelect TItem="LabelModel" Issue="@Issue" Items="@Issue.Labels"
+<InlineAutocompleteSelect TItem="LabelModel" Issue="@Issue" Items="@Issue.Labels"
     ItemsChanged="@((IReadOnlyCollection<LabelModel> labels) => Issue.Labels = ImmutableArray.CreateRange(labels))"
     LoadItemsAsync="@(async _ => await ProjectFacade.GetLabelsAsync())" 
     SaveActionAsync="@(async labels => await Facade.UpdateLabelsAsync(Issue.Key, labels))"
-    Label="Labels" ChipColor="Color.Secondary" EmptyTooltip="Aggiungi Label" />
+    Label="Labels" ChipColor="Color.Success" EmptyTooltip="Aggiungi Label" />
 
 @code {
     [Parameter][EditorRequired] public IHasLabels Issue { get; set; } = null!;
