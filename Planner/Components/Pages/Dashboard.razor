@@ -45,12 +45,20 @@
                     }
                 </div>
                 <div class="d-flex align-center justify-end flex-wrap gap-1">
-                    <MudChip T="string" Size="Size.Small" Color="Color.Primary" Variant="Variant.Text" Class="ma-0">@g.FormattedEstimate</MudChip>
-                    <MudChip T="string" Size="Size.Small" Color="Color.Info" Variant="Variant.Text" Class="ma-0">@g.FormattedTotalSpent</MudChip>
-                    <MudChip T="string" Size="Size.Small" Color="@(g.IsOverBudget ? Color.Error : Color.Warning)" Variant="Variant.Text" Class="ma-0">
-                        @g.FormattedRemaining
-                    </MudChip>
-                    <MudChip T="string" Size="Size.Small" Color="Color.Default" Variant="Variant.Text" Class="ma-0">@g.FormattedAssigneeSpent</MudChip>
+                    <MudTooltip Text="Estimate" Arrow="true">
+                        <MudChip T="string" Size="Size.Small" Color="Color.Primary" Variant="Variant.Text" Class="ma-0">@g.FormattedEstimate</MudChip>
+                    </MudTooltip>
+                    <MudTooltip Text="Spent" Arrow="true">
+                        <MudChip T="string" Size="Size.Small" Color="Color.Info" Variant="Variant.Text" Class="ma-0">@g.FormattedTotalSpent</MudChip>
+                    </MudTooltip>
+                    <MudTooltip Text="Remaining" Arrow="true">
+                        <MudChip T="string" Size="Size.Small" Color="@(g.IsOverBudget ? Color.Error : Color.Warning)" Variant="Variant.Text" Class="ma-0">
+                            @g.FormattedRemaining
+                        </MudChip>
+                    </MudTooltip>
+                    <MudTooltip Text="Left" Arrow="true">
+                        <MudChip T="string" Size="Size.Small" Color="Color.Default" Variant="Variant.Text" Class="ma-0">@g.FormattedAssigneeSpent</MudChip>
+                    </MudTooltip>
                 </div>
             </div>
 

@@ -41,8 +41,10 @@ else
     }
     else
     {
-        <MudTooltip Text="@EmptyTooltip" Arrow="true">
-            <MudIconButton Icon="@Icons.Material.Filled.Add" Size="Size.Small" Color="Color.Default" @onclick="StartEdit" Class="pa-0"/>
+        <MudTooltip Text="@EmptyTooltip" Arrow="true" Placement="Placement.Right">
+            <MudButton StartIcon="@Icons.Material.Filled.Add" Size="Size.Small" Variant="Variant.Text" Color="Color.Default" OnClick="StartEdit" Class="pa-0 text-none" Style="justify-content: flex-start; min-width: 0;">
+                <MudText Typo="Typo.caption">@Label</MudText>
+            </MudButton>
         </MudTooltip>
     }
 }

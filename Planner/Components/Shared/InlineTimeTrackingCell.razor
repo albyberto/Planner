@@ -1,20 +1,28 @@
 @using Planner.Model
 
 <div class="d-flex flex-column" style="gap: 2px; line-height: 1.3;">
-    <div class="d-flex align-center justify-end" style="gap: 4px;">
-        <MudText Typo="Typo.caption" Color="Color.Default" Class="text-nowrap" Style="min-width: 28px;">Est</MudText>
+    <div class="d-flex align-center justify-start" style="gap: 4px;">
+        <MudTooltip Text="Estimate" Arrow="true" Placement="Placement.Right">
+            <MudText Typo="Typo.caption" Color="Color.Default" Class="text-nowrap" Style="min-width: 28px; cursor: help;">Est</MudText>
+        </MudTooltip>
         <InlineOriginalEstimationEdit Issue="@Issue" />
     </div>
-    <div class="d-flex align-center justify-end" style="gap: 4px;">
-        <MudText Typo="Typo.caption" Color="Color.Default" Class="text-nowrap" Style="min-width: 28px;">Spn</MudText>
+    <div class="d-flex align-center justify-start" style="gap: 4px;">
+        <MudTooltip Text="Spent" Arrow="true" Placement="Placement.Right">
+            <MudText Typo="Typo.caption" Color="Color.Default" Class="text-nowrap" Style="min-width: 28px; cursor: help;">Spn</MudText>
+        </MudTooltip>
         <MudText Typo="Typo.body2" Color="Color.Info" Class="text-nowrap">@Issue.Stats.FormattedTotalSpent</MudText>
     </div>
-    <div class="d-flex align-center justify-end" style="gap: 4px;">
-        <MudText Typo="Typo.caption" Color="Color.Default" Class="text-nowrap" Style="min-width: 28px;">Rem</MudText>
+    <div class="d-flex align-center justify-start" style="gap: 4px;">
+        <MudTooltip Text="Remaining" Arrow="true" Placement="Placement.Right">
+            <MudText Typo="Typo.caption" Color="Color.Default" Class="text-nowrap" Style="min-width: 28px; cursor: help;">Rem</MudText>
+        </MudTooltip>
         <InlineRemainingEstimationEdit Issue="@Issue" />
     </div>
-    <div class="d-flex align-center justify-end" style="gap: 4px;">
-        <MudText Typo="Typo.caption" Color="Color.Default" Class="text-nowrap" Style="min-width: 28px;">Left</MudText>
+    <div class="d-flex align-center justify-start" style="gap: 4px;">
+        <MudTooltip Text="Left" Arrow="true" Placement="Placement.Right">
+            <MudText Typo="Typo.caption" Color="Color.Default" Class="text-nowrap" Style="min-width: 28px; cursor: help;">Left</MudText>
+        </MudTooltip>
         <MudText Typo="Typo.body2" Color="Color.Default" Class="text-nowrap">@Issue.Stats.FormattedAssigneeSpent</MudText>
     </div>
 </div>
