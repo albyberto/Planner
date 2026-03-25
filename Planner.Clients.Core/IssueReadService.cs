@@ -9,7 +9,8 @@ public class IssueReadService(JiraReadClient jiraReadClient, ILogger<IssueReadSe
     private static readonly string[] DashboardFields = [
         "summary", "status", "assignee", "fixVersions",
         "created", "updated", "issuetype", "components",
-        "labels", "timetracking", "worklog", "customfield_10117", "project", "comment"
+        "labels", "timetracking", "worklog", "customfield_10117", "project", "comment",
+        "parent", "customfield_10014"
     ];
     
     private static readonly string[] DashboardExpands = [

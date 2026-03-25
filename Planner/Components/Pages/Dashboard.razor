@@ -134,7 +134,7 @@
     
     private string? ActiveEmail => QueryEmail ?? Email;
 
-    private DashboardGroupingMode GroupingMode { get; set; } = DashboardGroupingMode.ByVersion;
+    private DashboardGroupingMode GroupingMode { get; set; } = DashboardGroupingMode.ByVersionAndEpic;
     private HashSet<DashboardIssueModel> selectedIssues = new();
 
     private async Task OpenEpicAssignDialog(IEnumerable<DashboardIssueModel> issuesToAssign)
@@ -226,7 +226,7 @@
                     </div>
                 </MudTd>
                 <MudTd DataLabel="Summary">
-                    @if (issue.Epic != null && GroupingMode != DashboardGroupingMode.ByEpic)
+                    @if (issue.Epic != null)
                     {
                         <MudChip T="string" Size="Size.Small" Color="Color.Tertiary" Variant="Variant.Outlined" Class="mb-1" Style="font-weight: 500; height: 18px;">
                             <MudIcon Icon="@Icons.Material.Filled.FlashOn" Size="Size.Small" Class="mr-1" Style="font-size: 14px;"/>
