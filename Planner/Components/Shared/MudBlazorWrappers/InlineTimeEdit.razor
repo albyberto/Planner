@@ -11,7 +11,7 @@
     <MudPopover Open="@_editing" AnchorOrigin="Origin.BottomLeft" TransformOrigin="Origin.TopLeft" RelativeToElement="@_popoverId" Class="pa-4">
         <div class="d-flex flex-column gap-3">
             <div class="d-flex flex-row gap-4 align-center justify-center">
-                $1$ Weeks Column #1#
+                @* Weeks Column *@
                 <div class="d-flex flex-column align-center justify-center cursor-ns-resize user-select-none" 
                      @onwheel="@(e => HandleWheel(e, "w"))" @onwheel:preventDefault>
                     <MudText Typo="Typo.caption" Color="Color.Secondary">Weeks</MudText>
@@ -20,7 +20,7 @@
                     <MudIconButton Icon="@Icons.Material.Filled.KeyboardArrowDown" Size="Size.Small" OnClick="@(() => AddValue("w", -1))" />
                 </div>
 
-                $1$ Days Column #1#
+                @* Days Column *@
                 <div class="d-flex flex-column align-center justify-center cursor-ns-resize user-select-none" 
                      @onwheel="@(e => HandleWheel(e, "d"))" @onwheel:preventDefault>
                     <MudText Typo="Typo.caption" Color="Color.Secondary">Days</MudText>
@@ -29,7 +29,7 @@
                     <MudIconButton Icon="@Icons.Material.Filled.KeyboardArrowDown" Size="Size.Small" OnClick="@(() => AddValue("d", -1))" />
                 </div>
 
-                $1$ Hours Column #1#
+                @* Hours Column *@
                 <div class="d-flex flex-column align-center justify-center cursor-ns-resize user-select-none" 
                      @onwheel="@(e => HandleWheel(e, "h"))" @onwheel:preventDefault>
                     <MudText Typo="Typo.caption" Color="Color.Secondary">Hours</MudText>
